@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
+use async_graphql::SimpleObject;
 use foundation::{InitialState, RewardType};
 use linera_sdk::{
     base::{Amount, ArithmeticError, Owner},
-    views::{MapView, RegisterView, ViewStorageContext},
+    views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use linera_views::views::{GraphQLView, RootView};
 use thiserror::Error;
 
-#[derive(RootView, GraphQLView)]
+#[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Foundation {
     pub foundation_balance: RegisterView<Amount>,
@@ -68,25 +68,25 @@ impl Foundation {
             .insert(&from, from_amount.saturating_sub(amount))?;
 
         let review_amount = amount.try_mul(*self.review_reward_percent.get() as u128)?;
-        let review_amount = review_amount.saturating_div(Amount::from_atto(100 as u128));
+        let review_amount = review_amount.saturating_div(Amount::from_attos(100 as u128));
         let review_amount = self
             .review_reward_balance
             .get()
-            .try_add(Amount::from_atto(review_amount))?;
+            .try_add(Amount::from_attos(review_amount))?;
 
         let author_amount = amount.try_mul(*self.author_reward_percent.get() as u128)?;
-        let author_amount = author_amount.saturating_div(Amount::from_atto(100 as u128));
+        let author_amount = author_amount.saturating_div(Amount::from_attos(100 as u128));
         let author_amount = self
             .author_reward_balance
             .get()
-            .try_add(Amount::from_atto(author_amount))?;
+            .try_add(Amount::from_attos(author_amount))?;
 
         let activity_amount = amount.try_mul(*self.activity_reward_percent.get() as u128)?;
-        let activity_amount = activity_amount.saturating_div(Amount::from_atto(100 as u128));
+        let activity_amount = activity_amount.saturating_div(Amount::from_attos(100 as u128));
         let activity_amount = self
             .activity_reward_balance
             .get()
-            .try_add(Amount::from_atto(activity_amount))?;
+            .try_add(Amount::from_attos(activity_amount))?;
 
         self.review_reward_balance.set(review_amount);
         self.author_reward_balance.set(author_amount);
@@ -119,7 +119,7 @@ impl Foundation {
         }
         let to_amount = match self.user_balances.get(&to).await? {
             Some(balance) => balance,
-            None => Amount::from_atto(0),
+            None => Amount::from_attos(0),
         };
         self.user_balances
             .insert(&from, from_amount.saturating_sub(amount))?;
@@ -179,10 +179,10 @@ impl Foundation {
 
     pub(crate) async fn reward_author(&mut self, reward_user: Owner) -> Result<(), StateError> {
         let balance = self.author_reward_balance.get().clone();
-        let amount = Amount::from_atto(
+        let amount = Amount::from_attos(
             balance
                 .try_mul(*self.author_reward_factor.get() as u128)?
-                .saturating_div(Amount::from_atto(100)),
+                .saturating_div(Amount::from_attos(100)),
         );
         self.reward_user(reward_user, amount).await?;
         self.author_reward_balance
@@ -194,11 +194,11 @@ impl Foundation {
         let balance = self.review_reward_balance.get().clone();
         let amount = balance
             .try_mul(*self.review_reward_factor.get() as u128)?
-            .saturating_div(Amount::from_atto(100));
-        self.reward_user(reward_user, Amount::from_atto(amount))
+            .saturating_div(Amount::from_attos(100));
+        self.reward_user(reward_user, Amount::from_attos(amount))
             .await?;
         self.review_reward_balance
-            .set(balance.saturating_sub(Amount::from_atto(amount)));
+            .set(balance.saturating_sub(Amount::from_attos(amount)));
         Ok(())
     }
 
@@ -278,10 +278,10 @@ impl Foundation {
             Ok(Some(balance)) => balance,
             _ => Amount::ZERO,
         };
-        let winner_amount = Amount::from_atto(
+        let winner_amount = Amount::from_attos(
             reward_amount
                 .saturating_mul(100 - voter_reward_percent as u128)
-                .saturating_div(Amount::from_atto(100)),
+                .saturating_div(Amount::from_attos(100)),
         );
         let balance = balance.saturating_add(winner_amount);
         self.user_balances.insert(&winner_user, balance)?;
@@ -307,9 +307,9 @@ impl Foundation {
             let percent = balance
                 .saturating_mul(100 as u128)
                 .saturating_div(user_balance_total);
-            let balance = balance.saturating_add(Amount::from_atto(
+            let balance = balance.saturating_add(Amount::from_attos(
                 voter_amount
-                    .saturating_div(Amount::from_atto(100))
+                    .saturating_div(Amount::from_attos(100))
                     .saturating_mul(percent),
             ));
             self.user_balances.insert(&user, balance)?;

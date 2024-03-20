@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
+use async_graphql::SimpleObject;
 use linera_sdk::{
     base::{Amount, ArithmeticError, ChainId, Owner},
     contract::system_api,
-    views::{MapView, RegisterView, ViewStorageContext},
+    views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use linera_views::views::{GraphQLView, RootView};
 use review::{Activity, Asset, Content, InitialState, Review as _Review, Reviewer};
 use thiserror::Error;
 
-#[derive(RootView, GraphQLView)]
+#[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Review {
     pub reviewers: MapView<Owner, Reviewer>,

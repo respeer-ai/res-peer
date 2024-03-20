@@ -14,8 +14,8 @@ use linera_sdk::{
         Amount, ApplicationId, ChainId, ChannelName, Destination, Owner, SessionId, WithContractAbi,
     },
     contract::system_api,
-    ApplicationCallResult, CalleeContext, Contract, ExecutionResult, MessageContext,
-    OperationContext, SessionCallResult, ViewStateStorage,
+    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
+    OperationContext, SessionCallOutcome, ViewStateStorage,
 };
 // use linera_views::views::ViewError;
 use market::MarketAbi;
@@ -39,10 +39,10 @@ impl Contract for Review {
         &mut self,
         _context: &OperationContext,
         state: Self::InitializationArgument,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         self._initialize(state).await?;
         // We should add creator here to be a reviewer, but we keep the message as an test case of application id
-        Ok(ExecutionResult::default().with_authenticated_message(
+        Ok(ExecutionOutcome::default().with_authenticated_message(
             system_api::current_application_id().creation.chain_id,
             Message::GenesisReviewer,
         ))
@@ -52,24 +52,24 @@ impl Contract for Review {
         &mut self,
         _context: &OperationContext,
         operation: Self::Operation,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match operation {
-            Operation::ApplyReviewer { resume } => Ok(ExecutionResult::default()
+            Operation::ApplyReviewer { resume } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::ApplyReviewer { resume },
                 )),
-            Operation::UpdateReviewerResume { resume } => Ok(ExecutionResult::default()
+            Operation::UpdateReviewerResume { resume } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::UpdateReviewerResume { resume },
                 )),
-            Operation::ApproveReviewer { candidate, reason } => Ok(ExecutionResult::default()
+            Operation::ApproveReviewer { candidate, reason } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::ApproveReviewer { candidate, reason },
                 )),
-            Operation::RejectReviewer { candidate, reason } => Ok(ExecutionResult::default()
+            Operation::RejectReviewer { candidate, reason } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::RejectReviewer { candidate, reason },
@@ -78,7 +78,7 @@ impl Contract for Review {
                 cid,
                 title,
                 content,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::SubmitContent {
                     cid,
@@ -90,7 +90,7 @@ impl Contract for Review {
                 content_cid,
                 reason_cid,
                 reason,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::ApproveContent {
                     content_cid,
@@ -101,7 +101,7 @@ impl Contract for Review {
             Operation::RejectContent {
                 content_cid,
                 reason,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::RejectContent {
                     content_cid,
@@ -112,7 +112,7 @@ impl Contract for Review {
                 cid,
                 comment_cid,
                 comment,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::SubmitComment {
                     cid,
@@ -120,12 +120,12 @@ impl Contract for Review {
                     comment,
                 },
             )),
-            Operation::ApproveAsset { cid, reason } => Ok(ExecutionResult::default()
+            Operation::ApproveAsset { cid, reason } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::ApproveAsset { cid, reason },
                 )),
-            Operation::RejectAsset { cid, reason } => Ok(ExecutionResult::default()
+            Operation::RejectAsset { cid, reason } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::RejectAsset { cid, reason },
@@ -136,7 +136,7 @@ impl Contract for Review {
                 uris,
                 price,
                 name,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::SubmitAsset {
                     cid,
@@ -146,7 +146,7 @@ impl Contract for Review {
                     name,
                 },
             )),
-            Operation::RequestSubscribe => Ok(ExecutionResult::default()
+            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::RequestSubscribe,
@@ -154,7 +154,7 @@ impl Contract for Review {
             Operation::ApproveActivity {
                 activity_id,
                 reason,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::ApproveActivity {
                     activity_id,
@@ -164,7 +164,7 @@ impl Contract for Review {
             Operation::RejectActivity {
                 activity_id,
                 reason,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::RejectActivity {
                     activity_id,
@@ -178,7 +178,7 @@ impl Contract for Review {
         &mut self,
         context: &MessageContext,
         message: Self::Message,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match message {
             Message::GenesisReviewer {} => {
                 let chain_id = context.chain_id;
@@ -186,12 +186,12 @@ impl Contract for Review {
                 self.genesis_reviewer(chain_id, reviewer).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::GenesisReviewer))
             }
             Message::ExistReviewer { reviewer } => {
                 self.add_exist_reviewer(reviewer).await?;
-                Ok(ExecutionResult::default())
+                Ok(ExecutionOutcome::default())
             }
             Message::ApplyReviewer { resume } => {
                 let candidate = context.authenticated_signer.unwrap();
@@ -199,7 +199,7 @@ impl Contract for Review {
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::ApplyReviewer { resume }))
             }
             Message::UpdateReviewerResume { resume } => {
@@ -208,7 +208,7 @@ impl Contract for Review {
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::UpdateReviewerResume { resume }))
             }
             Message::ApproveReviewer { candidate, reason } => {
@@ -221,7 +221,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::ApproveReviewer { candidate, reason },
                 ))
@@ -236,7 +236,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::RejectReviewer { candidate, reason },
                 ))
@@ -257,7 +257,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::SubmitContent {
                         cid,
@@ -282,7 +282,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::ApproveContent {
                         content_cid,
@@ -305,7 +305,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::RejectContent {
                         content_cid,
@@ -329,7 +329,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::SubmitComment {
                         cid,
@@ -348,7 +348,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::ApproveAsset { cid, reason }))
             }
             Message::RejectAsset { cid, reason } => {
@@ -361,7 +361,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::RejectAsset { cid, reason }))
             }
             Message::SubmitAsset {
@@ -382,7 +382,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::SubmitAsset {
                         cid,
@@ -394,7 +394,7 @@ impl Contract for Review {
                 ))
             }
             Message::RequestSubscribe => {
-                let mut result = ExecutionResult::default();
+                let mut result = ExecutionOutcome::default();
                 if context.message_id.chain_id
                     == system_api::current_application_id().creation.chain_id
                 {
@@ -422,7 +422,7 @@ impl Contract for Review {
             }
             Message::InitialState { state } => {
                 self.initialize_review(state).await?;
-                Ok(ExecutionResult::default())
+                Ok(ExecutionOutcome::default())
             }
             Message::SubmitActivity {
                 activity_id,
@@ -433,7 +433,7 @@ impl Contract for Review {
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::SubmitActivity {
                         activity_id,
@@ -455,7 +455,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::ApproveActivity {
                         activity_id,
@@ -476,7 +476,7 @@ impl Contract for Review {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::RejectActivity {
                         activity_id,
@@ -492,16 +492,18 @@ impl Contract for Review {
         _context: &CalleeContext,
         call: Self::ApplicationCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<ApplicationCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
+    ) -> Result<
+        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
+        Self::Error,
+    > {
         match call {
             ApplicationCall::SubmitContent {
                 cid,
                 title,
                 content,
             } => {
-                let mut result = ApplicationCallResult::default();
-                result.execution_result = ExecutionResult::default().with_authenticated_message(
+                let mut result = ApplicationCallOutcome::default();
+                result.execution_outcome = ExecutionOutcome::default().with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::SubmitContent {
                         cid,
@@ -516,8 +518,8 @@ impl Contract for Review {
                 activity_host,
                 budget_amount,
             } => {
-                let mut result = ApplicationCallResult::default();
-                result.execution_result = ExecutionResult::default().with_authenticated_message(
+                let mut result = ApplicationCallOutcome::default();
+                result.execution_outcome = ExecutionOutcome::default().with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::SubmitActivity {
                         activity_id,
@@ -528,7 +530,7 @@ impl Contract for Review {
                 Ok(result)
             }
             ApplicationCall::ActivityApproved { activity_id } => {
-                let mut result = ApplicationCallResult::default();
+                let mut result = ApplicationCallOutcome::default();
                 result.value = self.activity_approved(activity_id).await?;
                 Ok(result)
             }
@@ -541,7 +543,7 @@ impl Contract for Review {
         _session: Self::SessionState,
         _call: Self::SessionCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
+    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
     {
         Err(ContractError::SessionsNotSupported)
     }
@@ -566,8 +568,7 @@ impl Review {
 
     async fn reward_credits(&mut self, owner: Owner, amount: Amount) -> Result<(), ContractError> {
         let call = credit::ApplicationCall::Reward { owner, amount };
-        self.call_application(true, Self::credit_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::credit_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -577,8 +578,7 @@ impl Review {
             reward_type: foundation::RewardType::Review,
             activity_id: None,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -595,8 +595,7 @@ impl Review {
             content,
             author,
         };
-        self.call_application(true, Self::feed_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -611,8 +610,7 @@ impl Review {
             reason_cid: reason_cid.clone(),
             reason,
         };
-        self.call_application(true, Self::feed_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -629,8 +627,7 @@ impl Review {
             comment,
             commentor,
         };
-        self.call_application(true, Self::feed_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -649,8 +646,7 @@ impl Review {
             uris,
             publisher,
         };
-        self.call_application(true, Self::market_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::market_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -663,8 +659,7 @@ impl Review {
             activity_id,
             amount: budget_amount,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
         Ok(())
     }
 

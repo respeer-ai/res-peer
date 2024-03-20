@@ -20,7 +20,7 @@ log = { workspace = true }
 
 [dev-dependencies]
 linera-sdk = { workspace = true, features = ["test"] }
-webassembly-test = "0.1.0"
+webassembly-test = { workspace = true }
 
 [[bin]]
 name = "activity_contract"

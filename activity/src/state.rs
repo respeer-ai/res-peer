@@ -4,14 +4,14 @@ use std::{
 };
 
 use activity::{ActivityError, ActivityItem, CreateParams, UpdateParams, Winner};
+use async_graphql::SimpleObject;
 use linera_sdk::{
     base::{Amount, Owner},
     contract::system_api,
-    views::{MapView, RegisterView, ViewStorageContext},
+    views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use linera_views::views::{GraphQLView, RootView};
 
-#[derive(RootView, GraphQLView)]
+#[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Activity {
     pub activities: MapView<u64, ActivityItem>,

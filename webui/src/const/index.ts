@@ -13,4 +13,4 @@ export const appIds = Object.values(Apps)
 export const appDeployChain = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65'
 
 /// Port should be set with different service
-export const port = '8080'
+export const port = '9080'

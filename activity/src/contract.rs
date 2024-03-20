@@ -12,8 +12,8 @@ use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, Owner, SessionId, WithContractAbi},
     contract::system_api,
-    ApplicationCallResult, CalleeContext, Contract, ExecutionResult, MessageContext,
-    OperationContext, SessionCallResult, ViewStateStorage,
+    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
+    OperationContext, SessionCallOutcome, ViewStateStorage,
 };
 use review::ReviewAbi;
 
@@ -34,22 +34,22 @@ impl Contract for Activity {
         &mut self,
         _context: &OperationContext,
         _argument: Self::InitializationArgument,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
-        Ok(ExecutionResult::default())
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+        Ok(ExecutionOutcome::default())
     }
 
     async fn execute_operation(
         &mut self,
         context: &OperationContext,
         operation: Self::Operation,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match operation {
-            Operation::Create { params } => Ok(ExecutionResult::default()
+            Operation::Create { params } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Create { params },
                 )),
-            Operation::Update { params } => Ok(ExecutionResult::default()
+            Operation::Update { params } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Update { params },
@@ -57,7 +57,7 @@ impl Contract for Activity {
             Operation::Register {
                 activity_id,
                 object_id,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::Register {
                     activity_id,
@@ -67,19 +67,19 @@ impl Contract for Activity {
             Operation::Vote {
                 activity_id,
                 object_id,
-            } => Ok(ExecutionResult::default().with_authenticated_message(
+            } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::Vote {
                     activity_id,
                     object_id,
                 },
             )),
-            Operation::Announce { params } => Ok(ExecutionResult::default()
+            Operation::Announce { params } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Announce { params },
                 )),
-            Operation::RequestSubscribe => Ok(ExecutionResult::default()
+            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::RequestSubscribe,
@@ -89,7 +89,7 @@ impl Contract for Activity {
                 if activity.host != context.authenticated_signer.unwrap() {
                     return Err(ActivityError::NotActivityHost);
                 }
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Finalize { activity_id },
                 ))
@@ -101,21 +101,21 @@ impl Contract for Activity {
         &mut self,
         context: &MessageContext,
         message: Self::Message,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match message {
             Message::Create { params } => {
                 self._create_activity(context.authenticated_signer.unwrap(), params.clone())
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Create { params }))
             }
             Message::Update { params } => {
                 self.update_activity(params.clone()).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Update { params }))
             }
             Message::Register {
@@ -125,7 +125,7 @@ impl Contract for Activity {
                 self.register(activity_id, object_id.clone()).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::Register {
                         activity_id,
@@ -167,7 +167,7 @@ impl Contract for Activity {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::Vote {
                         activity_id,
@@ -185,11 +185,11 @@ impl Contract for Activity {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Announce { params }))
             }
             Message::RequestSubscribe => {
-                let mut result = ExecutionResult::default();
+                let mut result = ExecutionOutcome::default();
                 if context.message_id.chain_id
                     == system_api::current_application_id().creation.chain_id
                 {
@@ -205,7 +205,7 @@ impl Contract for Activity {
                 self._finalize(activity_id).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Finalize { activity_id }))
             }
         }
@@ -216,9 +216,11 @@ impl Contract for Activity {
         _context: &CalleeContext,
         _call: Self::ApplicationCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<ApplicationCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
-        Ok(ApplicationCallResult::default())
+    ) -> Result<
+        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
+        Self::Error,
+    > {
+        Ok(ApplicationCallOutcome::default())
     }
 
     async fn handle_session_call(
@@ -227,7 +229,7 @@ impl Contract for Activity {
         _session: Self::SessionState,
         _call: Self::SessionCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
+    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
     {
         Err(ActivityError::SessionsNotSupported)
     }
@@ -252,16 +254,13 @@ impl Activity {
             title: params.title,
             content: params.content,
         };
-        self.call_application(true, Self::review_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::review_app_id()?, &call, vec![])?;
         Ok(())
     }
 
     async fn account_balance(&mut self, owner: Owner) -> Result<Amount, ActivityError> {
         let call = foundation::ApplicationCall::Balance { owner };
-        let (resp, _) = self
-            .call_application(true, Self::foundation_app_id()?, &call, vec![])
-            .await?;
+        let (resp, _) = self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
         Ok(resp)
     }
 
@@ -276,24 +275,19 @@ impl Activity {
             activity_host: owner,
             budget_amount: params.budget_amount,
         };
-        self.call_application(true, Self::review_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::review_app_id()?, &call, vec![])?;
         Ok(())
     }
 
     async fn activity_approved(&mut self, activity_id: u64) -> Result<bool, ActivityError> {
         let call = review::ApplicationCall::ActivityApproved { activity_id };
-        let (approved, _) = self
-            .call_application(true, Self::review_app_id()?, &call, vec![])
-            .await?;
+        let (approved, _) = self.call_application(true, Self::review_app_id()?, &call, vec![])?;
         Ok(approved)
     }
 
     async fn content_author(&mut self, cid: String) -> Result<Owner, ActivityError> {
         let call = feed::ApplicationCall::ContentAuthor { cid };
-        let (author, _) = self
-            .call_application(true, Self::feed_app_id()?, &call, vec![])
-            .await?;
+        let (author, _) = self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
         match author {
             Some(author) => Ok(author),
             _ => Err(ActivityError::InvalidContentAuthor),
@@ -315,8 +309,7 @@ impl Activity {
             reward_amount,
             voter_reward_percent,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -326,8 +319,7 @@ impl Activity {
             reward_type: foundation::RewardType::Activity,
             activity_id: Some(activity_id),
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
         Ok(())
     }
 

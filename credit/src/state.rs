@@ -1,19 +1,19 @@
 use std::cmp::Ordering;
 
+use async_graphql::SimpleObject;
 use credit::{AgeAmount, AgeAmounts, InitialState};
 use linera_sdk::{
     base::{Amount, ApplicationId, Owner, Timestamp},
     contract::system_api::current_system_time,
-    views::{MapView, RegisterView, SetView, ViewStorageContext},
+    views::{linera_views, MapView, RegisterView, RootView, SetView, ViewStorageContext},
 };
-use linera_views::views::{GraphQLView, RootView};
 use thiserror::Error;
 
-#[derive(RootView, GraphQLView)]
+#[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Credit {
-    pub initial_supply: RegisterView<Amount>,
-    pub balance: RegisterView<Amount>,
+    pub _initial_supply: RegisterView<Amount>,
+    pub _balance: RegisterView<Amount>,
     pub amount_alive_ms: RegisterView<u64>,
     pub balances: MapView<Owner, AgeAmounts>,
     pub spendables: MapView<Owner, Amount>,
@@ -27,26 +27,26 @@ impl Credit {
         if state.initial_supply.eq(&Amount::ZERO) {
             state.initial_supply = Amount::from_tokens(100000000);
         }
-        self.initial_supply.set(state.initial_supply);
-        self.balance.set(state.initial_supply);
+        self._initial_supply.set(state.initial_supply);
+        self._balance.set(state.initial_supply);
         self.amount_alive_ms.set(state.amount_alive_ms);
     }
 
     pub(crate) async fn initial_state(&self) -> Result<InitialState, StateError> {
         Ok(InitialState {
-            initial_supply: *self.initial_supply.get(),
+            initial_supply: *self._initial_supply.get(),
             amount_alive_ms: *self.amount_alive_ms.get(),
         })
     }
 
     pub(crate) async fn initial_supply(&self) -> Amount {
-        *self.initial_supply.get()
+        *self._initial_supply.get()
     }
 
     pub(crate) async fn balance(&self, owner: Option<Owner>) -> Amount {
         match owner {
             Some(owner) => self.balances.get(&owner).await.unwrap().unwrap().sum(),
-            None => *self.balance.get(),
+            None => *self._balance.get(),
         }
     }
 
@@ -62,11 +62,11 @@ impl Credit {
             }
         }
 
-        match self.balance.get().cmp(&amount) {
+        match self._balance.get().cmp(&amount) {
             Ordering::Less => {
                 log::error!(
                     "Here we should correct: supply balance {} reward amount {}",
-                    self.balance.get(),
+                    self._balance.get(),
                     amount
                 );
                 // return Err(StateError::InsufficientSupplyBalance)
@@ -74,7 +74,8 @@ impl Credit {
             _ => {}
         }
 
-        self.balance.set(self.balance.get().saturating_sub(amount));
+        self._balance
+            .set(self._balance.get().saturating_sub(amount));
 
         match self.balances.get(&owner).await {
             Ok(Some(mut amounts)) => {
@@ -124,8 +125,8 @@ impl Credit {
             amounts.amounts.retain(|amount| {
                 let expired = current_system_time().saturating_diff_micros(amount.expired) > 0;
                 if expired {
-                    self.balance
-                        .set(self.balance.get().saturating_add(amount.amount));
+                    self._balance
+                        .set(self._balance.get().saturating_add(amount.amount));
                     spendable = spendable.saturating_sub(amount.amount);
                 }
                 !expired

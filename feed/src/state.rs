@@ -1,13 +1,13 @@
+use async_graphql::SimpleObject;
 use feed::{Content, InitialState};
 use linera_sdk::{
     base::{Owner, Timestamp},
     contract::system_api::current_system_time,
-    views::{MapView, RegisterView, ViewStorageContext},
+    views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use linera_views::views::{GraphQLView, RootView};
 use thiserror::Error;
 
-#[derive(RootView, GraphQLView)]
+#[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Feed {
     pub contents: MapView<String, Content>,

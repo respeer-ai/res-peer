@@ -8,8 +8,8 @@ use credit::{ApplicationCall, Message, Operation};
 use linera_sdk::{
     base::{ChannelName, Destination, SessionId, WithContractAbi},
     contract::system_api,
-    ApplicationCallResult, CalleeContext, Contract, ExecutionResult, MessageContext,
-    OperationContext, SessionCallResult, ViewStateStorage,
+    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
+    OperationContext, SessionCallOutcome, ViewStateStorage,
 };
 use thiserror::Error;
 
@@ -30,42 +30,42 @@ impl Contract for Credit {
         &mut self,
         _context: &OperationContext,
         state: Self::InitializationArgument,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         self.initialize_credit(state).await;
-        Ok(ExecutionResult::default())
+        Ok(ExecutionOutcome::default())
     }
 
     async fn execute_operation(
         &mut self,
         _context: &OperationContext,
         operation: Self::Operation,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match operation {
-            Operation::Liquidate => Ok(ExecutionResult::default().with_authenticated_message(
+            Operation::Liquidate => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::Liquidate,
             )),
-            Operation::SetRewardCallers { application_ids } => Ok(ExecutionResult::default()
+            Operation::SetRewardCallers { application_ids } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::SetRewardCallers { application_ids },
                 )),
-            Operation::SetTransferCallers { application_ids } => Ok(ExecutionResult::default()
+            Operation::SetTransferCallers { application_ids } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::SetTransferCallers { application_ids },
                 )),
-            Operation::Transfer { from, to, amount } => Ok(ExecutionResult::default()
+            Operation::Transfer { from, to, amount } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Transfer { from, to, amount },
                 )),
-            Operation::TransferExt { to, amount } => Ok(ExecutionResult::default()
+            Operation::TransferExt { to, amount } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::TransferExt { to, amount },
                 )),
-            Operation::RequestSubscribe => Ok(ExecutionResult::default()
+            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::RequestSubscribe,
@@ -77,23 +77,26 @@ impl Contract for Credit {
         &mut self,
         context: &MessageContext,
         message: Self::Message,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match message {
             Message::InitialState { state } => {
                 self.initialize_credit(state).await;
-                Ok(ExecutionResult::default())
+                Ok(ExecutionOutcome::default())
             }
             Message::Liquidate => {
                 self.liquidate().await;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(dest, Message::Liquidate))
+                Ok(
+                    ExecutionOutcome::default()
+                        .with_authenticated_message(dest, Message::Liquidate),
+                )
             }
             Message::Reward { owner, amount } => {
                 self.reward(owner, amount).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Reward { owner, amount }))
             }
             Message::SetRewardCallers { application_ids } => {
@@ -103,7 +106,7 @@ impl Contract for Credit {
                 self.set_reward_callers(application_ids.clone()).await;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::SetRewardCallers { application_ids },
                 ))
@@ -115,7 +118,7 @@ impl Contract for Credit {
                 self.set_transfer_callers(application_ids.clone()).await;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::SetTransferCallers { application_ids },
                 ))
@@ -124,7 +127,7 @@ impl Contract for Credit {
                 self.transfer(from, to, amount).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Transfer { from, to, amount }))
             }
             Message::TransferExt { to, amount } => {
@@ -132,11 +135,11 @@ impl Contract for Credit {
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::TransferExt { to, amount }))
             }
             Message::RequestSubscribe => {
-                let mut result = ExecutionResult::default();
+                let mut result = ExecutionOutcome::default();
                 if context.message_id.chain_id
                     == system_api::current_application_id().creation.chain_id
                 {
@@ -162,22 +165,24 @@ impl Contract for Credit {
         _context: &CalleeContext,
         call: Self::ApplicationCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<ApplicationCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
+    ) -> Result<
+        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
+        Self::Error,
+    > {
         let execution_result = match call {
-            ApplicationCall::Reward { owner, amount } => ExecutionResult::default()
+            ApplicationCall::Reward { owner, amount } => ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Reward { owner, amount },
                 ),
-            ApplicationCall::Transfer { from, to, amount } => ExecutionResult::default()
+            ApplicationCall::Transfer { from, to, amount } => ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Transfer { from, to, amount },
                 ),
         };
-        let mut result = ApplicationCallResult::default();
-        result.execution_result = execution_result;
+        let mut result = ApplicationCallOutcome::default();
+        result.execution_outcome = execution_result;
         Ok(result)
     }
 
@@ -187,7 +192,7 @@ impl Contract for Credit {
         _session: Self::SessionState,
         _call: Self::SessionCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
+    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
     {
         Err(ContractError::SessionsNotSupported)
     }

@@ -10,8 +10,8 @@ use foundation::{ApplicationCall, Message, Operation, RewardType};
 use linera_sdk::{
     base::{Amount, ChannelName, Destination, Owner, SessionId, WithContractAbi},
     contract::system_api,
-    ApplicationCallResult, CalleeContext, Contract, ExecutionResult, MessageContext,
-    OperationContext, SessionCallResult, ViewStateStorage,
+    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
+    OperationContext, SessionCallOutcome, ViewStateStorage,
 };
 use thiserror::Error;
 
@@ -32,23 +32,23 @@ impl Contract for Foundation {
         &mut self,
         _context: &OperationContext,
         state: Self::InitializationArgument,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         self.initialize_foundation(state).await?;
-        Ok(ExecutionResult::default())
+        Ok(ExecutionOutcome::default())
     }
 
     async fn execute_operation(
         &mut self,
         _context: &OperationContext,
         operation: Self::Operation,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match operation {
-            Operation::UserDeposit { amount } => Ok(ExecutionResult::default()
+            Operation::UserDeposit { amount } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::UserDeposit { amount },
                 )),
-            Operation::RequestSubscribe => Ok(ExecutionResult::default()
+            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::RequestSubscribe,
@@ -60,22 +60,22 @@ impl Contract for Foundation {
         &mut self,
         context: &MessageContext,
         message: Self::Message,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match message {
             Message::InitialState { state } => {
                 self.initialize_foundation(state).await?;
-                Ok(ExecutionResult::default())
+                Ok(ExecutionOutcome::default())
             }
             Message::UserDeposit { amount } => {
                 self.user_deposit(context.authenticated_signer.unwrap(), amount)
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::UserDeposit { amount }))
             }
             Message::RequestSubscribe => {
-                let mut result = ExecutionResult::default();
+                let mut result = ExecutionOutcome::default();
                 if context.message_id.chain_id
                     == system_api::current_application_id().creation.chain_id
                 {
@@ -97,7 +97,7 @@ impl Contract for Foundation {
                 self.deposit(from, amount).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Deposit { from, amount }))
             }
             Message::Lock {
@@ -107,7 +107,7 @@ impl Contract for Foundation {
                 self.lock(activity_id, amount).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::Lock {
                         activity_id,
@@ -133,7 +133,7 @@ impl Contract for Foundation {
                 self.reward(_reward_user, reward_type, activity_id).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::Reward {
                         reward_user,
@@ -146,7 +146,7 @@ impl Contract for Foundation {
                 self.transfer(from, to, amount).await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Transfer { from, to, amount }))
             }
             Message::ActivityRewards {
@@ -166,7 +166,7 @@ impl Contract for Foundation {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::ActivityRewards {
                         activity_id,
@@ -185,10 +185,12 @@ impl Contract for Foundation {
         _context: &CalleeContext,
         call: Self::ApplicationCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<ApplicationCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
+    ) -> Result<
+        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
+        Self::Error,
+    > {
         let execution_result = match call {
-            ApplicationCall::Deposit { from, amount } => ExecutionResult::default()
+            ApplicationCall::Deposit { from, amount } => ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Deposit { from, amount },
@@ -196,7 +198,7 @@ impl Contract for Foundation {
             ApplicationCall::Lock {
                 activity_id,
                 amount,
-            } => ExecutionResult::default().with_authenticated_message(
+            } => ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::Lock {
                     activity_id,
@@ -207,7 +209,7 @@ impl Contract for Foundation {
                 reward_user,
                 reward_type,
                 activity_id,
-            } => ExecutionResult::default().with_authenticated_message(
+            } => ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::Reward {
                     reward_user,
@@ -215,14 +217,14 @@ impl Contract for Foundation {
                     activity_id,
                 },
             ),
-            ApplicationCall::Transfer { from, to, amount } => ExecutionResult::default()
+            ApplicationCall::Transfer { from, to, amount } => ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Transfer { from, to, amount },
                 ),
             ApplicationCall::Balance { owner } => {
                 let balance = self.balance(owner).await?;
-                let mut result = ApplicationCallResult::default();
+                let mut result = ApplicationCallOutcome::default();
                 result.value = balance;
                 return Ok(result);
             }
@@ -232,7 +234,7 @@ impl Contract for Foundation {
                 voter_users,
                 reward_amount,
                 voter_reward_percent,
-            } => ExecutionResult::default().with_authenticated_message(
+            } => ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::ActivityRewards {
                     activity_id,
@@ -243,8 +245,8 @@ impl Contract for Foundation {
                 },
             ),
         };
-        let mut result = ApplicationCallResult::default();
-        result.execution_result = execution_result;
+        let mut result = ApplicationCallOutcome::default();
+        result.execution_outcome = execution_result;
         Ok(result)
     }
 
@@ -254,7 +256,7 @@ impl Contract for Foundation {
         _session: Self::SessionState,
         _call: Self::SessionCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
+    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
     {
         Err(ContractError::SessionsNotSupported)
     }

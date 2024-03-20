@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 
+use async_graphql::SimpleObject;
 use linera_sdk::{
     base::{Amount, ArithmeticError, Owner},
     contract::system_api,
-    views::{MapView, RegisterView, ViewStorageContext},
+    views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use linera_views::views::{GraphQLView, RootView};
 use market::{Collection, InitialState, NFT};
 use thiserror::Error;
 
-#[derive(RootView, GraphQLView)]
+#[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
 pub struct Market {
     pub publisher_collections: MapView<Owner, Vec<u64>>,
     /// owner, collection_id, token_id
-    pub assets: MapView<Owner, HashMap<u64, Vec<u16>>>,
+    pub _assets: MapView<Owner, HashMap<u64, Vec<u16>>>,
     pub token_owners: MapView<u16, HashMap<u64, Owner>>,
     pub token_publishers: MapView<u16, HashMap<u64, Owner>>,
     pub credits_per_linera: RegisterView<Amount>,
@@ -23,7 +23,7 @@ pub struct Market {
     /// If user want to buy asset here, they should deposit balance firstly, then buy
     /// They balance could be withdrawed
     pub token_ids: MapView<u64, u16>,
-    pub collections: MapView<u64, Collection>,
+    pub _collections: MapView<u64, Collection>,
     pub collection_uris: RegisterView<Vec<String>>,
     pub max_credits_percent: RegisterView<u8>,
     pub trade_fee_percent: RegisterView<u8>,
@@ -57,7 +57,7 @@ impl Market {
     }
 
     pub(crate) async fn assets(&self, owner: Owner) -> HashMap<u64, Vec<u16>> {
-        self.assets.get(&owner).await.unwrap().unwrap()
+        self._assets.get(&owner).await.unwrap().unwrap()
     }
 
     pub(crate) async fn create_collection(
@@ -95,7 +95,9 @@ impl Market {
                     .unwrap();
             }
         }
-        self.collections.insert(&collection_id, collection).unwrap();
+        self._collections
+            .insert(&collection_id, collection)
+            .unwrap();
         self.token_ids.insert(&collection_id, 1000).unwrap();
         self.collection_id.set(self.collection_id.get() + 1);
         Ok(())
@@ -124,7 +126,7 @@ impl Market {
         name: String,
     ) -> Result<(), StateError> {
         self.validate_collection_owner(collection_id, owner).await?;
-        match self.collections.get(&collection_id).await {
+        match self._collections.get(&collection_id).await {
             Ok(Some(mut collection)) => {
                 if uri_index >= collection.uris.len() as u16 {
                     return Err(StateError::InvalidUriIndex);
@@ -145,7 +147,7 @@ impl Market {
                                 name,
                             },
                         );
-                        self.collections.insert(&collection_id, collection)?;
+                        self._collections.insert(&collection_id, collection)?;
                         self.token_ids.insert(&collection_id, token_id + 1)?;
                         match self.token_owners.get(&token_id).await {
                             Ok(Some(mut collection_owners)) => {
@@ -186,7 +188,7 @@ impl Market {
         collection_id: u64,
         token_id: u16,
     ) -> Result<(), StateError> {
-        match self.collections.get(&collection_id).await {
+        match self._collections.get(&collection_id).await {
             Ok(Some(collection)) => match collection.nfts.get(&token_id) {
                 Some(nft) => {
                     if !nft.on_sale {
@@ -206,7 +208,7 @@ impl Market {
                     let mut token_owners = token_owners.clone();
                     token_owners.insert(collection_id, buyer);
                     self.token_owners.insert(&token_id, token_owners)?;
-                    match self.assets.get(&owner).await {
+                    match self._assets.get(&owner).await {
                         Ok(Some(collections)) => {
                             let collections = collections.clone();
                             match collections.get(&collection_id) {
@@ -215,19 +217,19 @@ impl Market {
                                     token_ids.push(token_id);
                                     let mut collections = collections.clone();
                                     collections.insert(collection_id, token_ids);
-                                    self.assets.insert(&owner, collections)?;
+                                    self._assets.insert(&owner, collections)?;
                                 }
                                 None => {
                                     let mut collections = collections.clone();
                                     collections.insert(collection_id, vec![token_id]);
-                                    self.assets.insert(&owner, collections)?;
+                                    self._assets.insert(&owner, collections)?;
                                 }
                             }
                         }
                         _ => {
                             let mut collections = HashMap::default();
                             collections.insert(collection_id, vec![token_id]);
-                            self.assets.insert(&owner, collections)?;
+                            self._assets.insert(&owner, collections)?;
                         }
                     }
                 }
@@ -258,7 +260,7 @@ impl Market {
         collection_id: u64,
         token_id: u16,
     ) -> Result<Amount, StateError> {
-        match self.collections.get(&collection_id).await {
+        match self._collections.get(&collection_id).await {
             Ok(Some(collection)) => match collection.nfts.get(&token_id) {
                 Some(nft) => match nft.price {
                     Some(price) => Ok(price),
@@ -285,13 +287,13 @@ impl Market {
                 if self.nft_owner(collection_id, token_id).await.unwrap() != owner {
                     return Err(StateError::NotTokenOwner);
                 }
-                match self.collections.get(&collection_id).await {
+                match self._collections.get(&collection_id).await {
                     Ok(Some(mut collection)) => match collection.nfts.get(&token_id) {
                         Some(nft) => {
                             let mut _nft = nft.clone();
                             _nft.price = Some(price);
                             collection.nfts.insert(nft.token_id, _nft);
-                            self.collections.insert(&collection_id, collection)?
+                            self._collections.insert(&collection_id, collection)?
                         }
                         _ => return Err(StateError::TokenIDNotExists),
                     },
@@ -306,10 +308,10 @@ impl Market {
                 {
                     return Err(StateError::NotCollectionOwner);
                 }
-                match self.collections.get(&collection_id).await {
+                match self._collections.get(&collection_id).await {
                     Ok(Some(mut collection)) => {
                         collection.price = Some(price);
-                        self.collections.insert(&collection_id, collection)?
+                        self._collections.insert(&collection_id, collection)?
                     }
                     _ => return Err(StateError::CollectionNotExists),
                 }
@@ -327,13 +329,13 @@ impl Market {
         if self.nft_owner(collection_id, token_id).await.unwrap() != owner {
             return Err(StateError::NotTokenOwner);
         }
-        match self.collections.get(&collection_id).await {
+        match self._collections.get(&collection_id).await {
             Ok(Some(mut collection)) => match collection.nfts.get(&token_id) {
                 Some(nft) => {
                     let mut _nft = nft.clone();
                     _nft.on_sale = true;
                     collection.nfts.insert(nft.token_id, _nft);
-                    self.collections.insert(&collection_id, collection)?
+                    self._collections.insert(&collection_id, collection)?
                 }
                 _ => return Err(StateError::TokenIDNotExists),
             },
@@ -351,13 +353,13 @@ impl Market {
         if self.nft_owner(collection_id, token_id).await.unwrap() != owner {
             return Err(StateError::NotTokenOwner);
         }
-        match self.collections.get(&collection_id).await {
+        match self._collections.get(&collection_id).await {
             Ok(Some(mut collection)) => match collection.nfts.get(&token_id) {
                 Some(nft) => {
                     let mut _nft = nft.clone();
                     _nft.on_sale = false;
                     collection.nfts.insert(nft.token_id, _nft);
-                    self.collections.insert(&collection_id, collection)?
+                    self._collections.insert(&collection_id, collection)?
                 }
                 _ => return Err(StateError::TokenIDNotExists),
             },
@@ -391,15 +393,15 @@ impl Market {
     }
 
     pub(crate) async fn trading_fee(&self, amount: Amount) -> Result<Amount, StateError> {
-        Ok(Amount::from_atto(
-            Amount::from_atto(*self.trade_fee_percent.get() as u128)
+        Ok(Amount::from_attos(
+            Amount::from_attos(*self.trade_fee_percent.get() as u128)
                 .saturating_mul(amount.into())
-                .saturating_div(Amount::from_atto(100 as u128)),
+                .saturating_div(Amount::from_attos(100 as u128)),
         ))
     }
 
     pub(crate) async fn credits_to_tokens(&self, credits: Amount) -> Result<Amount, StateError> {
-        Ok(Amount::from_atto(
+        Ok(Amount::from_attos(
             credits
                 .saturating_mul(Amount::ONE.into())
                 .saturating_div(*self.credits_per_linera.get()),

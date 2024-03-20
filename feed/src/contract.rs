@@ -12,8 +12,8 @@ use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, Owner, SessionId, WithContractAbi},
     contract::system_api::{self, current_system_time},
-    ApplicationCallResult, CalleeContext, Contract, ExecutionResult, MessageContext,
-    OperationContext, SessionCallResult, ViewStateStorage,
+    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
+    OperationContext, SessionCallOutcome, ViewStateStorage,
 };
 use thiserror::Error;
 
@@ -34,32 +34,32 @@ impl Contract for Feed {
         &mut self,
         _context: &OperationContext,
         state: Self::InitializationArgument,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         self.initialize_feed(state).await;
-        Ok(ExecutionResult::default())
+        Ok(ExecutionOutcome::default())
     }
 
     async fn execute_operation(
         &mut self,
         _context: &OperationContext,
         operation: Self::Operation,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match operation {
-            Operation::Like { cid } => Ok(ExecutionResult::default().with_authenticated_message(
+            Operation::Like { cid } => Ok(ExecutionOutcome::default().with_authenticated_message(
                 system_api::current_application_id().creation.chain_id,
                 Message::Like { cid },
             )),
-            Operation::Dislike { cid } => Ok(ExecutionResult::default()
+            Operation::Dislike { cid } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Dislike { cid },
                 )),
-            Operation::Tip { cid, amount } => Ok(ExecutionResult::default()
+            Operation::Tip { cid, amount } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Tip { cid, amount },
                 )),
-            Operation::RequestSubscribe => Ok(ExecutionResult::default()
+            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::RequestSubscribe,
@@ -71,7 +71,7 @@ impl Contract for Feed {
         &mut self,
         context: &MessageContext,
         message: Self::Message,
-    ) -> Result<ExecutionResult<Self::Message>, Self::Error> {
+    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
         match message {
             Message::Like { cid } => {
                 self.like(
@@ -82,7 +82,7 @@ impl Contract for Feed {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Like { cid }))
             }
             Message::Dislike { cid } => {
@@ -94,13 +94,13 @@ impl Contract for Feed {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Dislike { cid }))
             }
             Message::Tip { cid, amount } => {
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default()
+                Ok(ExecutionOutcome::default()
                     .with_authenticated_message(dest, Message::Tip { cid, amount }))
             }
             Message::Publish {
@@ -120,7 +120,7 @@ impl Contract for Feed {
                 .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::Publish {
                         cid,
@@ -149,7 +149,7 @@ impl Contract for Feed {
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::Recommend {
                         cid,
@@ -177,7 +177,7 @@ impl Contract for Feed {
                     .await?;
                 let dest =
                     Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionResult::default().with_authenticated_message(
+                Ok(ExecutionOutcome::default().with_authenticated_message(
                     dest,
                     Message::Comment {
                         cid,
@@ -188,7 +188,7 @@ impl Contract for Feed {
                 ))
             }
             Message::RequestSubscribe => {
-                let mut result = ExecutionResult::default();
+                let mut result = ExecutionOutcome::default();
                 if context.message_id.chain_id
                     == system_api::current_application_id().creation.chain_id
                 {
@@ -208,16 +208,18 @@ impl Contract for Feed {
         _context: &CalleeContext,
         call: Self::ApplicationCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<ApplicationCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
+    ) -> Result<
+        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
+        Self::Error,
+    > {
         match call {
             ApplicationCall::Recommend {
                 cid,
                 reason_cid,
                 reason,
-            } => Ok(ApplicationCallResult {
+            } => Ok(ApplicationCallOutcome {
                 value: None,
-                execution_result: ExecutionResult::default().with_authenticated_message(
+                execution_outcome: ExecutionOutcome::default().with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Recommend {
                         cid,
@@ -232,9 +234,9 @@ impl Contract for Feed {
                 comment_cid,
                 comment,
                 commentor,
-            } => Ok(ApplicationCallResult {
+            } => Ok(ApplicationCallOutcome {
                 value: None,
-                execution_result: ExecutionResult::default().with_authenticated_message(
+                execution_outcome: ExecutionOutcome::default().with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Comment {
                         cid,
@@ -250,9 +252,9 @@ impl Contract for Feed {
                 title,
                 content,
                 author,
-            } => Ok(ApplicationCallResult {
+            } => Ok(ApplicationCallOutcome {
                 value: None,
-                execution_result: ExecutionResult::default().with_authenticated_message(
+                execution_outcome: ExecutionOutcome::default().with_authenticated_message(
                     system_api::current_application_id().creation.chain_id,
                     Message::Publish {
                         cid,
@@ -263,9 +265,9 @@ impl Contract for Feed {
                 ),
                 create_sessions: vec![],
             }),
-            ApplicationCall::ContentAuthor { cid } => Ok(ApplicationCallResult {
+            ApplicationCall::ContentAuthor { cid } => Ok(ApplicationCallOutcome {
                 value: Some(self.content_author(cid).await?),
-                execution_result: ExecutionResult::default(),
+                execution_outcome: ExecutionOutcome::default(),
                 create_sessions: vec![],
             }),
         }
@@ -277,7 +279,7 @@ impl Contract for Feed {
         _session: Self::SessionState,
         _call: Self::SessionCall,
         _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallResult<Self::Message, Self::Response, Self::SessionState>, Self::Error>
+    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
     {
         Err(ContractError::SessionsNotSupported)
     }
@@ -294,8 +296,7 @@ impl Feed {
 
     async fn reward_credits(&mut self, owner: Owner, amount: Amount) -> Result<(), ContractError> {
         let call = credit::ApplicationCall::Reward { owner, amount };
-        self.call_application(true, Self::credit_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::credit_app_id()?, &call, vec![])?;
         Ok(())
     }
 
@@ -305,8 +306,7 @@ impl Feed {
             reward_type: foundation::RewardType::Publish,
             activity_id: None,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])
-            .await?;
+        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
         Ok(())
     }
 
