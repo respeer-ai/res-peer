@@ -21,7 +21,6 @@ const account = computed(() => user.account)
 const router = useRouter()
 const foundation = useFoundationStore()
 const estimatedReward = computed(() => Number(foundation.reviewRewardBalance) / foundation.reviewRewardFactor)
-const port = computed(() => Cookies.get('service-port'))
 
 const columns = computed(() => [
   {
@@ -56,7 +55,8 @@ const onAssetClick = (asset: Asset) => {
     path: '/reviewasset',
     query: {
       cid: asset.cid,
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }

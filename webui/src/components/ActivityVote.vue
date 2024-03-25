@@ -200,6 +200,7 @@ const onContentClick = (cid: string) => {
     path: '/content',
     query: {
       cid,
+      host: Cookies.get('service-host'),
       port: Cookies.get('service-port')
     }
   })

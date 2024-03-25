@@ -136,7 +136,6 @@ const collection = useCollectionStore()
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 const router = useRouter()
-const port = computed(() => Cookies.get('service-port'))
 
 const userAvatar = (account: string) => {
   const ids = collection.avatars.get(account)
@@ -228,7 +227,8 @@ const onCommentClick = (cid: string) => {
       path: '/content',
       query: {
         cid,
-        port: port.value
+        host: Cookies.get('service-host'),
+        port: Cookies.get('service-port')
       }
     })
     return
@@ -241,7 +241,8 @@ const onTitleClick = (cid: string) => {
     path: '/content',
     query: {
       cid,
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }

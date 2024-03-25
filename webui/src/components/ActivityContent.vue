@@ -247,6 +247,7 @@ const onRegisterClick = () => {
   void router.push({
     path: '/activity/register',
     query: {
+      host: Cookies.get('service-host'),
       port: Cookies.get('service-port'),
       activityId: activity.value?.id
     }
@@ -257,6 +258,7 @@ const onVoteClick = () => {
   void router.push({
     path: '/activity/vote',
     query: {
+      host: Cookies.get('service-host'),
       port: Cookies.get('service-port'),
       activityId: activity.value?.id
     }

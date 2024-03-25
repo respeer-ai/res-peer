@@ -73,7 +73,6 @@ import { useRouter } from 'vue-router'
 const collection = useCollectionStore()
 const collections = computed(() => Array.from(collection.collections.values()).filter((el) => collection.nftsByCollectionID(el.collectionId).length > 0))
 const collectionBanners = ref(new Map<number, string>())
-const port = computed(() => Cookies.get('service-port'))
 
 watch(collections, () => {
   collections.value.forEach((el) => {
@@ -91,7 +90,8 @@ const onCollectionClick = (_collection: Collection) => {
     path: '/collection',
     query: {
       collectionId: _collection.collectionId,
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }

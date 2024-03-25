@@ -100,7 +100,6 @@ const account = computed(() => user.account)
 const reviewed = computed(() => review.assetReviewed(cid.value, account.value))
 const _review = computed(() => review.assetReview(cid.value, account.value))
 const reason = ref(_review.value?.reason || 'I supper like this art not only it\'s about Linera, but also it\'s created by KK.' + uuidv4())
-const port = computed(() => Cookies.get('service-port'))
 
 const onApproveClick = async () => {
   if (!asset.value || !reason.value.length) {
@@ -128,7 +127,8 @@ const onApproveClick = async () => {
     path: '/dashboard',
     query: {
       tab: 'review-assets',
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }
@@ -159,7 +159,8 @@ const onRejectClick = async () => {
     path: '/dashboard',
     query: {
       tab: 'review-assets',
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }
@@ -169,7 +170,8 @@ const onBackClick = () => {
     path: '/dashboard',
     query: {
       tab: 'review-assets',
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }

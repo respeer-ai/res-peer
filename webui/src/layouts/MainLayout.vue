@@ -164,9 +164,11 @@ const tab = ref('feed')
 
 interface Query {
   port: number
+  host: string
 }
 
 const port = ref((route.query as unknown as Query).port || constants.port)
+const host = ref((route.query as unknown as Query).host || constants.host)
 
 const onGithubClick = (uri: string) => {
   window.open(uri)
@@ -176,6 +178,7 @@ const onDashboardClick = () => {
   void router.push({
     path: '/dashboard',
     query: {
+      host: host.value,
       port: port.value
     }
   })
@@ -185,6 +188,7 @@ const onActivityClick = () => {
   void router.push({
     path: '/activities',
     query: {
+      host: host.value,
       port: port.value
     }
   })
@@ -194,6 +198,7 @@ const onLogoClick = () => {
   void router.push({
     path: '/',
     query: {
+      host: host.value,
       port: port.value
     }
   })
@@ -214,6 +219,7 @@ const onLoginConfirmClick = () => {
 }
 onBeforeMount(() => {
   Cookies.set('service-port', port.value.toString())
+  Cookies.set('service-host', host.value.toString())
 })
 onMounted(() => {
   account.value = Cookies.get('account')
@@ -230,6 +236,7 @@ const onNFTMarketClick = () => {
   void router.push({
     path: '/market',
     query: {
+      host: host.value,
       port: port.value
     }
   })

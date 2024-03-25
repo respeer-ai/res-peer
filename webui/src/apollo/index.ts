@@ -9,9 +9,10 @@ import { Cookies } from 'quasar'
 
 export /* async */ function getClientOptions (/* {app, router, ...}, options?: Partial<BootFileParams<unknown>> */) {
   const port = Cookies.get('service-port') || constants.port
+  const host = Cookies.get('service-host') || constants.host
   const wsLink = new GraphQLWsLink(
     createClient({
-      url: 'ws://localhost:' + port + '/ws'
+      url: 'ws://' + host + ':' + port + '/ws'
     })
   )
 
@@ -20,21 +21,21 @@ export /* async */ function getClientOptions (/* {app, router, ...}, options?: P
       const chainId = operation.variables.chainId as string
       switch (operation.variables.endpoint) {
         case 'feed':
-          return 'http://localhost:' + port + '/chains/' + chainId + '/applications/' + constants.Apps.feedApp
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.feedApp
         case 'credit':
-          return 'http://localhost:' + port + '/chains/' + chainId + '/applications/' + constants.Apps.creditApp
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.creditApp
         case 'market':
-          return 'http://localhost:' + port + '/chains/' + chainId + '/applications/' + constants.Apps.marketApp
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.marketApp
         case 'review':
-          return 'http://localhost:' + port + '/chains/' + chainId + '/applications/' + constants.Apps.reviewApp
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.reviewApp
         case 'foundation':
-          return 'http://localhost:' + port + '/chains/' + chainId + '/applications/' + constants.Apps.foundationApp
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.foundationApp
         case 'activity':
-          return 'http://localhost:' + port + '/chains/' + chainId + '/applications/' + constants.Apps.activityApp
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.activityApp
         case 'main':
-          return 'http://localhost:' + port
+          return 'http://' + host + ':' + port
         default:
-          return 'http://localhost:' + port
+          return 'http://' + host + ':' + port
       }
     }
   })

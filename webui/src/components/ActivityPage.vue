@@ -74,14 +74,13 @@ const columns = computed(() => [
   }
 ])
 
-const port = computed(() => Cookies.get('service-port'))
-
 const router = useRouter()
 const onCreateActivityClick = () => {
   void router.push({
     path: '/create/activity',
     query: {
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }
@@ -90,7 +89,8 @@ const onActivityClick = (activity: Activity) => {
   void router.push({
     path: '/create/activity',
     query: {
-      port: port.value,
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port'),
       activityId: activity.id
     }
   })

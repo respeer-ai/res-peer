@@ -22,7 +22,6 @@ const account = computed(() => user.account)
 const router = useRouter()
 const foundation = useFoundationStore()
 const estimatedReward = computed(() => Number(foundation.reviewRewardBalance) / foundation.reviewRewardFactor)
-const port = computed(() => Cookies.get('service-port'))
 const activity = useActivityStore()
 
 const columns = computed(() => [
@@ -58,7 +57,8 @@ const onActivityClick = (activity: Activity) => {
     path: '/reviewactivity',
     query: {
       activityId: activity.activityId,
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }

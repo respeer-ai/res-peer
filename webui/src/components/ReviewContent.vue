@@ -85,7 +85,6 @@ const account = computed(() => user.account)
 const reviewed = computed(() => review.contentReviewed(cid.value, account.value))
 const _review = computed(() => review.contentReview(cid.value, account.value))
 const reason = ref(_review.value?.reason || 'I supper like this article not only it\'s about Linera, but also it\'s write by KK.' + uuidv4())
-const port = computed(() => Cookies.get('service-port'))
 
 const onApproveClick = async () => {
   if (!content.value || !reason.value.length) {
@@ -117,7 +116,8 @@ const onApproveClick = async () => {
   void router.push({
     path: '/',
     query: {
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }
@@ -148,7 +148,8 @@ const onRejectClick = async () => {
     path: '/dashboard',
     query: {
       tab: 'review-contents',
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }
@@ -158,7 +159,8 @@ const onBackClick = () => {
     path: '/dashboard',
     query: {
       tab: 'review-contents',
-      port: port.value
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port')
     }
   })
 }

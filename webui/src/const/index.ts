@@ -14,3 +14,4 @@ export const appDeployChain = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad55
 
 /// Port should be set with different service
 export const port = '9080'
+export const host = 'localhost'
