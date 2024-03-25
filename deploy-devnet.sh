@@ -28,8 +28,9 @@ for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
   linera --with-wallet $i wallet init --with-new-chain --faucet https://faucet.devnet.linera.net
 done
 
-print $'\U01F4AB' $YELLOW " Deploying Credit application ..."
+print $'\U01F4AB' $YELLOW " Deploying Credit bytecode ..."
 credit_bid=`linera --with-wallet 0 publish-bytecode ./target/wasm32-unknown-unknown/release/credit_{contract,service}.wasm`
+print $'\U01F4AB' $YELLOW " Creating Credit application ..."
 credit_appid=`linera --with-wallet 0 create-application $credit_bid --json-argument '{"initial_supply":"99999999999999.0","amount_alive_ms":600000}'`
 print $'\U01f499' $LIGHTGREEN " Credit application deployed"
 echo -e "    Bytecode ID:    $BLUE$credit_bid$NC"
