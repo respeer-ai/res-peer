@@ -17,10 +17,6 @@ impl ContractAbi for ActivityAbi {
     type Parameters = ActivityParameters;
     type InitializationArgument = ();
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ();
-    type SessionCall = ();
-    type SessionState = ();
     type Response = ();
 }
 

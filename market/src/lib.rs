@@ -10,10 +10,6 @@ impl ContractAbi for MarketAbi {
     type Parameters = MarketParameters;
     type InitializationArgument = InitialState;
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ApplicationCall;
-    type SessionCall = ();
-    type SessionState = ();
     type Response = ();
 }
 
@@ -23,7 +19,7 @@ impl ServiceAbi for MarketAbi {
     type QueryResponse = Response;
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MarketParameters {
     pub credit_app_id: ApplicationId<credit::CreditAbi>,
     pub foundation_app_id: ApplicationId<foundation::FoundationAbi>,

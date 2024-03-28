@@ -1,10 +1,9 @@
 use std::cmp::Ordering;
 
 use async_graphql::SimpleObject;
-use credit::{AgeAmount, AgeAmounts, InitialState};
+use credit::{AgeAmount, AgeAmounts, InitializationArgument};
 use linera_sdk::{
     base::{Amount, ApplicationId, Owner, Timestamp},
-    contract::system_api::current_system_time,
     views::{linera_views, MapView, RegisterView, RootView, SetView, ViewStorageContext},
 };
 use thiserror::Error;
@@ -32,7 +31,9 @@ impl Credit {
         self.amount_alive_ms.set(state.amount_alive_ms);
     }
 
-    pub(crate) async fn initial_state(&self) -> Result<InitialState, StateError> {
+    pub(crate) async fn initialization_argument(
+        &self,
+    ) -> Result<InitializationArgument, StateError> {
         Ok(InitialState {
             initial_supply: *self._initial_supply.get(),
             amount_alive_ms: *self.amount_alive_ms.get(),
@@ -50,7 +51,12 @@ impl Credit {
         }
     }
 
-    pub(crate) async fn reward(&mut self, owner: Owner, amount: Amount) -> Result<(), StateError> {
+    pub(crate) async fn reward(
+        &mut self,
+        owner: Owner,
+        amount: Amount,
+        now: Timestamp,
+    ) -> Result<(), StateError> {
         match self.spendables.get(&owner).await {
             Ok(Some(spendable)) => {
                 self.spendables
@@ -82,9 +88,7 @@ impl Credit {
                 amounts.amounts.push(AgeAmount {
                     amount,
                     expired: Timestamp::from(
-                        current_system_time()
-                            .micros()
-                            .saturating_add(*self.amount_alive_ms.get()),
+                        now.micros().saturating_add(*self.amount_alive_ms.get()),
                     ),
                 });
                 match self.balances.insert(&owner, amounts) {
@@ -98,9 +102,7 @@ impl Credit {
                     amounts: vec![AgeAmount {
                         amount,
                         expired: Timestamp::from(
-                            current_system_time()
-                                .micros()
-                                .saturating_add(*self.amount_alive_ms.get()),
+                            now.micros().saturating_add(*self.amount_alive_ms.get()),
                         ),
                     }],
                 },
@@ -111,7 +113,7 @@ impl Credit {
         }
     }
 
-    pub(crate) async fn liquidate(&mut self) {
+    pub(crate) async fn liquidate(&mut self, now: Timestamp) {
         let owners = self.balances.indices().await.unwrap();
         for owner in owners {
             let mut amounts = match self.balances.get(&owner).await {
@@ -123,7 +125,7 @@ impl Credit {
                 _ => continue,
             };
             amounts.amounts.retain(|amount| {
-                let expired = current_system_time().saturating_diff_micros(amount.expired) > 0;
+                let expired = now.saturating_diff_micros(amount.expired) > 0;
                 if expired {
                     self._balance
                         .set(self._balance.get().saturating_add(amount.amount));
@@ -153,6 +155,7 @@ impl Credit {
         from: Owner,
         to: Owner,
         amount: Amount,
+        now: Timestamp,
     ) -> Result<(), StateError> {
         match self.spendables.get(&from).await {
             Ok(Some(spendable)) => match spendable.cmp(&amount) {
@@ -174,8 +177,7 @@ impl Credit {
                                     remain = Some(AgeAmount {
                                         amount: result,
                                         expired: Timestamp::from(
-                                            current_system_time()
-                                                .micros()
+                                            now.micros()
                                                 .saturating_add(*self.amount_alive_ms.get()),
                                         ),
                                     })
@@ -196,9 +198,7 @@ impl Credit {
                             amounts.amounts.push(AgeAmount {
                                 amount,
                                 expired: Timestamp::from(
-                                    current_system_time()
-                                        .micros()
-                                        .saturating_add(*self.amount_alive_ms.get()),
+                                    now.micros().saturating_add(*self.amount_alive_ms.get()),
                                 ),
                             });
                             self.balances.insert(&to, amounts).unwrap();
@@ -211,8 +211,7 @@ impl Credit {
                                     amounts: vec![AgeAmount {
                                         amount,
                                         expired: Timestamp::from(
-                                            current_system_time()
-                                                .micros()
+                                            now.micros()
                                                 .saturating_add(*self.amount_alive_ms.get()),
                                         ),
                                     }],

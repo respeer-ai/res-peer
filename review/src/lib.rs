@@ -10,10 +10,6 @@ impl ContractAbi for ReviewAbi {
     type Parameters = ReviewParameters;
     type InitializationArgument = InitialState;
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ApplicationCall;
-    type SessionCall = ();
-    type SessionState = ();
     type Response = bool;
 }
 

@@ -4,18 +4,21 @@ mod state;
 
 use self::state::Credit;
 use async_trait::async_trait;
-use credit::{ApplicationCall, Message, Operation};
+use credit::{CreditAbi, InitializationArgument, Message, Operation};
 use linera_sdk::{
-    base::{ChannelName, Destination, SessionId, WithContractAbi},
-    contract::system_api,
-    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
-    OperationContext, SessionCallOutcome, ViewStateStorage,
+    base::{Amount, ApplicationId, ChannelName, Destination, Owner, WithContractAbi},
+    Contract, ContractRuntime, ViewStateStorage,
 };
 use thiserror::Error;
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
-linera_sdk::contract!(Credit);
+pub struct CreditContract {
+    state: Credit,
+    runtime: ContractRuntime<Self>,
+}
+
+linera_sdk::contract!(CreditContract);
 
 impl WithContractAbi for Credit {
     type Abi = credit::CreditAbi;
@@ -25,176 +28,239 @@ impl WithContractAbi for Credit {
 impl Contract for Credit {
     type Error = ContractError;
     type Storage = ViewStateStorage<Self>;
+    type State = Credit;
+    type Message = Message;
 
-    async fn initialize(
-        &mut self,
-        _context: &OperationContext,
-        state: Self::InitializationArgument,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
-        self.initialize_credit(state).await;
-        Ok(ExecutionOutcome::default())
+    async fn new(state: Credit, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(CreditContract { state, runtime })
     }
 
-    async fn execute_operation(
-        &mut self,
-        _context: &OperationContext,
-        operation: Self::Operation,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    fn state_mut(&mut self) -> &mut Self::State {
+        &mut self.state
+    }
+
+    async fn initialize(&mut self, state: InitializationArgument) -> Result<(), Self::Error> {
+        self.initialize_credit(state).await;
+        Ok(())
+    }
+
+    async fn execute_operation(&mut self, operation: Operation) -> Result<(), Self::Error> {
         match operation {
-            Operation::Liquidate => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::Liquidate,
-            )),
-            Operation::SetRewardCallers { application_ids } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::SetRewardCallers { application_ids },
-                )),
-            Operation::SetTransferCallers { application_ids } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::SetTransferCallers { application_ids },
-                )),
-            Operation::Transfer { from, to, amount } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Transfer { from, to, amount },
-                )),
-            Operation::TransferExt { to, amount } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::TransferExt { to, amount },
-                )),
-            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::RequestSubscribe,
-                )),
+            Operation::Liquidate => self.on_op_liquidate(),
+            Operation::SetRewardCallers { application_ids } => {
+                self.on_op_set_reward_callers(application_ids)
+            }
+            Operation::SetTransferCallers { application_ids } => {
+                self.on_op_set_transfer_callers(application_ids)
+            }
+            Operation::Transfer { from, to, amount } => self.on_op_transfer(from, to, amount),
+            Operation::TransferExt { to, amount } => self.on_op_transfer_ext(to, amount),
+            Operation::RequestSubscribe => self.on_op_request_subscribe(),
         }
     }
 
-    async fn execute_message(
-        &mut self,
-        context: &MessageContext,
-        message: Self::Message,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    async fn execute_message(&mut self, message: Message) -> Result<(), Self::Error> {
         match message {
-            Message::InitialState { state } => {
-                self.initialize_credit(state).await;
-                Ok(ExecutionOutcome::default())
+            Message::InitializationArgument { argument } => {
+                self.on_msg_initialization_argument(argument)
             }
-            Message::Liquidate => {
-                self.liquidate().await;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(
-                    ExecutionOutcome::default()
-                        .with_authenticated_message(dest, Message::Liquidate),
-                )
-            }
-            Message::Reward { owner, amount } => {
-                self.reward(owner, amount).await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Reward { owner, amount }))
-            }
+            Message::Liquidate => self.on_msg_liquidate(),
+            Message::Reward { owner, amount } => self.on_msg_reward(owner, amount),
             Message::SetRewardCallers { application_ids } => {
-                if context.chain_id != system_api::current_application_id().creation.chain_id {
-                    return Err(ContractError::OperationNotAllowed);
-                }
-                self.set_reward_callers(application_ids.clone()).await;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::SetRewardCallers { application_ids },
-                ))
+                self.on_msg_set_reward_callers(application_ids)
             }
             Message::SetTransferCallers { application_ids } => {
-                if context.chain_id != system_api::current_application_id().creation.chain_id {
-                    return Err(ContractError::OperationNotAllowed);
-                }
-                self.set_transfer_callers(application_ids.clone()).await;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::SetTransferCallers { application_ids },
-                ))
+                self.on_msg_set_transfer_callers(application_ids)
             }
-            Message::Transfer { from, to, amount } => {
-                self.transfer(from, to, amount).await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Transfer { from, to, amount }))
-            }
-            Message::TransferExt { to, amount } => {
-                self.transfer(context.authenticated_signer.unwrap(), to, amount)
-                    .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::TransferExt { to, amount }))
-            }
-            Message::RequestSubscribe => {
-                let mut result = ExecutionOutcome::default();
-                if context.message_id.chain_id
-                    == system_api::current_application_id().creation.chain_id
-                {
-                    return Ok(result);
-                }
-                result.subscribe.push((
-                    ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
-                    context.message_id.chain_id,
-                ));
-                result = result.with_authenticated_message(
-                    context.message_id.chain_id,
-                    Message::InitialState {
-                        state: self.initial_state().await?,
-                    },
-                );
-                Ok(result)
-            }
+            Message::Transfer { from, to, amount } => self.on_msg_transfer(from, to, amount),
+            Message::TransferExt { to, amount } => self.on_msg_transfer_ext(to, amount),
+            Message::RequestSubscribe => self.on_msg_request_subscribe(),
         }
     }
+}
 
-    async fn handle_application_call(
-        &mut self,
-        _context: &CalleeContext,
-        call: Self::ApplicationCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<
-        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
-        Self::Error,
-    > {
-        let execution_result = match call {
-            ApplicationCall::Reward { owner, amount } => ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Reward { owner, amount },
-                ),
-            ApplicationCall::Transfer { from, to, amount } => ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Transfer { from, to, amount },
-                ),
-        };
-        let mut result = ApplicationCallOutcome::default();
-        result.execution_outcome = execution_result;
-        Ok(result)
+impl CreditContract {
+    fn on_op_liquidate(&mut self) -> Result<(), ContractError> {
+        self.runtime
+            .prepare_message(Message::Liquidate)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
     }
 
-    async fn handle_session_call(
+    fn on_op_set_reward_callers(
         &mut self,
-        _context: &CalleeContext,
-        _session: Self::SessionState,
-        _call: Self::SessionCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
-        Err(ContractError::SessionsNotSupported)
+        application_ids: Vec<ApplicationId>,
+    ) -> Result<(), ContractError> {
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Err(ContractError::OperationNotAllowed);
+        }
+        self.runtime
+            .prepare_message(Message::SetRewardCallers { application_ids })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_set_transfer_callers(
+        &mut self,
+        application_ids: Vec<ApplicationId>,
+    ) -> Result<(), ContractError> {
+        self.runtime
+            .prepare_message(Message::SetTransferCallers { application_ids })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_transfer(
+        &mut self,
+        from: Owner,
+        to: Owner,
+        amount: Amount,
+    ) -> Result<(), ContractError> {
+        self.runtime
+            .prepare_message(Message::Transfer { from, to, amount })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_transfer_ext(&mut self, to: Owner, amount: Amount) -> Result<(), ContractError> {
+        self.runtime
+            .prepare_message(Message::TransferExt { to, amount })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_request_subscribe(&mut self) -> Result<(), ContractError> {
+        self.runtime
+            .prepare_message(Message::RequestSubscribe)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_msg_initialization_argument(
+        &mut self,
+        arg: InitializationArgument,
+    ) -> Result<(), ContractError> {
+        self.initialize_credit(arg).await;
+        Ok(())
+    }
+
+    fn on_msg_liquidate(&mut self) -> Result<(), ContractError> {
+        self.liquidate().await;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            Ok(())
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Liquidate)
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_reward(&mut self, owner: Owner, amount: Amount) -> Result<(), ContractError> {
+        self.reward(owner, amount).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            Ok(())
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Reward { owner, amount })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_set_reward_callers(
+        &mut self,
+        application_ids: Vec<ApplicationId>,
+    ) -> Result<(), ContractError> {
+        if self.runtime.message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            Err(ContractError::OperationNotAllowed)
+        }
+        self.set_reward_callers(application_ids.clone()).await;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            Ok(())
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::SetRewardCallers { application_ids })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_set_transfer_callers(
+        &mut self,
+        application_ids: Vec<ApplicationId>,
+    ) -> Result<(), ContractError> {
+        if self.runtime.message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            Err(ContractError::OperationNotAllowed)
+        }
+        self.set_transfer_callers(application_ids.clone()).await;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            Ok(())
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::SetTransferCallers { application_ids })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_transfer(
+        &mut self,
+        from: Owner,
+        to: Owner,
+        amount: Amount,
+    ) -> Result<(), ContractError> {
+        self.transfer(from, to, amount).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            Ok(())
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Transfer { from, to, amount })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_transfer_ext(&mut self, to: Owner, amount: Amount) -> Result<(), ContractError> {
+        self.transfer(context.authenticated_signer.unwrap(), to, amount)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            Ok(())
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::TransferExt { to, amount })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_request_subscribe(&mut self) -> Result<(), ContractError> {
+        if self.runtime.message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            Ok(())
+        }
+        self.runtime.subscribe(
+            self.runtime.message_id()?.chain_id,
+            ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
+        );
+        self.runtime
+            .prepare_message(Message::InitializationArgument {
+                argument: self.state.initialization_argument().await?,
+            })
+            .with_authentication()
+            .send_to(self.runtime.message_id()?.chain_id);
+        Ok(())
     }
 }
 

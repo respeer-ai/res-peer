@@ -6,12 +6,8 @@ pub struct CreditAbi;
 
 impl ContractAbi for CreditAbi {
     type Parameters = ();
-    type InitializationArgument = InitialState;
+    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ApplicationCall;
-    type SessionCall = ();
-    type SessionState = ();
     type Response = ();
 }
 
@@ -43,7 +39,7 @@ impl AgeAmounts {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct InitialState {
+pub struct InitializationArgument {
     pub initial_supply: Amount,
     pub amount_alive_ms: u64,
 }
@@ -84,8 +80,8 @@ pub enum ApplicationCall {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Message {
-    InitialState {
-        state: InitialState,
+    InitializationArgument {
+        argument: InitializationArgument,
     },
     Liquidate,
     Reward {

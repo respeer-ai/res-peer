@@ -12,12 +12,17 @@ use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, Owner, SessionId, WithContractAbi},
     contract::system_api,
-    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
-    OperationContext, SessionCallOutcome, ViewStateStorage,
+    ApplicationCallOutcome, CalleeContext, Contract, ContractRuntime, ExecutionOutcome,
+    MessageContext, OperationContext, SessionCallOutcome, ViewStateStorage,
 };
 use review::ReviewAbi;
 
-linera_sdk::contract!(Activity);
+pub struct ActivityContract {
+    state: Activity,
+    runtime: ContractRuntime<Self>,
+}
+
+linera_sdk::contract!(ActivityContract);
 
 impl WithContractAbi for Activity {
     type Abi = activity::ActivityAbi;
@@ -29,13 +34,22 @@ const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 impl Contract for Activity {
     type Error = ActivityError;
     type Storage = ViewStateStorage<Self>;
+    type State = Activity;
+    type Message = Message;
+
+    async fn new(state: Activity, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(ActivityContract { state, runtime })
+    }
+
+    fn state_mut(&mut self) -> &mut Self::State {
+        &mut self.state
+    }
 
     async fn initialize(
         &mut self,
-        _context: &OperationContext,
         _argument: Self::InitializationArgument,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
-        Ok(ExecutionOutcome::default())
+    ) -> Result<(), Self::Error> {
+        Ok(())
     }
 
     async fn execute_operation(
@@ -209,29 +223,6 @@ impl Contract for Activity {
                     .with_authenticated_message(dest, Message::Finalize { activity_id }))
             }
         }
-    }
-
-    async fn handle_application_call(
-        &mut self,
-        _context: &CalleeContext,
-        _call: Self::ApplicationCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<
-        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
-        Self::Error,
-    > {
-        Ok(ApplicationCallOutcome::default())
-    }
-
-    async fn handle_session_call(
-        &mut self,
-        _context: &CalleeContext,
-        _session: Self::SessionState,
-        _call: Self::SessionCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
-        Err(ActivityError::SessionsNotSupported)
     }
 }
 

@@ -148,7 +148,6 @@ impl Feed {
 
 /// Attempts to debit from an account with insufficient funds.
 #[derive(Debug, Error)]
-#[error("Insufficient balance for transfer")]
 pub enum StateError {
     #[error("Content already exists")]
     AlreadyExists,
