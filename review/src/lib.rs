@@ -19,7 +19,7 @@ impl ServiceAbi for ReviewAbi {
     type QueryResponse = Response;
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ReviewParameters {
     pub feed_app_id: ApplicationId<feed::FeedAbi>,
     pub credit_app_id: ApplicationId<credit::CreditAbi>,

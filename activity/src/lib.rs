@@ -26,7 +26,7 @@ impl ServiceAbi for ActivityAbi {
     type QueryResponse = Response;
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ActivityParameters {
     pub review_app_id: ApplicationId<review::ReviewAbi>,
     pub foundation_app_id: ApplicationId<foundation::FoundationAbi>,

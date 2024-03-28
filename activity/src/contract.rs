@@ -10,10 +10,9 @@ use async_trait::async_trait;
 use feed::FeedAbi;
 use foundation::FoundationAbi;
 use linera_sdk::{
-    base::{Amount, ApplicationId, ChannelName, Destination, Owner, SessionId, WithContractAbi},
-    contract::system_api,
-    ApplicationCallOutcome, CalleeContext, Contract, ContractRuntime, ExecutionOutcome,
-    MessageContext, OperationContext, SessionCallOutcome, ViewStateStorage,
+    base::{Amount, ApplicationId, ChannelName, Destination, Owner, WithContractAbi},
+    Contract, ContractRuntime,
+    ViewStateStorage,
 };
 use review::ReviewAbi;
 
@@ -45,18 +44,11 @@ impl Contract for Activity {
         &mut self.state
     }
 
-    async fn initialize(
-        &mut self,
-        _argument: Self::InitializationArgument,
-    ) -> Result<(), Self::Error> {
+    async fn initialize(&mut self, _argument: Self::InitializationArgument) -> Result<(), Self::Error> {
         Ok(())
     }
 
-    async fn execute_operation(
-        &mut self,
-        context: &OperationContext,
-        operation: Self::Operation,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    async fn execute_operation(&mut self, operation: Self::Operation) -> Result<(), Self::Error> {
         match operation {
             Operation::Create { params } => Ok(ExecutionOutcome::default()
                 .with_authenticated_message(
@@ -111,11 +103,7 @@ impl Contract for Activity {
         }
     }
 
-    async fn execute_message(
-        &mut self,
-        context: &MessageContext,
-        message: Self::Message,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
         match message {
             Message::Create { params } => {
                 self._create_activity(context.authenticated_signer.unwrap(), params.clone())

@@ -142,11 +142,11 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_msg_initialization_argument(
+    async fn on_msg_initialization_argument(
         &mut self,
         arg: InitializationArgument,
     ) -> Result<(), ContractError> {
-        self.initialize_credit(arg).await;
+        self.state.initialize_credit(arg).await;
         Ok(())
     }
 

@@ -22,19 +22,19 @@ pub struct Credit {
 
 #[allow(dead_code)]
 impl Credit {
-    pub(crate) async fn initialize_credit(&mut self, mut state: InitialState) {
-        if state.initial_supply.eq(&Amount::ZERO) {
-            state.initial_supply = Amount::from_tokens(100000000);
+    pub(crate) async fn initialize_credit(&mut self, mut argument: InitializationArgument) {
+        if argument.initial_supply.eq(&Amount::ZERO) {
+            argument.initial_supply = Amount::from_tokens(100000000);
         }
-        self._initial_supply.set(state.initial_supply);
-        self._balance.set(state.initial_supply);
-        self.amount_alive_ms.set(state.amount_alive_ms);
+        self._initial_supply.set(argument.initial_supply);
+        self._balance.set(argument.initial_supply);
+        self.amount_alive_ms.set(argument.amount_alive_ms);
     }
 
     pub(crate) async fn initialization_argument(
         &self,
     ) -> Result<InitializationArgument, StateError> {
-        Ok(InitialState {
+        Ok(InitializationArgument {
             initial_supply: *self._initial_supply.get(),
             amount_alive_ms: *self.amount_alive_ms.get(),
         })

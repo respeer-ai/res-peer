@@ -20,7 +20,6 @@ impl WithServiceAbi for Activity {
     type Abi = activity::ActivityAbi;
 }
 
-#[async_trait]
 impl Service for Activity {
     type Error = ActivityError;
     type Storage = ViewStateStorage<Self>;
