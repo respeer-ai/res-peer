@@ -10,7 +10,7 @@ use activity::{
 };
 use async_trait::async_trait;
 use feed::{FeedAbi, FeedResponse};
-use foundation::FoundationAbi;
+use foundation::{FoundationAbi, FoundationResponse};
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
     Contract, ContractRuntime, ViewStateStorage,
@@ -116,9 +116,13 @@ impl ActivityContract {
     async fn account_balance(&mut self, owner: Owner) -> Result<Amount, ActivityError> {
         let call = foundation::Operation::Balance { owner };
         let foundation_app_id = self.foundation_app_id();
-        Ok(self
+        match self
             .runtime
-            .call_application(true, foundation_app_id, &call))
+            .call_application(true, foundation_app_id, &call)
+        {
+            FoundationResponse::Balance(amount) => Ok(amount),
+            _ => Err(ActivityError::InvalidBalance),
+        }
     }
 
     async fn _create_activity(

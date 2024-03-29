@@ -4,32 +4,37 @@ mod state;
 
 use self::state::Foundation;
 use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
-use async_trait::async_trait;
 use foundation::Operation;
 use linera_sdk::{
     base::{Amount, WithServiceAbi},
-    QueryContext, Service, ViewStateStorage,
+    Service, ServiceRuntime, ViewStateStorage,
 };
 use std::sync::Arc;
 use thiserror::Error;
 
-linera_sdk::service!(Foundation);
+pub struct FoundationService {
+    state: Arc<Foundation>,
+}
 
-impl WithServiceAbi for Foundation {
+linera_sdk::service!(FoundationService);
+
+impl WithServiceAbi for FoundationService {
     type Abi = foundation::FoundationAbi;
 }
 
-#[async_trait]
-impl Service for Foundation {
+impl Service for FoundationService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
+    type State = Foundation;
 
-    async fn handle_query(
-        self: Arc<Self>,
-        _context: &QueryContext,
-        request: Request,
-    ) -> Result<Response, Self::Error> {
-        let schema = Schema::build(self.clone(), MutationRoot {}, EmptySubscription).finish();
+    async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(FoundationService {
+            state: Arc::new(state),
+        })
+    }
+
+    async fn handle_query(&self, request: Request) -> Result<Response, Self::Error> {
+        let schema = Schema::build(self.state.clone(), MutationRoot {}, EmptySubscription).finish();
         let response = schema.execute(request).await;
         Ok(response)
     }

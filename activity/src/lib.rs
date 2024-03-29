@@ -220,6 +220,9 @@ pub enum ActivityError {
     #[error("Invalid activity")]
     InvalidActivity,
 
+    #[error("Invalid balance")]
+    InvalidBalance,
+
     #[error("Cross-application sessions not supported")]
     SessionsNotSupported,
 

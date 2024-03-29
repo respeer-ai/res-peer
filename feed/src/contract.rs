@@ -51,31 +51,30 @@ impl Contract for FeedContract {
         &mut self,
         operation: Self::Operation,
     ) -> Result<Self::Response, Self::Error> {
-        let resp = match operation {
-            Operation::Like { cid } => self.on_op_like(cid)?,
-            Operation::Dislike { cid } => self.on_op_dislike(cid)?,
-            Operation::Tip { cid, amount } => self.on_op_tip(cid, amount)?,
-            Operation::RequestSubscribe => self.on_op_request_subscribe()?,
+        match operation {
+            Operation::Like { cid } => self.on_op_like(cid),
+            Operation::Dislike { cid } => self.on_op_dislike(cid),
+            Operation::Tip { cid, amount } => self.on_op_tip(cid, amount),
+            Operation::RequestSubscribe => self.on_op_request_subscribe(),
             Operation::Recommend {
                 cid,
                 reason_cid,
                 reason,
-            } => self.on_op_recommend(cid, reason_cid, reason)?,
+            } => self.on_op_recommend(cid, reason_cid, reason),
             Operation::Comment {
                 cid,
                 comment_cid,
                 comment,
                 commentor,
-            } => self.on_op_comment(cid, comment_cid, comment, commentor)?,
+            } => self.on_op_comment(cid, comment_cid, comment, commentor),
             Operation::Publish {
                 cid,
                 title,
                 content,
                 author,
-            } => self.on_op_publish(cid, title, content, author)?,
-            Operation::ContentAuthor { cid } => self.on_op_content_author(cid).await?,
-        };
-        Ok(resp)
+            } => self.on_op_publish(cid, title, content, author),
+            Operation::ContentAuthor { cid } => self.on_op_content_author(cid).await,
+        }
     }
 
     async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
