@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use async_graphql::{Request, Response, SimpleObject};
 use linera_sdk::base::{Amount, ApplicationId, ContractAbi, Owner, ServiceAbi, Timestamp};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 pub struct FeedAbi;
 
@@ -10,7 +11,7 @@ impl ContractAbi for FeedAbi {
     type Parameters = FeedParameters;
     type InitializationArgument = InitialState;
     type Operation = Operation;
-    type Response = Option<Owner>;
+    type Response = FeedResponse;
 }
 
 impl ServiceAbi for FeedAbi {
@@ -109,4 +110,53 @@ pub enum Message {
         commentor: Owner,
     },
     RequestSubscribe,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub enum FeedResponse {
+    #[default]
+    Ok,
+    ContentAuthor(Option<Owner>),
+}
+
+/// An error that can occur during the contract execution.
+#[derive(Debug, Error)]
+pub enum FeedError {
+    /// Failed to deserialize BCS bytes
+    #[error("Failed to deserialize BCS bytes")]
+    BcsError(#[from] bcs::Error),
+
+    /// Failed to deserialize JSON string
+    #[error("Failed to deserialize JSON string")]
+    JsonError(#[from] serde_json::Error),
+    // Add more error variants here.
+    #[error("Invalid publisher")]
+    InvalidPublisher,
+
+    #[error("Cross-application sessions not supported")]
+    SessionsNotSupported,
+
+    #[error("Content already exists")]
+    AlreadyExists,
+
+    #[error("Content not exist")]
+    NotExist,
+
+    #[error("Only 1 reaction is allowed within 1 minute")]
+    TooFrequently,
+
+    #[error("Only 1 like is allowed for each content")]
+    TooManyLike,
+
+    #[error("Invalid content")]
+    InvalidContent,
+
+    #[error("Invalid signer")]
+    InvalidSigner,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
+
+    #[error("View error")]
+    ViewError(#[from] linera_views::views::ViewError),
 }

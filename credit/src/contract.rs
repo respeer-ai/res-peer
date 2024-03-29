@@ -55,6 +55,7 @@ impl Contract for CreditContract {
             Operation::Transfer { from, to, amount } => self.on_op_transfer(from, to, amount),
             Operation::TransferExt { to, amount } => self.on_op_transfer_ext(to, amount),
             Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            Operation::Reward { owner, amount } => self.on_op_reward(owner, amount),
         }
     }
 
@@ -150,6 +151,14 @@ impl CreditContract {
     fn on_op_request_subscribe(&mut self) -> Result<(), CreditError> {
         self.runtime
             .prepare_message(Message::RequestSubscribe)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_reward(&mut self, owner: Owner, amount: Amount) -> Result<(), CreditError> {
+        self.runtime
+            .prepare_message(Message::Reward { owner, amount })
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
         Ok(())

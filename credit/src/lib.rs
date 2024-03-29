@@ -64,17 +64,8 @@ pub enum Operation {
         application_ids: Vec<ApplicationId>,
     },
     RequestSubscribe,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ApplicationCall {
     Reward {
         owner: Owner,
-        amount: Amount,
-    },
-    Transfer {
-        from: Owner,
-        to: Owner,
         amount: Amount,
     },
 }

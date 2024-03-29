@@ -9,7 +9,7 @@ use activity::{
     ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType,
 };
 use async_trait::async_trait;
-use feed::FeedAbi;
+use feed::{FeedAbi, FeedResponse};
 use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
@@ -150,7 +150,7 @@ impl ActivityContract {
         let call = feed::Operation::ContentAuthor { cid };
         let feed_app_id = self.feed_app_id();
         match self.runtime.call_application(true, feed_app_id, &call) {
-            Some(author) => Ok(author),
+            FeedResponse::ContentAuthor(Some(author)) => Ok(author),
             _ => Err(ActivityError::InvalidContentAuthor),
         }
     }

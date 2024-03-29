@@ -1,11 +1,9 @@
 use async_graphql::SimpleObject;
-use feed::{Content, InitialState};
+use feed::{Content, FeedError, InitialState};
 use linera_sdk::{
     base::{Owner, Timestamp},
-    contract::system_api::current_system_time,
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use thiserror::Error;
 
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
@@ -30,9 +28,9 @@ impl Feed {
         &mut self,
         content: Content,
         owner: Owner,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FeedError> {
         match self.contents.get(&content.clone().cid).await {
-            Ok(Some(_)) => return Err(StateError::AlreadyExists),
+            Ok(Some(_)) => return Err(FeedError::AlreadyExists),
             _ => {}
         }
         self.contents
@@ -43,12 +41,12 @@ impl Feed {
                 cids.push(content.cid);
                 match self.publishes.insert(&owner, cids) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(StateError::ViewError(err)),
+                    Err(err) => Err(FeedError::ViewError(err)),
                 }
             }
             _ => match self.publishes.insert(&owner, vec![content.cid]) {
                 Ok(_) => Ok(()),
-                Err(err) => Err(StateError::ViewError(err)),
+                Err(err) => Err(FeedError::ViewError(err)),
             },
         }
     }
@@ -58,24 +56,23 @@ impl Feed {
         ccid: String,
         owner: Owner,
         like: bool,
-    ) -> Result<(), StateError> {
+        now: Timestamp,
+    ) -> Result<(), FeedError> {
         match self.react_accounts.get(&owner).await {
             Ok(Some(reacted_at)) => {
-                if current_system_time().saturating_diff_micros(reacted_at)
-                    < *self.react_interval_ms.get()
-                {
-                    return Err(StateError::TooFrequently);
+                if now.saturating_diff_micros(reacted_at) < *self.react_interval_ms.get() {
+                    return Err(FeedError::TooFrequently);
                 }
             }
             _ => {
-                self.react_accounts.insert(&owner, current_system_time())?;
+                self.react_accounts.insert(&owner, now)?;
             }
         }
         match self.contents.get(&ccid).await {
             Ok(Some(mut content)) => match content.accounts.get(&owner) {
                 Some(&_like) => {
                     if (_like && like) || (!_like && !like) {
-                        return Err(StateError::TooManyLike);
+                        return Err(FeedError::TooManyLike);
                     }
                     content.accounts.insert(owner, like);
                     if _like {
@@ -99,7 +96,7 @@ impl Feed {
                     Ok(())
                 }
             },
-            _ => return Err(StateError::NotExist),
+            _ => return Err(FeedError::NotExist),
         }
     }
 
@@ -107,7 +104,7 @@ impl Feed {
         &mut self,
         cid: String,
         reason_cid: String,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FeedError> {
         match self.content_recommends.get(&cid).await? {
             Some(mut recommends) => {
                 recommends.push(reason_cid);
@@ -124,7 +121,7 @@ impl Feed {
         &mut self,
         cid: String,
         comment_cid: String,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FeedError> {
         match self.content_comments.get(&cid).await? {
             Some(mut comments) => {
                 comments.push(comment_cid);
@@ -137,33 +134,11 @@ impl Feed {
         Ok(())
     }
 
-    pub(crate) async fn content_author(&self, cid: String) -> Result<Owner, StateError> {
+    pub(crate) async fn content_author(&self, cid: String) -> Result<Owner, FeedError> {
         match self.contents.get(&cid).await {
             Ok(Some(content)) => Ok(content.author),
-            Ok(None) => Err(StateError::InvalidContent),
-            Err(err) => Err(StateError::ViewError(err)),
+            Ok(None) => Err(FeedError::InvalidContent),
+            Err(err) => Err(FeedError::ViewError(err)),
         }
     }
-}
-
-/// Attempts to debit from an account with insufficient funds.
-#[derive(Debug, Error)]
-pub enum StateError {
-    #[error("Content already exists")]
-    AlreadyExists,
-
-    #[error("Content not exist")]
-    NotExist,
-
-    #[error("Only 1 reaction is allowed within 1 minute")]
-    TooFrequently,
-
-    #[error("Only 1 like is allowed for each content")]
-    TooManyLike,
-
-    #[error("Invalid content")]
-    InvalidContent,
-
-    #[error("View error")]
-    ViewError(#[from] linera_views::views::ViewError),
 }
