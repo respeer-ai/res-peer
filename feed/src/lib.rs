@@ -50,6 +50,26 @@ pub enum Operation {
     Dislike { cid: String },
     Tip { cid: String, amount: Amount },
     RequestSubscribe,
+    Publish {
+        cid: String,
+        title: String,
+        content: String,
+        author: Owner,
+    },
+    Recommend {
+        cid: String,
+        reason_cid: String,
+        reason: String,
+    },
+    Comment {
+        cid: String,
+        comment_cid: String,
+        comment: String,
+        commentor: Owner,
+    },
+    ContentAuthor {
+        cid: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -82,28 +102,4 @@ pub enum Message {
         commentor: Owner,
     },
     RequestSubscribe,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ApplicationCall {
-    Publish {
-        cid: String,
-        title: String,
-        content: String,
-        author: Owner,
-    },
-    Recommend {
-        cid: String,
-        reason_cid: String,
-        reason: String,
-    },
-    Comment {
-        cid: String,
-        comment_cid: String,
-        comment: String,
-        commentor: Owner,
-    },
-    ContentAuthor {
-        cid: String,
-    },
 }

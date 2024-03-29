@@ -4,8 +4,7 @@ mod state;
 
 use self::state::Activity;
 use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
-use async_trait::async_trait;
-use linera_sdk::{base::WithServiceAbi, QueryContext, Service, ServiceRuntime, ViewStateStorage};
+use linera_sdk::{base::WithServiceAbi, Service, ServiceRuntime, ViewStateStorage};
 use std::sync::Arc;
 
 use activity::{ActivityError, AnnounceParams, CreateParams, Operation, UpdateParams};
@@ -16,11 +15,11 @@ pub struct ActivityService {
 
 linera_sdk::service!(ActivityService);
 
-impl WithServiceAbi for Activity {
+impl WithServiceAbi for ActivityService {
     type Abi = activity::ActivityAbi;
 }
 
-impl Service for Activity {
+impl Service for ActivityService {
     type Error = ActivityError;
     type Storage = ViewStateStorage<Self>;
     type State = Activity;
@@ -31,12 +30,8 @@ impl Service for Activity {
         })
     }
 
-    async fn handle_query(
-        self: Arc<Self>,
-        _context: &QueryContext,
-        request: Request,
-    ) -> Result<Response, Self::Error> {
-        let schema = Schema::build(self.clone(), MutationRoot, EmptySubscription).finish();
+    async fn handle_query(&self, request: Request) -> Result<Response, Self::Error> {
+        let schema = Schema::build(self.state.clone(), MutationRoot, EmptySubscription).finish();
         let response = schema.execute(request).await;
         Ok(response)
     }

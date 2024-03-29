@@ -253,6 +253,12 @@ pub enum ActivityError {
     #[error("Invalid prize config")]
     InvalidPrizeConfig,
 
+    #[error("Invalid signer")]
+    InvalidSigner,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
+
     #[error("Invalid query")]
     InvalidQuery(#[from] serde_json::Error),
 

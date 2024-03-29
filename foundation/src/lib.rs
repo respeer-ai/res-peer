@@ -39,10 +39,6 @@ pub enum RewardType {
 pub enum Operation {
     UserDeposit { amount: Amount },
     RequestSubscribe,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ApplicationCall {
     Deposit {
         from: Owner,
         amount: Amount,

@@ -148,6 +148,11 @@ pub enum Operation {
         name: String,
     },
     RequestSubscribe,
+    SubmitActivity {
+        activity_id: u64,
+        activity_host: Owner,
+        budget_amount: Amount,
+    },
     ApproveActivity {
         activity_id: u64,
         reason: Option<String>,
@@ -155,6 +160,9 @@ pub enum Operation {
     RejectActivity {
         activity_id: u64,
         reason: String,
+    },
+    ActivityApproved {
+        activity_id: u64,
     },
 }
 
@@ -228,22 +236,5 @@ pub enum Message {
     RejectActivity {
         activity_id: u64,
         reason: String,
-    },
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ApplicationCall {
-    SubmitContent {
-        cid: String,
-        title: String,
-        content: String,
-    },
-    SubmitActivity {
-        activity_id: u64,
-        activity_host: Owner,
-        budget_amount: Amount,
-    },
-    ActivityApproved {
-        activity_id: u64,
     },
 }
