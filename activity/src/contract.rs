@@ -5,7 +5,9 @@ mod state;
 use std::collections::HashSet;
 
 use self::state::Activity;
-use activity::{ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType};
+use activity::{
+    ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType,
+};
 use async_trait::async_trait;
 use feed::FeedAbi;
 use foundation::FoundationAbi;
@@ -43,7 +45,10 @@ impl Contract for ActivityContract {
         &mut self.state
     }
 
-    async fn initialize(&mut self, _argument: Self::InitializationArgument) -> Result<(), Self::Error> {
+    async fn initialize(
+        &mut self,
+        _argument: Self::InitializationArgument,
+    ) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -111,7 +116,9 @@ impl ActivityContract {
     async fn account_balance(&mut self, owner: Owner) -> Result<Amount, ActivityError> {
         let call = foundation::Operation::Balance { owner };
         let foundation_app_id = self.foundation_app_id();
-        Ok(self.runtime.call_application(true, foundation_app_id, &call))
+        Ok(self
+            .runtime
+            .call_application(true, foundation_app_id, &call))
     }
 
     async fn _create_activity(
@@ -119,7 +126,10 @@ impl ActivityContract {
         owner: Owner,
         params: CreateParams,
     ) -> Result<(), ActivityError> {
-        let activity_id = self.state.create_activity(owner, params.clone(), self.runtime.system_time()).await?;
+        let activity_id = self
+            .state
+            .create_activity(owner, params.clone(), self.runtime.system_time())
+            .await?;
         let call = review::Operation::SubmitActivity {
             activity_id,
             activity_host: owner,
@@ -161,7 +171,9 @@ impl ActivityContract {
             voter_reward_percent,
         };
         let foundation_app_id = self.foundation_app_id();
-        let _ = self.runtime.call_application(true, foundation_app_id, &call);
+        let _ = self
+            .runtime
+            .call_application(true, foundation_app_id, &call);
         Ok(())
     }
 
@@ -172,7 +184,9 @@ impl ActivityContract {
             activity_id: Some(activity_id),
         };
         let foundation_app_id = self.foundation_app_id();
-        let _ = self.runtime.call_application(true, foundation_app_id, &call);
+        let _ = self
+            .runtime
+            .call_application(true, foundation_app_id, &call);
         Ok(())
     }
 
@@ -217,7 +231,7 @@ impl ActivityContract {
     fn require_message_id(&mut self) -> Result<MessageId, ActivityError> {
         match self.runtime.message_id() {
             Some(message_id) => Ok(message_id),
-            None => Err(ActivityError::InvalidMessageId)
+            None => Err(ActivityError::InvalidMessageId),
         }
     }
 
@@ -291,7 +305,7 @@ impl ActivityContract {
         let owner = self.require_authenticated_signer()?;
         self._create_activity(owner, params.clone()).await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            return Ok(())
+            return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
@@ -302,7 +316,9 @@ impl ActivityContract {
     }
 
     async fn on_msg_update(&mut self, params: UpdateParams) -> Result<(), ActivityError> {
-        if self.require_authenticated_signer()? != self.state.activity(params.activity_id).await?.host {
+        if self.require_authenticated_signer()?
+            != self.state.activity(params.activity_id).await?.host
+        {
             return Err(ActivityError::InvalidSigner);
         }
         self.state.update_activity(params.clone()).await?;
@@ -317,20 +333,31 @@ impl ActivityContract {
         Ok(())
     }
 
-    async fn on_msg_register(&mut self, activity_id: u64, object_id: String) -> Result<(), ActivityError> {
+    async fn on_msg_register(
+        &mut self,
+        activity_id: u64,
+        object_id: String,
+    ) -> Result<(), ActivityError> {
         self.state.register(activity_id, object_id.clone()).await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
             return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Register { activity_id, object_id })
+            .prepare_message(Message::Register {
+                activity_id,
+                object_id,
+            })
             .with_authentication()
             .send_to(dest);
         Ok(())
     }
 
-    async fn on_msg_vote(&mut self, activity_id: u64, object_id: String) -> Result<(), ActivityError> {
+    async fn on_msg_vote(
+        &mut self,
+        activity_id: u64,
+        object_id: String,
+    ) -> Result<(), ActivityError> {
         match self.activity_approved(activity_id).await {
             Ok(true) => {}
             Ok(false) => return Err(ActivityError::ActivityNotApproved),
@@ -342,9 +369,7 @@ impl ActivityContract {
             Err(err) => return Err(err),
         }
         let owner = self.require_authenticated_signer()?;
-        let balance = self
-            .account_balance(owner)
-            .await?;
+        let balance = self.account_balance(owner).await?;
         let activity = self.state.activity(activity_id).await?;
         let power = match activity.vote_type {
             VoteType::Power => balance,
@@ -353,19 +378,18 @@ impl ActivityContract {
         if power.eq(&Amount::ZERO) {
             return Err(ActivityError::AccountBalanceRequired);
         }
-        self.state.vote(
-            owner,
-            activity_id,
-            object_id.clone(),
-            power,
-        )
-        .await?;
+        self.state
+            .vote(owner, activity_id, object_id.clone(), power)
+            .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
             return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Register { activity_id, object_id })
+            .prepare_message(Message::Register {
+                activity_id,
+                object_id,
+            })
             .with_authentication()
             .send_to(dest);
         Ok(())
@@ -373,12 +397,13 @@ impl ActivityContract {
 
     async fn on_msg_announce(&mut self, params: AnnounceParams) -> Result<(), ActivityError> {
         self.create_announcement(params.clone()).await?;
-        self.state.announce(
-            params.activity_id,
-            params.cid.clone(),
-            params.announce_prize,
-        )
-        .await?;
+        self.state
+            .announce(
+                params.activity_id,
+                params.cid.clone(),
+                params.announce_prize,
+            )
+            .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
             return Ok(());
         }

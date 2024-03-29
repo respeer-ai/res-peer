@@ -46,9 +46,16 @@ pub struct InitialState {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Operation {
-    Like { cid: String },
-    Dislike { cid: String },
-    Tip { cid: String, amount: Amount },
+    Like {
+        cid: String,
+    },
+    Dislike {
+        cid: String,
+    },
+    Tip {
+        cid: String,
+        amount: Amount,
+    },
     RequestSubscribe,
     Publish {
         cid: String,

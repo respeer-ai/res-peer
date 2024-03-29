@@ -1,12 +1,11 @@
 use std::cmp::Ordering;
 
 use async_graphql::SimpleObject;
-use credit::{AgeAmount, AgeAmounts, InitializationArgument};
+use credit::{AgeAmount, AgeAmounts, CreditError, InitializationArgument};
 use linera_sdk::{
     base::{Amount, ApplicationId, Owner, Timestamp},
     views::{linera_views, MapView, RegisterView, RootView, SetView, ViewStorageContext},
 };
-use thiserror::Error;
 
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
@@ -33,7 +32,7 @@ impl Credit {
 
     pub(crate) async fn initialization_argument(
         &self,
-    ) -> Result<InitializationArgument, StateError> {
+    ) -> Result<InitializationArgument, CreditError> {
         Ok(InitializationArgument {
             initial_supply: *self._initial_supply.get(),
             amount_alive_ms: *self.amount_alive_ms.get(),
@@ -56,7 +55,7 @@ impl Credit {
         owner: Owner,
         amount: Amount,
         now: Timestamp,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), CreditError> {
         match self.spendables.get(&owner).await {
             Ok(Some(spendable)) => {
                 self.spendables
@@ -75,7 +74,7 @@ impl Credit {
                     self._balance.get(),
                     amount
                 );
-                // return Err(StateError::InsufficientSupplyBalance)
+                // return Err(CreditError::InsufficientSupplyBalance)
             }
             _ => {}
         }
@@ -93,7 +92,7 @@ impl Credit {
                 });
                 match self.balances.insert(&owner, amounts) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(StateError::ViewError(err)),
+                    Err(err) => Err(CreditError::ViewError(err)),
                 }
             }
             _ => match self.balances.insert(
@@ -108,7 +107,7 @@ impl Credit {
                 },
             ) {
                 Ok(_) => Ok(()),
-                Err(err) => Err(StateError::ViewError(err)),
+                Err(err) => Err(CreditError::ViewError(err)),
             },
         }
     }
@@ -156,10 +155,10 @@ impl Credit {
         to: Owner,
         amount: Amount,
         now: Timestamp,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), CreditError> {
         match self.spendables.get(&from).await {
             Ok(Some(spendable)) => match spendable.cmp(&amount) {
-                Ordering::Less => Err(StateError::InsufficientAccountBalance),
+                Ordering::Less => Err(CreditError::InsufficientAccountBalance),
                 _ => {
                     self.spendables
                         .insert(&from, spendable.saturating_sub(amount))?;
@@ -228,16 +227,7 @@ impl Credit {
                     Ok(())
                 }
             },
-            _ => return Err(StateError::InsufficientAccountBalance),
+            _ => return Err(CreditError::InsufficientAccountBalance),
         }
     }
-}
-
-#[derive(Debug, Error)]
-pub enum StateError {
-    #[error("Insufficient account balance")]
-    InsufficientAccountBalance,
-
-    #[error("View error")]
-    ViewError(#[from] linera_views::views::ViewError),
 }

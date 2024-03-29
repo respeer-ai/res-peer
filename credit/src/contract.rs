@@ -4,12 +4,11 @@ mod state;
 
 use self::state::Credit;
 use async_trait::async_trait;
-use credit::{CreditAbi, InitializationArgument, Message, Operation};
+use credit::{CreditAbi, CreditError, InitializationArgument, Message, Operation};
 use linera_sdk::{
-    base::{Amount, ApplicationId, ChannelName, Destination, Owner, WithContractAbi},
+    base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
     Contract, ContractRuntime, ViewStateStorage,
 };
-use thiserror::Error;
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
@@ -20,13 +19,13 @@ pub struct CreditContract {
 
 linera_sdk::contract!(CreditContract);
 
-impl WithContractAbi for Credit {
-    type Abi = credit::CreditAbi;
+impl WithContractAbi for CreditContract {
+    type Abi = CreditAbi;
 }
 
 #[async_trait]
-impl Contract for Credit {
-    type Error = ContractError;
+impl Contract for CreditContract {
+    type Error = CreditError;
     type Storage = ViewStateStorage<Self>;
     type State = Credit;
     type Message = Message;
@@ -40,7 +39,7 @@ impl Contract for Credit {
     }
 
     async fn initialize(&mut self, state: InitializationArgument) -> Result<(), Self::Error> {
-        self.initialize_credit(state).await;
+        self.state.initialize_credit(state).await;
         Ok(())
     }
 
@@ -62,25 +61,39 @@ impl Contract for Credit {
     async fn execute_message(&mut self, message: Message) -> Result<(), Self::Error> {
         match message {
             Message::InitializationArgument { argument } => {
-                self.on_msg_initialization_argument(argument)
+                self.on_msg_initialization_argument(argument).await
             }
-            Message::Liquidate => self.on_msg_liquidate(),
-            Message::Reward { owner, amount } => self.on_msg_reward(owner, amount),
+            Message::Liquidate => self.on_msg_liquidate().await,
+            Message::Reward { owner, amount } => self.on_msg_reward(owner, amount).await,
             Message::SetRewardCallers { application_ids } => {
-                self.on_msg_set_reward_callers(application_ids)
+                self.on_msg_set_reward_callers(application_ids).await
             }
             Message::SetTransferCallers { application_ids } => {
-                self.on_msg_set_transfer_callers(application_ids)
+                self.on_msg_set_transfer_callers(application_ids).await
             }
-            Message::Transfer { from, to, amount } => self.on_msg_transfer(from, to, amount),
-            Message::TransferExt { to, amount } => self.on_msg_transfer_ext(to, amount),
-            Message::RequestSubscribe => self.on_msg_request_subscribe(),
+            Message::Transfer { from, to, amount } => self.on_msg_transfer(from, to, amount).await,
+            Message::TransferExt { to, amount } => self.on_msg_transfer_ext(to, amount).await,
+            Message::RequestSubscribe => self.on_msg_request_subscribe().await,
         }
     }
 }
 
 impl CreditContract {
-    fn on_op_liquidate(&mut self) -> Result<(), ContractError> {
+    fn require_message_id(&mut self) -> Result<MessageId, CreditError> {
+        match self.runtime.message_id() {
+            Some(message_id) => Ok(message_id),
+            None => Err(CreditError::InvalidMessageId),
+        }
+    }
+
+    fn require_authenticated_signer(&mut self) -> Result<Owner, CreditError> {
+        match self.runtime.authenticated_signer() {
+            Some(owner) => Ok(owner),
+            None => Err(CreditError::InvalidSigner),
+        }
+    }
+
+    fn on_op_liquidate(&mut self) -> Result<(), CreditError> {
         self.runtime
             .prepare_message(Message::Liquidate)
             .with_authentication()
@@ -91,9 +104,9 @@ impl CreditContract {
     fn on_op_set_reward_callers(
         &mut self,
         application_ids: Vec<ApplicationId>,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), CreditError> {
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            return Err(ContractError::OperationNotAllowed);
+            return Err(CreditError::OperationNotAllowed);
         }
         self.runtime
             .prepare_message(Message::SetRewardCallers { application_ids })
@@ -105,7 +118,7 @@ impl CreditContract {
     fn on_op_set_transfer_callers(
         &mut self,
         application_ids: Vec<ApplicationId>,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), CreditError> {
         self.runtime
             .prepare_message(Message::SetTransferCallers { application_ids })
             .with_authentication()
@@ -118,7 +131,7 @@ impl CreditContract {
         from: Owner,
         to: Owner,
         amount: Amount,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), CreditError> {
         self.runtime
             .prepare_message(Message::Transfer { from, to, amount })
             .with_authentication()
@@ -126,7 +139,7 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_op_transfer_ext(&mut self, to: Owner, amount: Amount) -> Result<(), ContractError> {
+    fn on_op_transfer_ext(&mut self, to: Owner, amount: Amount) -> Result<(), CreditError> {
         self.runtime
             .prepare_message(Message::TransferExt { to, amount })
             .with_authentication()
@@ -134,7 +147,7 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_op_request_subscribe(&mut self) -> Result<(), ContractError> {
+    fn on_op_request_subscribe(&mut self) -> Result<(), CreditError> {
         self.runtime
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
@@ -145,15 +158,15 @@ impl CreditContract {
     async fn on_msg_initialization_argument(
         &mut self,
         arg: InitializationArgument,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), CreditError> {
         self.state.initialize_credit(arg).await;
         Ok(())
     }
 
-    fn on_msg_liquidate(&mut self) -> Result<(), ContractError> {
-        self.liquidate().await;
+    async fn on_msg_liquidate(&mut self) -> Result<(), CreditError> {
+        self.state.liquidate(self.runtime.system_time()).await;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            Ok(())
+            return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
@@ -163,10 +176,12 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_msg_reward(&mut self, owner: Owner, amount: Amount) -> Result<(), ContractError> {
-        self.reward(owner, amount).await?;
+    async fn on_msg_reward(&mut self, owner: Owner, amount: Amount) -> Result<(), CreditError> {
+        self.state
+            .reward(owner, amount, self.runtime.system_time())
+            .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            Ok(())
+            return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
@@ -176,16 +191,16 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_msg_set_reward_callers(
+    async fn on_msg_set_reward_callers(
         &mut self,
         application_ids: Vec<ApplicationId>,
-    ) -> Result<(), ContractError> {
-        if self.runtime.message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
-            Err(ContractError::OperationNotAllowed)
+    ) -> Result<(), CreditError> {
+        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            return Err(CreditError::OperationNotAllowed);
         }
-        self.set_reward_callers(application_ids.clone()).await;
+        self.state.set_reward_callers(application_ids.clone()).await;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            Ok(())
+            return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
@@ -195,16 +210,18 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_msg_set_transfer_callers(
+    async fn on_msg_set_transfer_callers(
         &mut self,
         application_ids: Vec<ApplicationId>,
-    ) -> Result<(), ContractError> {
-        if self.runtime.message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
-            Err(ContractError::OperationNotAllowed)
+    ) -> Result<(), CreditError> {
+        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            return Err(CreditError::OperationNotAllowed);
         }
-        self.set_transfer_callers(application_ids.clone()).await;
+        self.state
+            .set_transfer_callers(application_ids.clone())
+            .await;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            Ok(())
+            return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
@@ -214,15 +231,17 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_msg_transfer(
+    async fn on_msg_transfer(
         &mut self,
         from: Owner,
         to: Owner,
         amount: Amount,
-    ) -> Result<(), ContractError> {
-        self.transfer(from, to, amount).await?;
+    ) -> Result<(), CreditError> {
+        self.state
+            .transfer(from, to, amount, self.runtime.system_time())
+            .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            Ok(())
+            return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
@@ -232,11 +251,13 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_msg_transfer_ext(&mut self, to: Owner, amount: Amount) -> Result<(), ContractError> {
-        self.transfer(context.authenticated_signer.unwrap(), to, amount)
+    async fn on_msg_transfer_ext(&mut self, to: Owner, amount: Amount) -> Result<(), CreditError> {
+        let from = self.require_authenticated_signer()?;
+        self.state
+            .transfer(from, to, amount, self.runtime.system_time())
             .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            Ok(())
+            return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
@@ -246,12 +267,13 @@ impl CreditContract {
         Ok(())
     }
 
-    fn on_msg_request_subscribe(&mut self) -> Result<(), ContractError> {
-        if self.runtime.message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
-            Ok(())
+    async fn on_msg_request_subscribe(&mut self) -> Result<(), CreditError> {
+        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            return Ok(());
         }
+        let message_id = self.require_message_id()?;
         self.runtime.subscribe(
-            self.runtime.message_id()?.chain_id,
+            message_id.chain_id,
             ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
         );
         self.runtime
@@ -259,34 +281,7 @@ impl CreditContract {
                 argument: self.state.initialization_argument().await?,
             })
             .with_authentication()
-            .send_to(self.runtime.message_id()?.chain_id);
+            .send_to(self.require_message_id()?.chain_id);
         Ok(())
     }
-}
-
-/// An error that can occur during the contract execution.
-#[derive(Debug, Error)]
-pub enum ContractError {
-    /// Failed to deserialize BCS bytes
-    #[error("Failed to deserialize BCS bytes")]
-    BcsError(#[from] bcs::Error),
-
-    /// Failed to deserialize JSON string
-    #[error("Failed to deserialize JSON string")]
-    JsonError(#[from] serde_json::Error),
-    // Add more error variants here.
-    #[error(transparent)]
-    StateError(#[from] state::StateError),
-
-    #[error("NOT IMPLEMENTED")]
-    NotImplemented,
-
-    #[error("Caller not allowed")]
-    CallerNotAllowed,
-
-    #[error("Operation not allowed")]
-    OperationNotAllowed,
-
-    #[error("Cross-application sessions not supported")]
-    SessionsNotSupported,
 }
