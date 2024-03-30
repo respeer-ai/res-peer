@@ -13,8 +13,10 @@ pub struct Market {
     pub publisher_collections: MapView<Owner, Vec<u64>>,
     /// owner, collection_id, token_id
     pub _assets: MapView<Owner, HashMap<u64, Vec<u16>>>,
-    pub token_owners: MapView<u16, HashMap<u64, Owner>>,
-    pub token_publishers: MapView<u16, HashMap<u64, Owner>>,
+    // pub token_owners: MapView<u16, HashMap<u64, Owner>>,
+    // pub token_publishers: MapView<u16, HashMap<u64, Owner>>,
+    pub token_owners: MapView<u64, HashMap<u64, Owner>>,
+    pub token_publishers: MapView<u64, HashMap<u64, Owner>>,
     pub credits_per_linera: RegisterView<Amount>,
     pub collection_id: RegisterView<u64>,
     /// Linera token balance
@@ -149,6 +151,7 @@ impl Market {
                         );
                         self._collections.insert(&collection_id, collection)?;
                         self.token_ids.insert(&collection_id, token_id + 1)?;
+                        let token_id = token_id as u64;
                         match self.token_owners.get(&token_id).await {
                             Ok(Some(mut collection_owners)) => {
                                 collection_owners.insert(collection_id, owner);
@@ -194,6 +197,7 @@ impl Market {
                     if !nft.on_sale {
                         return Err(MarketError::TokenNotOnSale);
                     }
+                    let token_id = token_id as u64;
                     let token_owners = match self.token_owners.get(&token_id).await {
                         Ok(Some(owners)) => owners,
                         _ => HashMap::default(),
@@ -211,6 +215,7 @@ impl Market {
                     match self._assets.get(&owner).await {
                         Ok(Some(collections)) => {
                             let collections = collections.clone();
+                            let token_id = token_id as u16;
                             match collections.get(&collection_id) {
                                 Some(token_ids) => {
                                     let mut token_ids = token_ids.clone();
@@ -228,6 +233,7 @@ impl Market {
                         }
                         _ => {
                             let mut collections = HashMap::default();
+                            let token_id = token_id as u16;
                             collections.insert(collection_id, vec![token_id]);
                             self._assets.insert(&owner, collections)?;
                         }
@@ -245,6 +251,7 @@ impl Market {
         collection_id: u64,
         token_id: u16,
     ) -> Result<Owner, MarketError> {
+        let token_id = token_id as u64;
         let token_owners = match self.token_owners.get(&token_id).await {
             Ok(Some(owners)) => owners,
             _ => HashMap::default(),
