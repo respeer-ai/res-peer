@@ -6,8 +6,7 @@ use std::{
 use activity::{ActivityError, ActivityItem, CreateParams, UpdateParams, Winner};
 use async_graphql::SimpleObject;
 use linera_sdk::{
-    base::{Amount, Owner},
-    contract::system_api,
+    base::{Amount, Owner, Timestamp},
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
 
@@ -24,6 +23,7 @@ impl Activity {
         &mut self,
         owner: Owner,
         params: CreateParams,
+        now: Timestamp,
     ) -> Result<u64, ActivityError> {
         let activity_id = self.activity_id.get() + 1;
         self.activity_id.set(activity_id);
@@ -38,7 +38,7 @@ impl Activity {
                 introduction: params.introduction,
                 host: owner,
                 host_resume: params.host_resume,
-                created_at: system_api::current_system_time(),
+                created_at: now,
                 activity_type: params.activity_type,
                 votable: params.votable,
                 vote_type: params.vote_type,

@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 
 use async_graphql::{Request, Response, SimpleObject};
-use linera_sdk::base::{Amount, ApplicationId, ContractAbi, Owner, ServiceAbi, Timestamp};
+use linera_sdk::{
+    base::{Amount, ApplicationId, ArithmeticError, ContractAbi, Owner, ServiceAbi, Timestamp},
+    graphql::GraphQLMutationRoot,
+};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 pub struct MarketAbi;
 
 impl ContractAbi for MarketAbi {
     type Parameters = MarketParameters;
-    type InitializationArgument = InitialState;
+    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ApplicationCall;
-    type SessionCall = ();
-    type SessionState = ();
     type Response = ();
 }
 
@@ -23,7 +23,7 @@ impl ServiceAbi for MarketAbi {
     type QueryResponse = Response;
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MarketParameters {
     pub credit_app_id: ApplicationId<credit::CreditAbi>,
     pub foundation_app_id: ApplicationId<foundation::FoundationAbi>,
@@ -55,14 +55,15 @@ pub struct Collection {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct InitialState {
+pub struct InitializationArgument {
     pub credits_per_linera: Amount,
     pub max_credits_percent: u8,
     pub trade_fee_percent: u8,
     pub collection_id: Option<u64>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
+#[allow(clippy::large_enum_variant)]
 pub enum Operation {
     MintNFT {
         collection_id: u64,
@@ -96,10 +97,6 @@ pub enum Operation {
         token_id: u16,
     },
     RequestSubscribe,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ApplicationCall {
     CreateCollection {
         base_uri: String,
         price: Option<Amount>,
@@ -110,9 +107,10 @@ pub enum ApplicationCall {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum Message {
-    InitialState {
-        state: InitialState,
+    InitializationArgument {
+        argument: InitializationArgument,
     },
     CreateCollection {
         base_uri: String,
@@ -153,4 +151,67 @@ pub enum Message {
         token_id: u16,
     },
     RequestSubscribe,
+}
+
+/// An error that can occur during the contract execution.
+#[derive(Debug, Error)]
+pub enum MarketError {
+    /// Failed to deserialize BCS bytes
+    #[error("Failed to deserialize BCS bytes")]
+    BcsError(#[from] bcs::Error),
+
+    /// Failed to deserialize JSON string
+    #[error("Failed to deserialize JSON string")]
+    JsonError(#[from] serde_json::Error),
+    // Add more error variants here.
+    #[error("NOT IMPLEMENTED")]
+    NotImplemented,
+
+    #[error("Operation not allowed")]
+    OperationNotAllowed,
+
+    #[error("Invalid owner")]
+    InvalidOwner,
+
+    #[error("Cross-application sessions not supported")]
+    SessionsNotSupported,
+
+    #[error(transparent)]
+    ViewError(#[from] linera_views::views::ViewError),
+
+    #[error(transparent)]
+    ArithmeticError(#[from] ArithmeticError),
+
+    #[error("Owner is not collection owner")]
+    NotCollectionOwner,
+
+    #[error("Owner is not token owner")]
+    NotTokenOwner,
+
+    #[error("Base uri already exists")]
+    BaseURIALreadyExists,
+
+    #[error("Collection not exists")]
+    CollectionNotExists,
+
+    #[error("Token ID not exists")]
+    TokenIDNotExists,
+
+    #[error("NFT not on sale")]
+    TokenNotOnSale,
+
+    #[error("Invalid price")]
+    InvalidPrice,
+
+    #[error("Buyer is same as owner")]
+    BuyerIsOwner,
+
+    #[error("Invalid uri index")]
+    InvalidUriIndex,
+
+    #[error("Invalid signer")]
+    InvalidSigner,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
 }

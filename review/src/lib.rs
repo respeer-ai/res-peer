@@ -1,20 +1,22 @@
 use std::collections::HashMap;
 
 use async_graphql::{Request, Response, SimpleObject};
-use linera_sdk::base::{Amount, ApplicationId, ChainId, ContractAbi, Owner, ServiceAbi, Timestamp};
+use linera_sdk::{
+    base::{
+        Amount, ApplicationId, ArithmeticError, ChainId, ContractAbi, Owner, ServiceAbi, Timestamp,
+    },
+    graphql::GraphQLMutationRoot,
+};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 pub struct ReviewAbi;
 
 impl ContractAbi for ReviewAbi {
     type Parameters = ReviewParameters;
-    type InitializationArgument = InitialState;
+    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ApplicationCall;
-    type SessionCall = ();
-    type SessionState = ();
-    type Response = bool;
+    type Response = ReviewResponse;
 }
 
 impl ServiceAbi for ReviewAbi {
@@ -23,7 +25,14 @@ impl ServiceAbi for ReviewAbi {
     type QueryResponse = Response;
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize, Default)]
+pub enum ReviewResponse {
+    #[default]
+    Ok,
+    Approved(bool),
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ReviewParameters {
     pub feed_app_id: ApplicationId<feed::FeedAbi>,
     pub credit_app_id: ApplicationId<credit::CreditAbi>,
@@ -32,7 +41,7 @@ pub struct ReviewParameters {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
-pub struct InitialState {
+pub struct InitializationArgument {
     pub content_approved_threshold: u16,
     pub content_rejected_threshold: u16,
     pub asset_approved_threshold: u16,
@@ -101,7 +110,7 @@ pub struct Activity {
     pub reviewers: HashMap<Owner, Review>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     ApplyReviewer {
         resume: String,
@@ -152,6 +161,11 @@ pub enum Operation {
         name: String,
     },
     RequestSubscribe,
+    SubmitActivity {
+        activity_id: u64,
+        activity_host: Owner,
+        budget_amount: Amount,
+    },
     ApproveActivity {
         activity_id: u64,
         reason: Option<String>,
@@ -159,6 +173,9 @@ pub enum Operation {
     RejectActivity {
         activity_id: u64,
         reason: String,
+    },
+    ActivityApproved {
+        activity_id: u64,
     },
 }
 
@@ -217,8 +234,8 @@ pub enum Message {
         name: String,
     },
     RequestSubscribe,
-    InitialState {
-        state: InitialState,
+    InitializationArgument {
+        argument: InitializationArgument,
     },
     SubmitActivity {
         activity_id: u64,
@@ -235,19 +252,45 @@ pub enum Message {
     },
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ApplicationCall {
-    SubmitContent {
-        cid: String,
-        title: String,
-        content: String,
-    },
-    SubmitActivity {
-        activity_id: u64,
-        activity_host: Owner,
-        budget_amount: Amount,
-    },
-    ActivityApproved {
-        activity_id: u64,
-    },
+#[derive(Debug, Error)]
+pub enum ReviewError {
+    #[error("View error")]
+    ViewError(#[from] linera_views::views::ViewError),
+
+    #[error("Arithmetic error")]
+    ArithmeticError(#[from] ArithmeticError),
+
+    #[error("Invalid reviewer")]
+    InvalidReviewer,
+
+    #[error("Already reviewed")]
+    AlreadyReviewed,
+
+    #[error("Invalid content")]
+    InvalidContent,
+
+    #[error("Already exists")]
+    AlreadyExists,
+
+    #[error("Invalid activity")]
+    InvalidActivity,
+
+    #[error("Failed to deserialize BCS bytes")]
+    BcsError(#[from] bcs::Error),
+
+    /// Failed to deserialize JSON string
+    #[error("Failed to deserialize JSON string")]
+    JsonError(#[from] serde_json::Error),
+
+    #[error("Invalid user")]
+    InvalidUser,
+
+    #[error("Cross-application sessions not supported")]
+    SessionsNotSupported,
+
+    #[error("Invalid signer")]
+    InvalidSigner,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
 }

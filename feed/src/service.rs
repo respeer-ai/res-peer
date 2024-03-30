@@ -4,34 +4,39 @@ mod state;
 
 use self::state::Feed;
 use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
-use async_trait::async_trait;
 use feed::Operation;
 use linera_sdk::{
     base::{Amount, WithServiceAbi},
-    QueryContext, Service, ViewStateStorage,
+    Service, ServiceRuntime, ViewStateStorage,
 };
 use std::sync::Arc;
 use thiserror::Error;
 
-linera_sdk::service!(Feed);
+pub struct FeedService {
+    state: Arc<Feed>,
+}
 
-impl WithServiceAbi for Feed {
+linera_sdk::service!(FeedService);
+
+impl WithServiceAbi for FeedService {
     type Abi = feed::FeedAbi;
 }
 
-#[async_trait]
-impl Service for Feed {
+impl Service for FeedService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
+    type State = Feed;
 
-    async fn handle_query(
-        self: Arc<Self>,
-        _context: &QueryContext,
-        request: Request,
-    ) -> Result<Response, Self::Error> {
+    async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(FeedService {
+            state: Arc::new(state),
+        })
+    }
+
+    async fn handle_query(&self, request: Request) -> Result<Response, Self::Error> {
         // TODO: we need to filter content according to requester and review state here
         let schema: Schema<Arc<Feed>, MutationRoot, EmptySubscription> =
-            Schema::build(self.clone(), MutationRoot {}, EmptySubscription).finish();
+            Schema::build(self.state.clone(), MutationRoot {}, EmptySubscription).finish();
         let response = schema.execute(request).await;
         Ok(response)
     }

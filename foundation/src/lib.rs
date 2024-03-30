@@ -1,20 +1,16 @@
 use std::collections::HashSet;
 
 use async_graphql::{Request, Response};
-use linera_sdk::base::{Amount, ContractAbi, Owner, ServiceAbi};
+use linera_sdk::base::{Amount, ArithmeticError, ContractAbi, Owner, ServiceAbi};
 use serde::{Deserialize, Serialize};
-
+use thiserror::Error;
 pub struct FoundationAbi;
 
 impl ContractAbi for FoundationAbi {
     type Parameters = ();
-    type InitializationArgument = InitialState;
+    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ApplicationCall;
-    type SessionCall = ();
-    type SessionState = ();
-    type Response = Amount;
+    type Response = FoundationResponse;
 }
 
 impl ServiceAbi for FoundationAbi {
@@ -24,12 +20,19 @@ impl ServiceAbi for FoundationAbi {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
-pub struct InitialState {
+pub struct InitializationArgument {
     pub review_reward_percent: u8,
     pub review_reward_factor: u8,
     pub author_reward_percent: u8,
     pub author_reward_factor: u8,
     pub activity_reward_percent: u8,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub enum FoundationResponse {
+    #[default]
+    Ok,
+    Balance(Amount),
 }
 
 #[derive(Debug, Deserialize, Serialize, Copy, Clone)]
@@ -41,12 +44,10 @@ pub enum RewardType {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Operation {
-    UserDeposit { amount: Amount },
+    UserDeposit {
+        amount: Amount,
+    },
     RequestSubscribe,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ApplicationCall {
     Deposit {
         from: Owner,
         amount: Amount,
@@ -86,8 +87,8 @@ pub enum Message {
         amount: Amount,
     },
     RequestSubscribe,
-    InitialState {
-        state: InitialState,
+    InitializationArgument {
+        argument: InitializationArgument,
     },
     Deposit {
         from: Owner,
@@ -118,4 +119,49 @@ pub enum Message {
         activity_id: u64,
         amount: Amount,
     },
+}
+
+/// An error that can occur during the contract execution.
+#[derive(Debug, Error)]
+pub enum FoundationError {
+    /// Failed to deserialize BCS bytes
+    #[error("Failed to deserialize BCS bytes")]
+    BcsError(#[from] bcs::Error),
+
+    /// Failed to deserialize JSON string
+    #[error("Failed to deserialize JSON string")]
+    JsonError(#[from] serde_json::Error),
+
+    #[error("View error")]
+    ViewError(#[from] linera_views::views::ViewError),
+
+    #[error("Invalid user")]
+    InvalidUser,
+
+    #[error("Cross-application sessions not supported")]
+    SessionsNotSupported,
+
+    #[error("Insufficient funds")]
+    InsufficientFunds,
+
+    #[error("Invalid percent")]
+    InvalidPercent,
+
+    #[error("Insufficient balance")]
+    InsufficientBalance,
+
+    #[error("Arithmetic error")]
+    ArithmeticError(#[from] ArithmeticError),
+
+    #[error("Invalid account")]
+    InvalidAccount,
+
+    #[error("Invalid activity funds")]
+    InvalidActivityFunds,
+
+    #[error("Invalid signer")]
+    InvalidSigner,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
 }

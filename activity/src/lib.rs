@@ -17,10 +17,6 @@ impl ContractAbi for ActivityAbi {
     type Parameters = ActivityParameters;
     type InitializationArgument = ();
     type Operation = Operation;
-    type Message = Message;
-    type ApplicationCall = ();
-    type SessionCall = ();
-    type SessionState = ();
     type Response = ();
 }
 
@@ -30,7 +26,7 @@ impl ServiceAbi for ActivityAbi {
     type QueryResponse = Response;
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ActivityParameters {
     pub review_app_id: ApplicationId<review::ReviewAbi>,
     pub foundation_app_id: ApplicationId<foundation::FoundationAbi>,
@@ -224,6 +220,9 @@ pub enum ActivityError {
     #[error("Invalid activity")]
     InvalidActivity,
 
+    #[error("Invalid balance")]
+    InvalidBalance,
+
     #[error("Cross-application sessions not supported")]
     SessionsNotSupported,
 
@@ -256,6 +255,12 @@ pub enum ActivityError {
 
     #[error("Invalid prize config")]
     InvalidPrizeConfig,
+
+    #[error("Invalid signer")]
+    InvalidSigner,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
 
     #[error("Invalid query")]
     InvalidQuery(#[from] serde_json::Error),

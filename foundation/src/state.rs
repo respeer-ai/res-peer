@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
 use async_graphql::SimpleObject;
-use foundation::{InitialState, RewardType};
+use foundation::{FoundationError, InitializationArgument, RewardType};
 use linera_sdk::{
-    base::{Amount, ArithmeticError, Owner},
+    base::{Amount, Owner},
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use thiserror::Error;
 
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
@@ -28,12 +27,12 @@ pub struct Foundation {
 impl Foundation {
     pub(crate) async fn initialize_foundation(
         &mut self,
-        state: InitialState,
-    ) -> Result<(), StateError> {
+        state: InitializationArgument,
+    ) -> Result<(), FoundationError> {
         if state.review_reward_percent + state.author_reward_percent + state.activity_reward_percent
             > 100
         {
-            return Err(StateError::InvalidPercent);
+            return Err(FoundationError::InvalidPercent);
         }
         self.review_reward_percent.set(state.review_reward_percent);
         self.author_reward_percent.set(state.author_reward_percent);
@@ -44,8 +43,10 @@ impl Foundation {
         Ok(())
     }
 
-    pub(crate) async fn initial_state(&self) -> Result<InitialState, StateError> {
-        Ok(InitialState {
+    pub(crate) async fn initialization_argument(
+        &self,
+    ) -> Result<InitializationArgument, FoundationError> {
+        Ok(InitializationArgument {
             review_reward_percent: *self.review_reward_percent.get(),
             review_reward_factor: *self.review_reward_factor.get(),
             author_reward_percent: *self.author_reward_percent.get(),
@@ -56,13 +57,17 @@ impl Foundation {
 
     // When transaction happen, transaction fee will be deposited here
     // It'll be separated to different reward balance according to reward ratio
-    pub(crate) async fn deposit(&mut self, from: Owner, amount: Amount) -> Result<(), StateError> {
+    pub(crate) async fn deposit(
+        &mut self,
+        from: Owner,
+        amount: Amount,
+    ) -> Result<(), FoundationError> {
         let from_amount = match self.user_balances.get(&from).await? {
             Some(amount) => amount,
-            _ => return Err(StateError::InsufficientBalance),
+            _ => return Err(FoundationError::InsufficientBalance),
         };
         if from_amount.lt(&amount) {
-            return Err(StateError::InsufficientBalance);
+            return Err(FoundationError::InsufficientBalance);
         }
         self.user_balances
             .insert(&from, from_amount.saturating_sub(amount))?;
@@ -106,16 +111,16 @@ impl Foundation {
         from: Owner,
         to: Owner,
         amount: Amount,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         if from == to {
-            return Err(StateError::InvalidAccount);
+            return Err(FoundationError::InvalidAccount);
         }
         let from_amount = match self.user_balances.get(&from).await? {
             Some(balance) => balance,
-            None => return Err(StateError::InsufficientBalance),
+            None => return Err(FoundationError::InsufficientBalance),
         };
         if from_amount.lt(&amount) {
-            return Err(StateError::InsufficientBalance);
+            return Err(FoundationError::InsufficientBalance);
         }
         let to_amount = match self.user_balances.get(&to).await? {
             Some(balance) => balance,
@@ -132,7 +137,7 @@ impl Foundation {
         &mut self,
         owner: Owner,
         amount: Amount,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         let balance = self
             .user_balances
             .get(&owner)
@@ -147,7 +152,7 @@ impl Foundation {
         &mut self,
         user: Owner,
         amount: Amount,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         let amount = match self.user_balances.get(&user).await? {
             Some(user_balance) => user_balance.try_add(amount)?,
             None => amount,
@@ -160,15 +165,15 @@ impl Foundation {
         &mut self,
         reward_user: Owner,
         activity_id: u64,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         // TODO: check who can reward activity here
         let balance = match self.activity_lock_funds.get(&activity_id).await? {
             Some(balance) => balance,
-            None => return Err(StateError::InsufficientBalance),
+            None => return Err(FoundationError::InsufficientBalance),
         };
         let amount = Amount::from_tokens(50);
         if balance.le(&amount) {
-            return Err(StateError::InsufficientBalance);
+            return Err(FoundationError::InsufficientBalance);
         }
         // TODO: distribute reward from locked activity balance
         self.reward_user(reward_user, amount).await?;
@@ -177,7 +182,10 @@ impl Foundation {
         Ok(())
     }
 
-    pub(crate) async fn reward_author(&mut self, reward_user: Owner) -> Result<(), StateError> {
+    pub(crate) async fn reward_author(
+        &mut self,
+        reward_user: Owner,
+    ) -> Result<(), FoundationError> {
         let balance = self.author_reward_balance.get().clone();
         let amount = Amount::from_attos(
             balance
@@ -190,7 +198,10 @@ impl Foundation {
         Ok(())
     }
 
-    pub(crate) async fn reward_reviewer(&mut self, reward_user: Owner) -> Result<(), StateError> {
+    pub(crate) async fn reward_reviewer(
+        &mut self,
+        reward_user: Owner,
+    ) -> Result<(), FoundationError> {
         let balance = self.review_reward_balance.get().clone();
         let amount = balance
             .try_mul(*self.review_reward_factor.get() as u128)?
@@ -208,7 +219,7 @@ impl Foundation {
         reward_user: Owner,
         reward_type: RewardType,
         activity_id: Option<u64>,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         match reward_type {
             RewardType::Activity => {
                 self.reward_activity(reward_user, activity_id.unwrap())
@@ -223,7 +234,7 @@ impl Foundation {
         &mut self,
         activity_id: u64,
         amount: Amount,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         // TODO: check application balance
         let locked = match self.activity_lock_funds.get(&activity_id).await? {
             Some(amount) => amount,
@@ -235,7 +246,7 @@ impl Foundation {
         Ok(())
     }
 
-    pub(crate) async fn balance(&self, owner: Owner) -> Result<Amount, StateError> {
+    pub(crate) async fn balance(&self, owner: Owner) -> Result<Amount, FoundationError> {
         Ok(self
             .user_balances
             .get(&owner)
@@ -248,19 +259,19 @@ impl Foundation {
         &mut self,
         activity_id: u64,
         reward_amount: Amount,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         match self.activity_lock_funds.get(&activity_id).await {
             Ok(Some(funds)) => {
                 if funds < reward_amount {
-                    return Err(StateError::InsufficientBalance);
+                    return Err(FoundationError::InsufficientBalance);
                 } else {
                     self.activity_lock_funds
                         .insert(&activity_id, funds.saturating_sub(reward_amount))?;
                     Ok(())
                 }
             }
-            Ok(None) => return Err(StateError::InvalidActivityFunds),
-            Err(err) => return Err(StateError::ViewError(err)),
+            Ok(None) => return Err(FoundationError::InvalidActivityFunds),
+            Err(err) => return Err(FoundationError::ViewError(err)),
         }
     }
 
@@ -270,9 +281,9 @@ impl Foundation {
         voter_users: HashSet<Owner>,
         reward_amount: Amount,
         voter_reward_percent: u8,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), FoundationError> {
         if voter_reward_percent > 100 {
-            return Err(StateError::InvalidPercent);
+            return Err(FoundationError::InvalidPercent);
         }
         let balance = match self.user_balances.get(&winner_user).await {
             Ok(Some(balance)) => balance,
@@ -316,25 +327,4 @@ impl Foundation {
         }
         Ok(())
     }
-}
-
-#[derive(Debug, Error)]
-pub enum StateError {
-    #[error("Invalid percent")]
-    InvalidPercent,
-
-    #[error("Insufficient balance")]
-    InsufficientBalance,
-
-    #[error("View error")]
-    ViewError(#[from] linera_views::views::ViewError),
-
-    #[error("Arithmetic error")]
-    ArithmeticError(#[from] ArithmeticError),
-
-    #[error("Invalid account")]
-    InvalidAccount,
-
-    #[error("Invalid activity funds")]
-    InvalidActivityFunds,
 }

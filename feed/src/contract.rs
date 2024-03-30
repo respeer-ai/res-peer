@@ -7,306 +7,132 @@ use std::collections::HashMap;
 use self::state::Feed;
 use async_trait::async_trait;
 use credit::CreditAbi;
-use feed::{ApplicationCall, Content, Message, Operation};
+use feed::{Content, FeedError, FeedResponse, Message, Operation};
 use foundation::FoundationAbi;
 use linera_sdk::{
-    base::{Amount, ApplicationId, ChannelName, Destination, Owner, SessionId, WithContractAbi},
-    contract::system_api::{self, current_system_time},
-    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
-    OperationContext, SessionCallOutcome, ViewStateStorage,
+    base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
+    Contract, ContractRuntime, ViewStateStorage,
 };
-use thiserror::Error;
 
-linera_sdk::contract!(Feed);
+pub struct FeedContract {
+    state: Feed,
+    runtime: ContractRuntime<Self>,
+}
 
-impl WithContractAbi for Feed {
+linera_sdk::contract!(FeedContract);
+
+impl WithContractAbi for FeedContract {
     type Abi = feed::FeedAbi;
 }
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
 #[async_trait]
-impl Contract for Feed {
-    type Error = ContractError;
+impl Contract for FeedContract {
+    type Error = FeedError;
     type Storage = ViewStateStorage<Self>;
+    type State = Feed;
+    type Message = Message;
 
-    async fn initialize(
-        &mut self,
-        _context: &OperationContext,
-        state: Self::InitializationArgument,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
-        self.initialize_feed(state).await;
-        Ok(ExecutionOutcome::default())
+    async fn new(state: Feed, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(FeedContract { state, runtime })
+    }
+
+    fn state_mut(&mut self) -> &mut Self::State {
+        &mut self.state
+    }
+
+    async fn initialize(&mut self, state: Self::InitializationArgument) -> Result<(), Self::Error> {
+        self.state.initialize_feed(state).await;
+        Ok(())
     }
 
     async fn execute_operation(
         &mut self,
-        _context: &OperationContext,
         operation: Self::Operation,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    ) -> Result<Self::Response, Self::Error> {
         match operation {
-            Operation::Like { cid } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::Like { cid },
-            )),
-            Operation::Dislike { cid } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Dislike { cid },
-                )),
-            Operation::Tip { cid, amount } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Tip { cid, amount },
-                )),
-            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::RequestSubscribe,
-                )),
+            Operation::Like { cid } => self.on_op_like(cid),
+            Operation::Dislike { cid } => self.on_op_dislike(cid),
+            Operation::Tip { cid, amount } => self.on_op_tip(cid, amount),
+            Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            Operation::Recommend {
+                cid,
+                reason_cid,
+                reason,
+            } => self.on_op_recommend(cid, reason_cid, reason),
+            Operation::Comment {
+                cid,
+                comment_cid,
+                comment,
+                commentor,
+            } => self.on_op_comment(cid, comment_cid, comment, commentor),
+            Operation::Publish {
+                cid,
+                title,
+                content,
+                author,
+            } => self.on_op_publish(cid, title, content, author),
+            Operation::ContentAuthor { cid } => self.on_op_content_author(cid).await,
         }
     }
 
-    async fn execute_message(
-        &mut self,
-        context: &MessageContext,
-        message: Self::Message,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
         match message {
-            Message::Like { cid } => {
-                self.like(
-                    cid.clone(),
-                    context.authenticated_signer.unwrap(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Like { cid }))
-            }
-            Message::Dislike { cid } => {
-                self.dislike(
-                    cid.clone(),
-                    context.authenticated_signer.unwrap(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Dislike { cid }))
-            }
-            Message::Tip { cid, amount } => {
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Tip { cid, amount }))
-            }
+            Message::Like { cid } => self.on_msg_like(cid).await,
+            Message::Dislike { cid } => self.on_msg_dislike(cid).await,
+            Message::Tip { cid, amount } => self.on_msg_tip(cid, amount).await,
             Message::Publish {
                 cid,
                 title,
                 content,
                 author,
-            } => {
-                self.publish(
-                    cid.clone(),
-                    None,
-                    title.clone(),
-                    content.clone(),
-                    author,
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::Publish {
-                        cid,
-                        title,
-                        content,
-                        author,
-                    },
-                ))
-            }
+            } => self.on_msg_publish(cid, title, content, author).await,
             Message::Recommend {
                 cid,
                 reason_cid,
                 reason,
-            } => {
-                let author = context.authenticated_signer.unwrap();
-                self.publish(
-                    reason_cid.clone(),
-                    Some(cid.clone()),
-                    String::default(),
-                    reason.clone(),
-                    author,
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                self.recommend_content(cid.clone(), reason_cid.clone())
-                    .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::Recommend {
-                        cid,
-                        reason_cid,
-                        reason,
-                    },
-                ))
-            }
+            } => self.on_msg_recommend(cid, reason_cid, reason).await,
             Message::Comment {
                 cid,
                 comment_cid,
                 comment,
                 commentor,
             } => {
-                self.publish(
-                    comment_cid.clone(),
-                    Some(cid.clone()),
-                    String::default(),
-                    comment.clone(),
-                    commentor,
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                self.comment_content(cid.clone(), comment_cid.clone())
-                    .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::Comment {
-                        cid,
-                        comment_cid,
-                        comment,
-                        commentor,
-                    },
-                ))
+                self.on_msg_comment(cid, comment_cid, comment, commentor)
+                    .await
             }
-            Message::RequestSubscribe => {
-                let mut result = ExecutionOutcome::default();
-                if context.message_id.chain_id
-                    == system_api::current_application_id().creation.chain_id
-                {
-                    return Ok(result);
-                }
-                result.subscribe.push((
-                    ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
-                    context.message_id.chain_id,
-                ));
-                Ok(result)
-            }
+            Message::RequestSubscribe => self.on_msg_request_subscribe(),
         }
-    }
-
-    async fn handle_application_call(
-        &mut self,
-        _context: &CalleeContext,
-        call: Self::ApplicationCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<
-        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
-        Self::Error,
-    > {
-        match call {
-            ApplicationCall::Recommend {
-                cid,
-                reason_cid,
-                reason,
-            } => Ok(ApplicationCallOutcome {
-                value: None,
-                execution_outcome: ExecutionOutcome::default().with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Recommend {
-                        cid,
-                        reason_cid,
-                        reason,
-                    },
-                ),
-                create_sessions: vec![],
-            }),
-            ApplicationCall::Comment {
-                cid,
-                comment_cid,
-                comment,
-                commentor,
-            } => Ok(ApplicationCallOutcome {
-                value: None,
-                execution_outcome: ExecutionOutcome::default().with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Comment {
-                        cid,
-                        comment_cid,
-                        comment,
-                        commentor,
-                    },
-                ),
-                create_sessions: vec![],
-            }),
-            ApplicationCall::Publish {
-                cid,
-                title,
-                content,
-                author,
-            } => Ok(ApplicationCallOutcome {
-                value: None,
-                execution_outcome: ExecutionOutcome::default().with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Publish {
-                        cid,
-                        title,
-                        content,
-                        author,
-                    },
-                ),
-                create_sessions: vec![],
-            }),
-            ApplicationCall::ContentAuthor { cid } => Ok(ApplicationCallOutcome {
-                value: Some(self.content_author(cid).await?),
-                execution_outcome: ExecutionOutcome::default(),
-                create_sessions: vec![],
-            }),
-        }
-    }
-
-    async fn handle_session_call(
-        &mut self,
-        _context: &CalleeContext,
-        _session: Self::SessionState,
-        _call: Self::SessionCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
-        Err(ContractError::SessionsNotSupported)
     }
 }
 
-impl Feed {
-    fn credit_app_id() -> Result<ApplicationId<CreditAbi>, ContractError> {
-        Ok(Self::parameters().unwrap().credit_app_id)
+impl FeedContract {
+    fn credit_app_id(&mut self) -> ApplicationId<CreditAbi> {
+        self.runtime.application_parameters().credit_app_id
     }
 
-    fn foundation_app_id() -> Result<ApplicationId<FoundationAbi>, ContractError> {
-        Ok(Self::parameters().unwrap().foundation_app_id)
+    fn foundation_app_id(&mut self) -> ApplicationId<FoundationAbi> {
+        self.runtime.application_parameters().foundation_app_id
     }
 
-    async fn reward_credits(&mut self, owner: Owner, amount: Amount) -> Result<(), ContractError> {
-        let call = credit::ApplicationCall::Reward { owner, amount };
-        self.call_application(true, Self::credit_app_id()?, &call, vec![])?;
+    async fn reward_credits(&mut self, owner: Owner, amount: Amount) -> Result<(), FeedError> {
+        let call = credit::Operation::Reward { owner, amount };
+        let credit_app_id = self.credit_app_id();
+        let _ = self.runtime.call_application(true, credit_app_id, &call);
         Ok(())
     }
 
-    async fn reward_tokens(&mut self, author: Owner) -> Result<(), ContractError> {
-        let call = foundation::ApplicationCall::Reward {
+    async fn reward_tokens(&mut self, author: Owner) -> Result<(), FeedError> {
+        let call = foundation::Operation::Reward {
             reward_user: Some(author),
             reward_type: foundation::RewardType::Publish,
             activity_id: None,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
+        let foundation_app_id = self.foundation_app_id();
+        let _ = self
+            .runtime
+            .call_application(true, foundation_app_id, &call);
         Ok(())
     }
 
@@ -318,8 +144,9 @@ impl Feed {
         content: String,
         author: Owner,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), FeedError> {
         match self
+            .state
             .create_content(
                 Content {
                     cid,
@@ -330,7 +157,7 @@ impl Feed {
                     likes: 0,
                     dislikes: 0,
                     accounts: HashMap::default(),
-                    created_at: current_system_time(),
+                    created_at: self.runtime.system_time(),
                 },
                 author,
             )
@@ -345,7 +172,7 @@ impl Feed {
                 self.reward_tokens(author).await?;
                 Ok(())
             }
-            Err(err) => Err(ContractError::StateError(err)),
+            Err(err) => Err(err),
         }
     }
 
@@ -354,15 +181,19 @@ impl Feed {
         cid: String,
         owner: Owner,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
-        match self.like_content(cid, owner, true).await {
+    ) -> Result<(), FeedError> {
+        match self
+            .state
+            .like_content(cid, owner, true, self.runtime.system_time())
+            .await
+        {
             Ok(_) => {
                 if !creation_chain {
                     return Ok(());
                 }
                 return self.reward_credits(owner, Amount::from_tokens(100)).await;
             }
-            Err(err) => return Err(ContractError::StateError(err)),
+            Err(err) => Err(err),
         }
     }
 
@@ -371,36 +202,277 @@ impl Feed {
         cid: String,
         owner: Owner,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
-        match self.like_content(cid, owner, false).await {
+    ) -> Result<(), FeedError> {
+        match self
+            .state
+            .like_content(cid, owner, false, self.runtime.system_time())
+            .await
+        {
             Ok(_) => {
                 if !creation_chain {
                     return Ok(());
                 }
                 return self.reward_credits(owner, Amount::from_tokens(100)).await;
             }
-            Err(err) => return Err(ContractError::StateError(err)),
+            Err(err) => Err(err),
         }
     }
-}
 
-/// An error that can occur during the contract execution.
-#[derive(Debug, Error)]
-pub enum ContractError {
-    /// Failed to deserialize BCS bytes
-    #[error("Failed to deserialize BCS bytes")]
-    BcsError(#[from] bcs::Error),
+    fn require_message_id(&mut self) -> Result<MessageId, FeedError> {
+        match self.runtime.message_id() {
+            Some(message_id) => Ok(message_id),
+            None => Err(FeedError::InvalidMessageId),
+        }
+    }
 
-    /// Failed to deserialize JSON string
-    #[error("Failed to deserialize JSON string")]
-    JsonError(#[from] serde_json::Error),
-    // Add more error variants here.
-    #[error("Invalid publisher")]
-    InvalidPublisher,
+    fn require_authenticated_signer(&mut self) -> Result<Owner, FeedError> {
+        match self.runtime.authenticated_signer() {
+            Some(owner) => Ok(owner),
+            None => Err(FeedError::InvalidSigner),
+        }
+    }
 
-    #[error(transparent)]
-    StateError(#[from] state::StateError),
+    fn on_op_like(&mut self, cid: String) -> Result<FeedResponse, FeedError> {
+        self.runtime
+            .prepare_message(Message::Like { cid })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(FeedResponse::Ok)
+    }
 
-    #[error("Cross-application sessions not supported")]
-    SessionsNotSupported,
+    fn on_op_dislike(&mut self, cid: String) -> Result<FeedResponse, FeedError> {
+        self.runtime
+            .prepare_message(Message::Dislike { cid })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(FeedResponse::Ok)
+    }
+
+    fn on_op_tip(&mut self, cid: String, amount: Amount) -> Result<FeedResponse, FeedError> {
+        self.runtime
+            .prepare_message(Message::Tip { cid, amount })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(FeedResponse::Ok)
+    }
+
+    fn on_op_request_subscribe(&mut self) -> Result<FeedResponse, FeedError> {
+        self.runtime
+            .prepare_message(Message::RequestSubscribe)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(FeedResponse::Ok)
+    }
+
+    fn on_op_recommend(
+        &mut self,
+        cid: String,
+        reason_cid: String,
+        reason: String,
+    ) -> Result<FeedResponse, FeedError> {
+        self.runtime
+            .prepare_message(Message::Recommend {
+                cid,
+                reason_cid,
+                reason,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(FeedResponse::Ok)
+    }
+
+    fn on_op_comment(
+        &mut self,
+        cid: String,
+        comment_cid: String,
+        comment: String,
+        commentor: Owner,
+    ) -> Result<FeedResponse, FeedError> {
+        self.runtime
+            .prepare_message(Message::Comment {
+                cid,
+                comment_cid,
+                comment,
+                commentor,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(FeedResponse::Ok)
+    }
+
+    fn on_op_publish(
+        &mut self,
+        cid: String,
+        title: String,
+        content: String,
+        author: Owner,
+    ) -> Result<FeedResponse, FeedError> {
+        self.runtime
+            .prepare_message(Message::Publish {
+                cid,
+                title,
+                content,
+                author,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(FeedResponse::Ok)
+    }
+
+    async fn on_op_content_author(&mut self, cid: String) -> Result<FeedResponse, FeedError> {
+        match self.state.content_author(cid).await {
+            Ok(owner) => Ok(FeedResponse::ContentAuthor(Some(owner))),
+            _ => Err(FeedError::InvalidContent),
+        }
+    }
+
+    async fn on_msg_like(&mut self, cid: String) -> Result<(), FeedError> {
+        let signer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() == self.runtime.application_id().creation.chain_id;
+        self.like(cid.clone(), signer, creation_chain).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Like { cid })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_dislike(&mut self, cid: String) -> Result<(), FeedError> {
+        let signer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() == self.runtime.application_id().creation.chain_id;
+        self.dislike(cid.clone(), signer, creation_chain).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Dislike { cid })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_tip(&mut self, cid: String, _amount: Amount) -> Result<(), FeedError> {
+        // TODO: transfer amount from signer to author
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Dislike { cid })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_publish(
+        &mut self,
+        cid: String,
+        title: String,
+        content: String,
+        author: Owner,
+    ) -> Result<(), FeedError> {
+        let creation_chain =
+            self.runtime.chain_id() == self.runtime.application_id().creation.chain_id;
+        self.publish(
+            cid.clone(),
+            None,
+            title.clone(),
+            content.clone(),
+            author,
+            creation_chain,
+        )
+        .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Dislike { cid })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_recommend(
+        &mut self,
+        cid: String,
+        reason_cid: String,
+        reason: String,
+    ) -> Result<(), FeedError> {
+        let author = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() == self.runtime.application_id().creation.chain_id;
+        self.publish(
+            reason_cid.clone(),
+            Some(cid.clone()),
+            String::default(),
+            reason.clone(),
+            author,
+            creation_chain,
+        )
+        .await?;
+        self.state
+            .recommend_content(cid.clone(), reason_cid.clone())
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Dislike { cid })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_comment(
+        &mut self,
+        cid: String,
+        comment_cid: String,
+        comment: String,
+        commentor: Owner,
+    ) -> Result<(), FeedError> {
+        let creation_chain =
+            self.runtime.chain_id() == self.runtime.application_id().creation.chain_id;
+        self.publish(
+            comment_cid.clone(),
+            Some(cid.clone()),
+            String::default(),
+            comment.clone(),
+            commentor,
+            creation_chain,
+        )
+        .await?;
+        self.state
+            .comment_content(cid.clone(), comment_cid.clone())
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Dislike { cid })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_request_subscribe(&mut self) -> Result<(), FeedError> {
+        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let message_id = self.require_message_id()?;
+        self.runtime.subscribe(
+            message_id.chain_id,
+            ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
+        );
+        Ok(())
+    }
 }

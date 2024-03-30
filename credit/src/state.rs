@@ -1,13 +1,11 @@
 use std::cmp::Ordering;
 
 use async_graphql::SimpleObject;
-use credit::{AgeAmount, AgeAmounts, InitialState};
+use credit::{AgeAmount, AgeAmounts, CreditError, InitializationArgument};
 use linera_sdk::{
     base::{Amount, ApplicationId, Owner, Timestamp},
-    contract::system_api::current_system_time,
     views::{linera_views, MapView, RegisterView, RootView, SetView, ViewStorageContext},
 };
-use thiserror::Error;
 
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
@@ -23,17 +21,19 @@ pub struct Credit {
 
 #[allow(dead_code)]
 impl Credit {
-    pub(crate) async fn initialize_credit(&mut self, mut state: InitialState) {
-        if state.initial_supply.eq(&Amount::ZERO) {
-            state.initial_supply = Amount::from_tokens(100000000);
+    pub(crate) async fn initialize_credit(&mut self, mut argument: InitializationArgument) {
+        if argument.initial_supply.eq(&Amount::ZERO) {
+            argument.initial_supply = Amount::from_tokens(100000000);
         }
-        self._initial_supply.set(state.initial_supply);
-        self._balance.set(state.initial_supply);
-        self.amount_alive_ms.set(state.amount_alive_ms);
+        self._initial_supply.set(argument.initial_supply);
+        self._balance.set(argument.initial_supply);
+        self.amount_alive_ms.set(argument.amount_alive_ms);
     }
 
-    pub(crate) async fn initial_state(&self) -> Result<InitialState, StateError> {
-        Ok(InitialState {
+    pub(crate) async fn initialization_argument(
+        &self,
+    ) -> Result<InitializationArgument, CreditError> {
+        Ok(InitializationArgument {
             initial_supply: *self._initial_supply.get(),
             amount_alive_ms: *self.amount_alive_ms.get(),
         })
@@ -50,7 +50,12 @@ impl Credit {
         }
     }
 
-    pub(crate) async fn reward(&mut self, owner: Owner, amount: Amount) -> Result<(), StateError> {
+    pub(crate) async fn reward(
+        &mut self,
+        owner: Owner,
+        amount: Amount,
+        now: Timestamp,
+    ) -> Result<(), CreditError> {
         match self.spendables.get(&owner).await {
             Ok(Some(spendable)) => {
                 self.spendables
@@ -69,7 +74,7 @@ impl Credit {
                     self._balance.get(),
                     amount
                 );
-                // return Err(StateError::InsufficientSupplyBalance)
+                // return Err(CreditError::InsufficientSupplyBalance)
             }
             _ => {}
         }
@@ -82,14 +87,12 @@ impl Credit {
                 amounts.amounts.push(AgeAmount {
                     amount,
                     expired: Timestamp::from(
-                        current_system_time()
-                            .micros()
-                            .saturating_add(*self.amount_alive_ms.get()),
+                        now.micros().saturating_add(*self.amount_alive_ms.get()),
                     ),
                 });
                 match self.balances.insert(&owner, amounts) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(StateError::ViewError(err)),
+                    Err(err) => Err(CreditError::ViewError(err)),
                 }
             }
             _ => match self.balances.insert(
@@ -98,20 +101,18 @@ impl Credit {
                     amounts: vec![AgeAmount {
                         amount,
                         expired: Timestamp::from(
-                            current_system_time()
-                                .micros()
-                                .saturating_add(*self.amount_alive_ms.get()),
+                            now.micros().saturating_add(*self.amount_alive_ms.get()),
                         ),
                     }],
                 },
             ) {
                 Ok(_) => Ok(()),
-                Err(err) => Err(StateError::ViewError(err)),
+                Err(err) => Err(CreditError::ViewError(err)),
             },
         }
     }
 
-    pub(crate) async fn liquidate(&mut self) {
+    pub(crate) async fn liquidate(&mut self, now: Timestamp) {
         let owners = self.balances.indices().await.unwrap();
         for owner in owners {
             let mut amounts = match self.balances.get(&owner).await {
@@ -123,7 +124,7 @@ impl Credit {
                 _ => continue,
             };
             amounts.amounts.retain(|amount| {
-                let expired = current_system_time().saturating_diff_micros(amount.expired) > 0;
+                let expired = now.saturating_diff_micros(amount.expired) > 0;
                 if expired {
                     self._balance
                         .set(self._balance.get().saturating_add(amount.amount));
@@ -153,10 +154,11 @@ impl Credit {
         from: Owner,
         to: Owner,
         amount: Amount,
-    ) -> Result<(), StateError> {
+        now: Timestamp,
+    ) -> Result<(), CreditError> {
         match self.spendables.get(&from).await {
             Ok(Some(spendable)) => match spendable.cmp(&amount) {
-                Ordering::Less => Err(StateError::InsufficientAccountBalance),
+                Ordering::Less => Err(CreditError::InsufficientAccountBalance),
                 _ => {
                     self.spendables
                         .insert(&from, spendable.saturating_sub(amount))?;
@@ -174,8 +176,7 @@ impl Credit {
                                     remain = Some(AgeAmount {
                                         amount: result,
                                         expired: Timestamp::from(
-                                            current_system_time()
-                                                .micros()
+                                            now.micros()
                                                 .saturating_add(*self.amount_alive_ms.get()),
                                         ),
                                     })
@@ -196,9 +197,7 @@ impl Credit {
                             amounts.amounts.push(AgeAmount {
                                 amount,
                                 expired: Timestamp::from(
-                                    current_system_time()
-                                        .micros()
-                                        .saturating_add(*self.amount_alive_ms.get()),
+                                    now.micros().saturating_add(*self.amount_alive_ms.get()),
                                 ),
                             });
                             self.balances.insert(&to, amounts).unwrap();
@@ -211,8 +210,7 @@ impl Credit {
                                     amounts: vec![AgeAmount {
                                         amount,
                                         expired: Timestamp::from(
-                                            current_system_time()
-                                                .micros()
+                                            now.micros()
                                                 .saturating_add(*self.amount_alive_ms.get()),
                                         ),
                                     }],
@@ -229,16 +227,7 @@ impl Credit {
                     Ok(())
                 }
             },
-            _ => return Err(StateError::InsufficientAccountBalance),
+            _ => return Err(CreditError::InsufficientAccountBalance),
         }
     }
-}
-
-#[derive(Debug, Error)]
-pub enum StateError {
-    #[error("Insufficient account balance")]
-    InsufficientAccountBalance,
-
-    #[error("View error")]
-    ViewError(#[from] linera_views::views::ViewError),
 }

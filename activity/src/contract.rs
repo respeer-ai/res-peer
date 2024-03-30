@@ -5,263 +5,124 @@ mod state;
 use std::collections::HashSet;
 
 use self::state::Activity;
-use activity::{ActivityError, AnnounceParams, CreateParams, Message, Operation, VoteType};
-use async_trait::async_trait;
-use feed::FeedAbi;
-use foundation::FoundationAbi;
-use linera_sdk::{
-    base::{Amount, ApplicationId, ChannelName, Destination, Owner, SessionId, WithContractAbi},
-    contract::system_api,
-    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
-    OperationContext, SessionCallOutcome, ViewStateStorage,
+use activity::{
+    ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType,
 };
-use review::ReviewAbi;
+use async_trait::async_trait;
+use feed::{FeedAbi, FeedResponse};
+use foundation::{FoundationAbi, FoundationResponse};
+use linera_sdk::{
+    base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
+    Contract, ContractRuntime, ViewStateStorage,
+};
+use review::{ReviewAbi, ReviewResponse};
 
-linera_sdk::contract!(Activity);
+pub struct ActivityContract {
+    state: Activity,
+    runtime: ContractRuntime<Self>,
+}
 
-impl WithContractAbi for Activity {
+linera_sdk::contract!(ActivityContract);
+
+impl WithContractAbi for ActivityContract {
     type Abi = activity::ActivityAbi;
 }
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
 #[async_trait]
-impl Contract for Activity {
+impl Contract for ActivityContract {
     type Error = ActivityError;
     type Storage = ViewStateStorage<Self>;
+    type State = Activity;
+    type Message = Message;
+
+    async fn new(state: Activity, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(ActivityContract { state, runtime })
+    }
+
+    fn state_mut(&mut self) -> &mut Self::State {
+        &mut self.state
+    }
 
     async fn initialize(
         &mut self,
-        _context: &OperationContext,
         _argument: Self::InitializationArgument,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
-        Ok(ExecutionOutcome::default())
+    ) -> Result<(), Self::Error> {
+        Ok(())
     }
 
-    async fn execute_operation(
-        &mut self,
-        context: &OperationContext,
-        operation: Self::Operation,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    async fn execute_operation(&mut self, operation: Self::Operation) -> Result<(), Self::Error> {
         match operation {
-            Operation::Create { params } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Create { params },
-                )),
-            Operation::Update { params } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Update { params },
-                )),
+            Operation::Create { params } => self.on_op_create(params),
+            Operation::Update { params } => self.on_op_update(params),
             Operation::Register {
                 activity_id,
                 object_id,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::Register {
-                    activity_id,
-                    object_id,
-                },
-            )),
+            } => self.on_op_register(activity_id, object_id),
             Operation::Vote {
                 activity_id,
                 object_id,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::Vote {
-                    activity_id,
-                    object_id,
-                },
-            )),
-            Operation::Announce { params } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Announce { params },
-                )),
-            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::RequestSubscribe,
-                )),
-            Operation::Finalize { activity_id } => {
-                let activity = self.activity(activity_id).await?;
-                if activity.host != context.authenticated_signer.unwrap() {
-                    return Err(ActivityError::NotActivityHost);
-                }
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::Finalize { activity_id },
-                ))
-            }
+            } => self.on_op_vote(activity_id, object_id),
+            Operation::Announce { params } => self.on_op_announce(params),
+            Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            Operation::Finalize { activity_id } => self.on_op_finalize(activity_id).await,
         }
     }
 
-    async fn execute_message(
-        &mut self,
-        context: &MessageContext,
-        message: Self::Message,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
         match message {
-            Message::Create { params } => {
-                self._create_activity(context.authenticated_signer.unwrap(), params.clone())
-                    .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Create { params }))
-            }
-            Message::Update { params } => {
-                self.update_activity(params.clone()).await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Update { params }))
-            }
+            Message::Create { params } => self.on_msg_create(params).await,
+            Message::Update { params } => self.on_msg_update(params).await,
             Message::Register {
                 activity_id,
                 object_id,
-            } => {
-                self.register(activity_id, object_id.clone()).await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::Register {
-                        activity_id,
-                        object_id,
-                    },
-                ))
-            }
+            } => self.on_msg_register(activity_id, object_id).await,
             Message::Vote {
                 activity_id,
                 object_id,
-            } => {
-                match self.activity_approved(activity_id).await {
-                    Ok(true) => {}
-                    Ok(false) => return Err(ActivityError::ActivityNotApproved),
-                    Err(err) => return Err(err),
-                }
-                match self.votable(activity_id).await {
-                    Ok(true) => {}
-                    Ok(false) => return Err(ActivityError::ActivityNotVotable),
-                    Err(err) => return Err(err),
-                }
-                let balance = self
-                    .account_balance(context.authenticated_signer.unwrap())
-                    .await?;
-                let activity = self.activity(activity_id).await?;
-                let power = match activity.vote_type {
-                    VoteType::Power => balance,
-                    VoteType::Account => Amount::ONE,
-                };
-                if power.eq(&Amount::ZERO) {
-                    return Err(ActivityError::AccountBalanceRequired);
-                }
-                self.vote(
-                    context.authenticated_signer.unwrap(),
-                    activity_id,
-                    object_id.clone(),
-                    power,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::Vote {
-                        activity_id,
-                        object_id,
-                    },
-                ))
-            }
-            Message::Announce { params } => {
-                self.create_announcement(params.clone()).await?;
-                self.announce(
-                    params.activity_id,
-                    params.cid.clone(),
-                    params.announce_prize,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Announce { params }))
-            }
-            Message::RequestSubscribe => {
-                let mut result = ExecutionOutcome::default();
-                if context.message_id.chain_id
-                    == system_api::current_application_id().creation.chain_id
-                {
-                    return Ok(result);
-                }
-                result.subscribe.push((
-                    ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
-                    context.message_id.chain_id,
-                ));
-                Ok(result)
-            }
-            Message::Finalize { activity_id } => {
-                self._finalize(activity_id).await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::Finalize { activity_id }))
-            }
+            } => self.on_msg_vote(activity_id, object_id).await,
+            Message::Announce { params } => self.on_msg_announce(params).await,
+            Message::RequestSubscribe => self.on_msg_request_subscribe(),
+            Message::Finalize { activity_id } => self.on_msg_finalize(activity_id).await,
         }
-    }
-
-    async fn handle_application_call(
-        &mut self,
-        _context: &CalleeContext,
-        _call: Self::ApplicationCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<
-        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
-        Self::Error,
-    > {
-        Ok(ApplicationCallOutcome::default())
-    }
-
-    async fn handle_session_call(
-        &mut self,
-        _context: &CalleeContext,
-        _session: Self::SessionState,
-        _call: Self::SessionCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
-        Err(ActivityError::SessionsNotSupported)
     }
 }
 
-impl Activity {
-    fn review_app_id() -> Result<ApplicationId<ReviewAbi>, ActivityError> {
-        Ok(Self::parameters().unwrap().review_app_id)
+impl ActivityContract {
+    fn review_app_id(&mut self) -> ApplicationId<ReviewAbi> {
+        self.runtime.application_parameters().review_app_id
     }
 
-    fn foundation_app_id() -> Result<ApplicationId<FoundationAbi>, ActivityError> {
-        Ok(Self::parameters().unwrap().foundation_app_id)
+    fn foundation_app_id(&mut self) -> ApplicationId<FoundationAbi> {
+        self.runtime.application_parameters().foundation_app_id
     }
 
-    fn feed_app_id() -> Result<ApplicationId<FeedAbi>, ActivityError> {
-        Ok(Self::parameters().unwrap().feed_app_id)
+    fn feed_app_id(&mut self) -> ApplicationId<FeedAbi> {
+        self.runtime.application_parameters().feed_app_id
     }
 
     async fn create_announcement(&mut self, params: AnnounceParams) -> Result<(), ActivityError> {
-        let call = review::ApplicationCall::SubmitContent {
+        let call = review::Operation::SubmitContent {
             cid: params.cid,
             title: params.title,
             content: params.content,
         };
-        self.call_application(true, Self::review_app_id()?, &call, vec![])?;
+        let review_app_id = self.review_app_id();
+        self.runtime.call_application(true, review_app_id, &call);
         Ok(())
     }
 
     async fn account_balance(&mut self, owner: Owner) -> Result<Amount, ActivityError> {
-        let call = foundation::ApplicationCall::Balance { owner };
-        let (resp, _) = self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
-        Ok(resp)
+        let call = foundation::Operation::Balance { owner };
+        let foundation_app_id = self.foundation_app_id();
+        match self
+            .runtime
+            .call_application(true, foundation_app_id, &call)
+        {
+            FoundationResponse::Balance(amount) => Ok(amount),
+            _ => Err(ActivityError::InvalidBalance),
+        }
     }
 
     async fn _create_activity(
@@ -269,27 +130,34 @@ impl Activity {
         owner: Owner,
         params: CreateParams,
     ) -> Result<(), ActivityError> {
-        let activity_id = self.create_activity(owner, params.clone()).await?;
-        let call = review::ApplicationCall::SubmitActivity {
+        let activity_id = self
+            .state
+            .create_activity(owner, params.clone(), self.runtime.system_time())
+            .await?;
+        let call = review::Operation::SubmitActivity {
             activity_id,
             activity_host: owner,
             budget_amount: params.budget_amount,
         };
-        self.call_application(true, Self::review_app_id()?, &call, vec![])?;
+        let review_app_id = self.review_app_id();
+        let _ = self.runtime.call_application(true, review_app_id, &call);
         Ok(())
     }
 
     async fn activity_approved(&mut self, activity_id: u64) -> Result<bool, ActivityError> {
-        let call = review::ApplicationCall::ActivityApproved { activity_id };
-        let (approved, _) = self.call_application(true, Self::review_app_id()?, &call, vec![])?;
-        Ok(approved)
+        let call = review::Operation::ActivityApproved { activity_id };
+        let review_app_id = self.review_app_id();
+        match self.runtime.call_application(true, review_app_id, &call) {
+            ReviewResponse::Approved(approved) => Ok(approved),
+            _ => Err(ActivityError::InvalidActivity),
+        }
     }
 
     async fn content_author(&mut self, cid: String) -> Result<Owner, ActivityError> {
-        let call = feed::ApplicationCall::ContentAuthor { cid };
-        let (author, _) = self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
-        match author {
-            Some(author) => Ok(author),
+        let call = feed::Operation::ContentAuthor { cid };
+        let feed_app_id = self.feed_app_id();
+        match self.runtime.call_application(true, feed_app_id, &call) {
+            FeedResponse::ContentAuthor(Some(author)) => Ok(author),
             _ => Err(ActivityError::InvalidContentAuthor),
         }
     }
@@ -302,30 +170,36 @@ impl Activity {
         reward_amount: Amount,
         voter_reward_percent: u8,
     ) -> Result<(), ActivityError> {
-        let call = foundation::ApplicationCall::ActivityRewards {
+        let call = foundation::Operation::ActivityRewards {
             activity_id,
             winner_user,
             voter_users,
             reward_amount,
             voter_reward_percent,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
+        let foundation_app_id = self.foundation_app_id();
+        let _ = self
+            .runtime
+            .call_application(true, foundation_app_id, &call);
         Ok(())
     }
 
     async fn reward_activity_host(&mut self, activity_id: u64) -> Result<(), ActivityError> {
-        let call = foundation::ApplicationCall::Reward {
+        let call = foundation::Operation::Reward {
             reward_user: None,
             reward_type: foundation::RewardType::Activity,
             activity_id: Some(activity_id),
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
+        let foundation_app_id = self.foundation_app_id();
+        let _ = self
+            .runtime
+            .call_application(true, foundation_app_id, &call);
         Ok(())
     }
 
     async fn _finalize(&mut self, activity_id: u64) -> Result<(), ActivityError> {
-        self.finalize(activity_id).await?;
-        let activity = self.activity(activity_id).await?;
+        self.state.finalize(activity_id).await?;
+        let activity = self.state.activity(activity_id).await?;
         for winner in activity.winners {
             let author = self.content_author(winner.clone().object_id).await?;
             let voter_users = activity.voters.get(&winner.object_id).unwrap().clone();
@@ -351,6 +225,225 @@ impl Activity {
             .await?;
         }
         self.reward_activity_host(activity_id).await?;
+        Ok(())
+    }
+
+    fn require_authenticated_signer(&mut self) -> Result<Owner, ActivityError> {
+        match self.runtime.authenticated_signer() {
+            Some(owner) => Ok(owner),
+            None => Err(ActivityError::InvalidSigner),
+        }
+    }
+
+    fn require_message_id(&mut self) -> Result<MessageId, ActivityError> {
+        match self.runtime.message_id() {
+            Some(message_id) => Ok(message_id),
+            None => Err(ActivityError::InvalidMessageId),
+        }
+    }
+
+    fn on_op_create(&mut self, params: CreateParams) -> Result<(), ActivityError> {
+        self.runtime
+            .prepare_message(Message::Create { params })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_update(&mut self, params: UpdateParams) -> Result<(), ActivityError> {
+        self.runtime
+            .prepare_message(Message::Update { params })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_register(&mut self, activity_id: u64, object_id: String) -> Result<(), ActivityError> {
+        self.runtime
+            .prepare_message(Message::Register {
+                activity_id,
+                object_id,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_vote(&mut self, activity_id: u64, object_id: String) -> Result<(), ActivityError> {
+        self.runtime
+            .prepare_message(Message::Vote {
+                activity_id,
+                object_id,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_announce(&mut self, params: AnnounceParams) -> Result<(), ActivityError> {
+        self.runtime
+            .prepare_message(Message::Announce { params })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_request_subscribe(&mut self) -> Result<(), ActivityError> {
+        self.runtime
+            .prepare_message(Message::RequestSubscribe)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    async fn on_op_finalize(&mut self, activity_id: u64) -> Result<(), ActivityError> {
+        let activity = self.state.activity(activity_id).await?;
+        if Some(activity.host) != self.runtime.authenticated_signer() {
+            return Err(ActivityError::NotActivityHost);
+        }
+        self.runtime
+            .prepare_message(Message::Finalize { activity_id })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    async fn on_msg_create(&mut self, params: CreateParams) -> Result<(), ActivityError> {
+        let owner = self.require_authenticated_signer()?;
+        self._create_activity(owner, params.clone()).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Create { params })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_update(&mut self, params: UpdateParams) -> Result<(), ActivityError> {
+        if self.require_authenticated_signer()?
+            != self.state.activity(params.activity_id).await?.host
+        {
+            return Err(ActivityError::InvalidSigner);
+        }
+        self.state.update_activity(params.clone()).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Update { params })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_register(
+        &mut self,
+        activity_id: u64,
+        object_id: String,
+    ) -> Result<(), ActivityError> {
+        self.state.register(activity_id, object_id.clone()).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Register {
+                activity_id,
+                object_id,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_vote(
+        &mut self,
+        activity_id: u64,
+        object_id: String,
+    ) -> Result<(), ActivityError> {
+        match self.activity_approved(activity_id).await {
+            Ok(true) => {}
+            Ok(false) => return Err(ActivityError::ActivityNotApproved),
+            Err(err) => return Err(err),
+        }
+        match self.state.votable(activity_id).await {
+            Ok(true) => {}
+            Ok(false) => return Err(ActivityError::ActivityNotVotable),
+            Err(err) => return Err(err),
+        }
+        let owner = self.require_authenticated_signer()?;
+        let balance = self.account_balance(owner).await?;
+        let activity = self.state.activity(activity_id).await?;
+        let power = match activity.vote_type {
+            VoteType::Power => balance,
+            VoteType::Account => Amount::ONE,
+        };
+        if power.eq(&Amount::ZERO) {
+            return Err(ActivityError::AccountBalanceRequired);
+        }
+        self.state
+            .vote(owner, activity_id, object_id.clone(), power)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Register {
+                activity_id,
+                object_id,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_announce(&mut self, params: AnnounceParams) -> Result<(), ActivityError> {
+        self.create_announcement(params.clone()).await?;
+        self.state
+            .announce(
+                params.activity_id,
+                params.cid.clone(),
+                params.announce_prize,
+            )
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Announce { params })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn on_msg_request_subscribe(&mut self) -> Result<(), ActivityError> {
+        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let message_id = self.require_message_id()?;
+        self.runtime.subscribe(
+            message_id.chain_id,
+            ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
+        );
+        Ok(())
+    }
+
+    async fn on_msg_finalize(&mut self, activity_id: u64) -> Result<(), ActivityError> {
+        self._finalize(activity_id).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Finalize { activity_id })
+            .with_authentication()
+            .send_to(dest);
         Ok(())
     }
 }
