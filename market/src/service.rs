@@ -4,32 +4,43 @@ mod state;
 
 use self::state::Market;
 use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
-use async_trait::async_trait;
 use linera_sdk::{
     base::{Amount, WithServiceAbi},
-    QueryContext, Service, ViewStateStorage,
+    graphql::GraphQLMutationRoot,
+    Service, ServiceRuntime, ViewStateStorage,
 };
 use market::Operation;
 use std::sync::Arc;
 use thiserror::Error;
 
-linera_sdk::service!(Market);
+pub struct MarketService {
+    state: Arc<Market>,
+}
 
-impl WithServiceAbi for Market {
+linera_sdk::service!(MarketService);
+
+impl WithServiceAbi for MarketService {
     type Abi = market::MarketAbi;
 }
 
-#[async_trait]
-impl Service for Market {
+impl Service for MarketService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
+    type State = Market;
 
-    async fn handle_query(
-        self: Arc<Self>,
-        _context: &QueryContext,
-        request: Request,
-    ) -> Result<Response, Self::Error> {
-        let schema = Schema::build(self.clone(), MutationRoot {}, EmptySubscription).finish();
+    async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(MarketService {
+            state: Arc::new(state),
+        })
+    }
+
+    async fn handle_query(&self, request: Request) -> Result<Response, Self::Error> {
+        let schema = Schema::build(
+            self.state.clone(),
+            Operation::mutation_root(),
+            EmptySubscription,
+        )
+        .finish();
         let response = schema.execute(request).await;
         Ok(response)
     }
