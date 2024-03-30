@@ -15,7 +15,7 @@ use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
     Contract, ContractRuntime, ViewStateStorage,
 };
-use review::ReviewAbi;
+use review::{ReviewAbi, ReviewResponse};
 
 pub struct ActivityContract {
     state: Activity,
@@ -147,7 +147,10 @@ impl ActivityContract {
     async fn activity_approved(&mut self, activity_id: u64) -> Result<bool, ActivityError> {
         let call = review::Operation::ActivityApproved { activity_id };
         let review_app_id = self.review_app_id();
-        Ok(self.runtime.call_application(true, review_app_id, &call))
+        match self.runtime.call_application(true, review_app_id, &call) {
+            ReviewResponse::Approved(approved) => Ok(approved),
+            _ => Err(ActivityError::InvalidActivity),
+        }
     }
 
     async fn content_author(&mut self, cid: String) -> Result<Owner, ActivityError> {

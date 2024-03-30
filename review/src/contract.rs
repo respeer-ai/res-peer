@@ -11,359 +11,157 @@ use feed::FeedAbi;
 use foundation::FoundationAbi;
 use linera_sdk::{
     base::{
-        Amount, ApplicationId, ChainId, ChannelName, Destination, Owner, SessionId, WithContractAbi,
+        Amount, ApplicationId, ChainId, ChannelName, Destination, MessageId, Owner, WithContractAbi,
     },
-    contract::system_api,
-    ApplicationCallOutcome, CalleeContext, Contract, ExecutionOutcome, MessageContext,
-    OperationContext, SessionCallOutcome, ViewStateStorage,
+    Contract, ContractRuntime, ViewStateStorage,
 };
 // use linera_views::views::ViewError;
 use market::MarketAbi;
-use review::{ApplicationCall, Asset, Content, InitialState, Message, Operation};
-use thiserror::Error;
+use review::{
+    Asset, Content, InitializationArgument, Message, Operation, ReviewError, ReviewResponse,
+    Reviewer,
+};
 
-linera_sdk::contract!(Review);
+pub struct ReviewContract {
+    state: Review,
+    runtime: ContractRuntime<Self>,
+}
 
-impl WithContractAbi for Review {
+linera_sdk::contract!(ReviewContract);
+
+impl WithContractAbi for ReviewContract {
     type Abi = review::ReviewAbi;
 }
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
 #[async_trait]
-impl Contract for Review {
-    type Error = ContractError;
+impl Contract for ReviewContract {
+    type Error = ReviewError;
     type Storage = ViewStateStorage<Self>;
+    type State = Review;
+    type Message = Message;
+
+    async fn new(state: Review, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
+        Ok(ReviewContract { state, runtime })
+    }
+
+    fn state_mut(&mut self) -> &mut Self::State {
+        &mut self.state
+    }
 
     async fn initialize(
         &mut self,
-        _context: &OperationContext,
-        state: Self::InitializationArgument,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
-        self._initialize(state).await?;
+        argument: Self::InitializationArgument,
+    ) -> Result<(), Self::Error> {
+        self._initialize(argument).await?;
         // We should add creator here to be a reviewer, but we keep the message as an test case of application id
-        Ok(ExecutionOutcome::default().with_authenticated_message(
-            system_api::current_application_id().creation.chain_id,
-            Message::GenesisReviewer,
-        ))
+        self.runtime
+            .prepare_message(Message::GenesisReviewer)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
     }
 
     async fn execute_operation(
         &mut self,
-        _context: &OperationContext,
         operation: Self::Operation,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    ) -> Result<ReviewResponse, Self::Error> {
         match operation {
-            Operation::ApplyReviewer { resume } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::ApplyReviewer { resume },
-                )),
-            Operation::UpdateReviewerResume { resume } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::UpdateReviewerResume { resume },
-                )),
-            Operation::ApproveReviewer { candidate, reason } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::ApproveReviewer { candidate, reason },
-                )),
-            Operation::RejectReviewer { candidate, reason } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::RejectReviewer { candidate, reason },
-                )),
+            Operation::ApplyReviewer { resume } => self.on_op_apply_reviewer(resume),
+            Operation::UpdateReviewerResume { resume } => self.on_op_upeate_reviewer_resume(resume),
+            Operation::ApproveReviewer { candidate, reason } => {
+                self.on_op_approve_reviewer(candidate, reason)
+            }
+            Operation::RejectReviewer { candidate, reason } => {
+                self.on_op_reject_reviewer(candidate, reason)
+            }
             Operation::SubmitContent {
                 cid,
                 title,
                 content,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::SubmitContent {
-                    cid,
-                    title,
-                    content,
-                },
-            )),
+            } => self.on_op_submit_content(cid, title, content),
             Operation::ApproveContent {
                 content_cid,
                 reason_cid,
                 reason,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::ApproveContent {
-                    content_cid,
-                    reason_cid,
-                    reason,
-                },
-            )),
+            } => self.on_op_approve_content(content_cid, reason_cid, reason),
             Operation::RejectContent {
                 content_cid,
                 reason,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::RejectContent {
-                    content_cid,
-                    reason,
-                },
-            )),
+            } => self.on_op_reject_content(content_cid, reason),
             Operation::SubmitComment {
                 cid,
                 comment_cid,
                 comment,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::SubmitComment {
-                    cid,
-                    comment_cid,
-                    comment,
-                },
-            )),
-            Operation::ApproveAsset { cid, reason } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::ApproveAsset { cid, reason },
-                )),
-            Operation::RejectAsset { cid, reason } => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::RejectAsset { cid, reason },
-                )),
+            } => self.on_op_submit_comment(cid, comment_cid, comment),
+            Operation::ApproveAsset { cid, reason } => self.on_op_approve_asset(cid, reason),
+            Operation::RejectAsset { cid, reason } => self.on_op_reject_asset(cid, reason),
             Operation::SubmitAsset {
                 cid,
                 base_uri,
                 uris,
                 price,
                 name,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::SubmitAsset {
-                    cid,
-                    base_uri,
-                    uris,
-                    price,
-                    name,
-                },
-            )),
-            Operation::RequestSubscribe => Ok(ExecutionOutcome::default()
-                .with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::RequestSubscribe,
-                )),
+            } => self.on_op_submit_asset(cid, base_uri, uris, price, name),
+            Operation::RequestSubscribe => self.on_op_request_subscribe(),
             Operation::ApproveActivity {
                 activity_id,
                 reason,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::ApproveActivity {
-                    activity_id,
-                    reason,
-                },
-            )),
+            } => self.on_op_approve_activity(activity_id, reason),
             Operation::RejectActivity {
                 activity_id,
                 reason,
-            } => Ok(ExecutionOutcome::default().with_authenticated_message(
-                system_api::current_application_id().creation.chain_id,
-                Message::RejectActivity {
-                    activity_id,
-                    reason,
-                },
-            )),
+            } => self.on_op_reject_activity(activity_id, reason),
+            Operation::SubmitActivity {
+                activity_id,
+                activity_host,
+                budget_amount,
+            } => self.on_op_submit_activity(activity_id, activity_host, budget_amount),
+            Operation::ActivityApproved { activity_id } => {
+                self.on_op_activity_approved(activity_id).await
+            }
         }
     }
 
-    async fn execute_message(
-        &mut self,
-        context: &MessageContext,
-        message: Self::Message,
-    ) -> Result<ExecutionOutcome<Self::Message>, Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
         match message {
-            Message::GenesisReviewer {} => {
-                let chain_id = context.chain_id;
-                let reviewer = context.authenticated_signer.unwrap();
-                self.genesis_reviewer(chain_id, reviewer).await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::GenesisReviewer))
-            }
-            Message::ExistReviewer { reviewer } => {
-                self.add_exist_reviewer(reviewer).await?;
-                Ok(ExecutionOutcome::default())
-            }
-            Message::ApplyReviewer { resume } => {
-                let candidate = context.authenticated_signer.unwrap();
-                self._apply_reviewer(context.chain_id, candidate, resume.clone())
-                    .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::ApplyReviewer { resume }))
-            }
+            Message::GenesisReviewer {} => self.on_msg_genesis_reviewer().await,
+            Message::ExistReviewer { reviewer } => self.on_msg_exist_reviewer(reviewer).await,
+            Message::ApplyReviewer { resume } => self.on_msg_apply_reviewer(resume).await,
             Message::UpdateReviewerResume { resume } => {
-                let candidate = context.authenticated_signer.unwrap();
-                self._update_reviewer_resume(candidate, resume.clone())
-                    .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::UpdateReviewerResume { resume }))
+                self.on_msg_upeate_reviewer_resume(resume).await
             }
             Message::ApproveReviewer { candidate, reason } => {
-                self._approve_reviewer(
-                    context.authenticated_signer.unwrap(),
-                    candidate,
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::ApproveReviewer { candidate, reason },
-                ))
+                self.on_msg_approve_reviewer(candidate, reason).await
             }
             Message::RejectReviewer { candidate, reason } => {
-                self._reject_reviewer(
-                    context.authenticated_signer.unwrap(),
-                    candidate,
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::RejectReviewer { candidate, reason },
-                ))
+                self.on_msg_reject_reviewer(candidate, reason).await
             }
             Message::SubmitContent {
                 cid,
                 title,
                 content,
-            } => {
-                let author = context.authenticated_signer.unwrap();
-                self._submit_content(
-                    cid.clone(),
-                    title.clone(),
-                    content.clone(),
-                    author,
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::SubmitContent {
-                        cid,
-                        title,
-                        content,
-                    },
-                ))
-            }
+            } => self.on_msg_submit_content(cid, title, content).await,
             Message::ApproveContent {
                 content_cid,
                 reason_cid,
                 reason,
             } => {
-                let reviewer = context.authenticated_signer.unwrap();
-                self._approve_content(
-                    reviewer,
-                    content_cid.clone(),
-                    reason_cid.clone(),
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::ApproveContent {
-                        content_cid,
-                        reason_cid,
-                        reason,
-                    },
-                ))
+                self.on_msg_approve_content(content_cid, reason_cid, reason)
+                    .await
             }
             Message::RejectContent {
                 content_cid,
                 reason,
-            } => {
-                let reviewer = context.authenticated_signer.unwrap();
-                self._reject_content(
-                    reviewer,
-                    content_cid.clone(),
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::RejectContent {
-                        content_cid,
-                        reason,
-                    },
-                ))
-            }
+            } => self.on_msg_reject_content(content_cid, reason).await,
             Message::SubmitComment {
                 cid,
                 comment_cid,
                 comment,
-            } => {
-                let author = context.authenticated_signer.unwrap();
-                self._submit_comment(
-                    comment_cid.clone(),
-                    cid.clone(),
-                    comment.clone(),
-                    author,
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::SubmitComment {
-                        cid,
-                        comment_cid,
-                        comment,
-                    },
-                ))
-            }
-            Message::ApproveAsset { cid, reason } => {
-                self._approve_asset(
-                    context.authenticated_signer.unwrap(),
-                    cid.clone(),
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::ApproveAsset { cid, reason }))
-            }
-            Message::RejectAsset { cid, reason } => {
-                self._reject_asset(
-                    context.authenticated_signer.unwrap(),
-                    cid.clone(),
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default()
-                    .with_authenticated_message(dest, Message::RejectAsset { cid, reason }))
-            }
+            } => self.on_msg_submit_comment(cid, comment_cid, comment).await,
+            Message::ApproveAsset { cid, reason } => self.on_msg_approve_asset(cid, reason).await,
+            Message::RejectAsset { cid, reason } => self.on_msg_reject_asset(cid, reason).await,
             Message::SubmitAsset {
                 cid,
                 base_uri,
@@ -371,214 +169,66 @@ impl Contract for Review {
                 price,
                 name,
             } => {
-                self._submit_asset(
-                    context.authenticated_signer.unwrap(),
-                    cid.clone(),
-                    base_uri.clone(),
-                    uris.clone(),
-                    price.clone(),
-                    name.clone(),
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::SubmitAsset {
-                        cid,
-                        base_uri,
-                        uris,
-                        price,
-                        name,
-                    },
-                ))
+                self.on_msg_submit_asset(cid, base_uri, uris, price, name)
+                    .await
             }
-            Message::RequestSubscribe => {
-                let mut result = ExecutionOutcome::default();
-                if context.message_id.chain_id
-                    == system_api::current_application_id().creation.chain_id
-                {
-                    return Ok(result);
-                }
-                result.subscribe.push((
-                    ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
-                    context.message_id.chain_id,
-                ));
-                /* Will be stuck in the for each so we use indices */
-                for reviewer in self.reviewers.indices().await? {
-                    let reviewer = self.reviewers.get(&reviewer).await?.unwrap();
-                    result = result.with_authenticated_message(
-                        context.message_id.chain_id,
-                        Message::ExistReviewer { reviewer },
-                    );
-                }
-                result = result.with_authenticated_message(
-                    context.message_id.chain_id,
-                    Message::InitialState {
-                        state: self.initial_state().await?,
-                    },
-                );
-                Ok(result)
-            }
-            Message::InitialState { state } => {
-                self.initialize_review(state).await?;
-                Ok(ExecutionOutcome::default())
+            Message::RequestSubscribe => self.on_msg_request_subscribe().await,
+            Message::InitializationArgument { argument } => {
+                self.on_msg_initialization_argument(argument).await
             }
             Message::SubmitActivity {
                 activity_id,
                 activity_host,
                 budget_amount,
             } => {
-                self._submit_activity(activity_id, activity_host, budget_amount)
-                    .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::SubmitActivity {
-                        activity_id,
-                        activity_host,
-                        budget_amount,
-                    },
-                ))
+                self.on_msg_submit_activity(activity_id, activity_host, budget_amount)
+                    .await
             }
             Message::ApproveActivity {
                 activity_id,
                 reason,
-            } => {
-                self._approve_activity(
-                    context.authenticated_signer.unwrap(),
-                    activity_id,
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::ApproveActivity {
-                        activity_id,
-                        reason,
-                    },
-                ))
-            }
+            } => self.on_msg_approve_activity(activity_id, reason).await,
             Message::RejectActivity {
                 activity_id,
                 reason,
-            } => {
-                self._reject_activity(
-                    context.authenticated_signer.unwrap(),
-                    activity_id,
-                    reason.clone(),
-                    context.chain_id == system_api::current_application_id().creation.chain_id,
-                )
-                .await?;
-                let dest =
-                    Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
-                Ok(ExecutionOutcome::default().with_authenticated_message(
-                    dest,
-                    Message::RejectActivity {
-                        activity_id,
-                        reason,
-                    },
-                ))
-            }
+            } => self.on_msg_reject_activity(activity_id, reason).await,
         }
-    }
-
-    async fn handle_application_call(
-        &mut self,
-        _context: &CalleeContext,
-        call: Self::ApplicationCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<
-        ApplicationCallOutcome<Self::Message, Self::Response, Self::SessionState>,
-        Self::Error,
-    > {
-        match call {
-            ApplicationCall::SubmitContent {
-                cid,
-                title,
-                content,
-            } => {
-                let mut result = ApplicationCallOutcome::default();
-                result.execution_outcome = ExecutionOutcome::default().with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::SubmitContent {
-                        cid,
-                        title,
-                        content,
-                    },
-                );
-                Ok(result)
-            }
-            ApplicationCall::SubmitActivity {
-                activity_id,
-                activity_host,
-                budget_amount,
-            } => {
-                let mut result = ApplicationCallOutcome::default();
-                result.execution_outcome = ExecutionOutcome::default().with_authenticated_message(
-                    system_api::current_application_id().creation.chain_id,
-                    Message::SubmitActivity {
-                        activity_id,
-                        activity_host,
-                        budget_amount,
-                    },
-                );
-                Ok(result)
-            }
-            ApplicationCall::ActivityApproved { activity_id } => {
-                let mut result = ApplicationCallOutcome::default();
-                result.value = self.activity_approved(activity_id).await?;
-                Ok(result)
-            }
-        }
-    }
-
-    async fn handle_session_call(
-        &mut self,
-        _context: &CalleeContext,
-        _session: Self::SessionState,
-        _call: Self::SessionCall,
-        _forwarded_sessions: Vec<SessionId>,
-    ) -> Result<SessionCallOutcome<Self::Message, Self::Response, Self::SessionState>, Self::Error>
-    {
-        Err(ContractError::SessionsNotSupported)
     }
 }
 
-impl Review {
-    fn feed_app_id() -> Result<ApplicationId<FeedAbi>, ContractError> {
-        Ok(Self::parameters()?.feed_app_id)
+impl ReviewContract {
+    fn feed_app_id(&mut self) -> ApplicationId<FeedAbi> {
+        self.runtime.application_parameters().feed_app_id
     }
 
-    fn credit_app_id() -> Result<ApplicationId<CreditAbi>, ContractError> {
-        Ok(Self::parameters()?.credit_app_id)
+    fn credit_app_id(&mut self) -> ApplicationId<CreditAbi> {
+        self.runtime.application_parameters().credit_app_id
     }
 
-    fn foundation_app_id() -> Result<ApplicationId<FoundationAbi>, ContractError> {
-        Ok(Self::parameters()?.foundation_app_id)
+    fn foundation_app_id(&mut self) -> ApplicationId<FoundationAbi> {
+        self.runtime.application_parameters().foundation_app_id
     }
 
-    fn market_app_id() -> Result<ApplicationId<MarketAbi>, ContractError> {
-        Ok(Self::parameters()?.market_app_id)
+    fn market_app_id(&mut self) -> ApplicationId<MarketAbi> {
+        self.runtime.application_parameters().market_app_id
     }
 
-    async fn reward_credits(&mut self, owner: Owner, amount: Amount) -> Result<(), ContractError> {
-        let call = credit::ApplicationCall::Reward { owner, amount };
-        self.call_application(true, Self::credit_app_id()?, &call, vec![])?;
+    async fn reward_credits(&mut self, owner: Owner, amount: Amount) -> Result<(), ReviewError> {
+        let call = credit::Operation::Reward { owner, amount };
+        let credit_app_id = self.credit_app_id();
+        self.runtime.call_application(true, credit_app_id, &call);
         Ok(())
     }
 
-    async fn reward_tokens(&mut self) -> Result<(), ContractError> {
-        let call = foundation::ApplicationCall::Reward {
+    async fn reward_tokens(&mut self) -> Result<(), ReviewError> {
+        let call = foundation::Operation::Reward {
             reward_user: None,
             reward_type: foundation::RewardType::Review,
             activity_id: None,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
+        let foundation_app_id = self.foundation_app_id();
+        self.runtime
+            .call_application(true, foundation_app_id, &call);
         Ok(())
     }
 
@@ -588,14 +238,15 @@ impl Review {
         title: String,
         content: String,
         author: Owner,
-    ) -> Result<(), ContractError> {
-        let call = feed::ApplicationCall::Publish {
+    ) -> Result<(), ReviewError> {
+        let call = feed::Operation::Publish {
             cid: cid.clone(),
             title,
             content,
             author,
         };
-        self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
+        let feed_app_id = self.feed_app_id();
+        self.runtime.call_application(true, feed_app_id, &call);
         Ok(())
     }
 
@@ -604,13 +255,14 @@ impl Review {
         cid: String,
         reason_cid: String,
         reason: String,
-    ) -> Result<(), ContractError> {
-        let call = feed::ApplicationCall::Recommend {
+    ) -> Result<(), ReviewError> {
+        let call = feed::Operation::Recommend {
             cid: cid.clone(),
             reason_cid: reason_cid.clone(),
             reason,
         };
-        self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
+        let feed_app_id = self.feed_app_id();
+        self.runtime.call_application(true, feed_app_id, &call);
         Ok(())
     }
 
@@ -620,14 +272,15 @@ impl Review {
         comment_cid: String,
         comment: String,
         commentor: Owner,
-    ) -> Result<(), ContractError> {
-        let call = feed::ApplicationCall::Comment {
+    ) -> Result<(), ReviewError> {
+        let call = feed::Operation::Comment {
             cid: cid.clone(),
             comment_cid: comment_cid.clone(),
             comment,
             commentor,
         };
-        self.call_application(true, Self::feed_app_id()?, &call, vec![])?;
+        let feed_app_id = self.feed_app_id();
+        self.runtime.call_application(true, feed_app_id, &call);
         Ok(())
     }
 
@@ -638,15 +291,16 @@ impl Review {
         price: Option<Amount>,
         name: String,
         publisher: Owner,
-    ) -> Result<(), ContractError> {
-        let call = market::ApplicationCall::CreateCollection {
+    ) -> Result<(), ReviewError> {
+        let call = market::Operation::CreateCollection {
             base_uri: base_uri.clone(),
             price,
             name,
             uris,
             publisher,
         };
-        self.call_application(true, Self::market_app_id()?, &call, vec![])?;
+        let market_app_id = self.market_app_id();
+        self.runtime.call_application(true, market_app_id, &call);
         Ok(())
     }
 
@@ -654,17 +308,19 @@ impl Review {
         &mut self,
         activity_id: u64,
         budget_amount: Amount,
-    ) -> Result<(), ContractError> {
-        let call = foundation::ApplicationCall::Lock {
+    ) -> Result<(), ReviewError> {
+        let call = foundation::Operation::Lock {
             activity_id,
             amount: budget_amount,
         };
-        self.call_application(true, Self::foundation_app_id()?, &call, vec![])?;
+        let foundation_app_id = self.foundation_app_id();
+        self.runtime
+            .call_application(true, foundation_app_id, &call);
         Ok(())
     }
 
-    async fn _initialize(&mut self, state: InitialState) -> Result<(), ContractError> {
-        self.initialize_review(state).await?;
+    async fn _initialize(&mut self, argument: InitializationArgument) -> Result<(), ReviewError> {
+        self.state.initialize_review(argument).await?;
         Ok(())
     }
 
@@ -673,8 +329,10 @@ impl Review {
         chain_id: ChainId,
         candidate: Owner,
         resume: String,
-    ) -> Result<(), ContractError> {
-        self.apply_reviewer(chain_id, candidate, resume).await?;
+    ) -> Result<(), ReviewError> {
+        self.state
+            .apply_reviewer(chain_id, candidate, resume, self.runtime.system_time())
+            .await?;
         Ok(())
     }
 
@@ -682,8 +340,8 @@ impl Review {
         &mut self,
         reviewer: Owner,
         resume: String,
-    ) -> Result<(), ContractError> {
-        self.update_reviewer_resume(reviewer, resume).await?;
+    ) -> Result<(), ReviewError> {
+        self.state.update_reviewer_resume(reviewer, resume).await?;
         Ok(())
     }
 
@@ -693,9 +351,15 @@ impl Review {
         candidate: Owner,
         reason: Option<String>,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ReviewError> {
         let _reviewer = self
-            .approve_reviewer(reviewer, candidate, reason.unwrap_or_default())
+            .state
+            .approve_reviewer(
+                reviewer,
+                candidate,
+                reason.unwrap_or_default(),
+                self.runtime.system_time(),
+            )
             .await?;
         if !creation_chain {
             return Ok(());
@@ -720,9 +384,15 @@ impl Review {
         candidate: Owner,
         reason: Option<String>,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ReviewError> {
         let _reviewer = self
-            .reject_reviewer(reviewer, candidate, reason.unwrap_or_default())
+            .state
+            .reject_reviewer(
+                reviewer,
+                candidate,
+                reason.unwrap_or_default(),
+                self.runtime.system_time(),
+            )
             .await?;
         if !creation_chain {
             return Ok(());
@@ -748,20 +418,21 @@ impl Review {
         content: String,
         author: Owner,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
-        self.submit_content(Content {
-            // TODO: notify author
-            cid,
-            comment_to_cid: None,
-            title,
-            content,
-            author,
-            reviewers: HashMap::default(),
-            approved: 0,
-            rejected: 0,
-            created_at: system_api::current_system_time(),
-        })
-        .await?;
+    ) -> Result<(), ReviewError> {
+        self.state
+            .submit_content(Content {
+                // TODO: notify author
+                cid,
+                comment_to_cid: None,
+                title,
+                content,
+                author,
+                reviewers: HashMap::default(),
+                approved: 0,
+                rejected: 0,
+                created_at: self.runtime.system_time(),
+            })
+            .await?;
         if !creation_chain {
             return Ok(());
         }
@@ -776,19 +447,20 @@ impl Review {
         comment: String,
         author: Owner,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
-        self.submit_content(Content {
-            cid,
-            comment_to_cid: Some(comment_to_cid),
-            title: String::default(),
-            content: comment,
-            author,
-            reviewers: HashMap::default(),
-            approved: 0,
-            rejected: 0,
-            created_at: system_api::current_system_time(),
-        })
-        .await?;
+    ) -> Result<(), ReviewError> {
+        self.state
+            .submit_content(Content {
+                cid,
+                comment_to_cid: Some(comment_to_cid),
+                title: String::default(),
+                content: comment,
+                author,
+                reviewers: HashMap::default(),
+                approved: 0,
+                rejected: 0,
+                created_at: self.runtime.system_time(),
+            })
+            .await?;
         if !creation_chain {
             return Ok(());
         }
@@ -803,12 +475,14 @@ impl Review {
         reason_cid: Option<String>,
         reason: Option<String>,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ReviewError> {
         let content = self
+            .state
             .approve_content(
                 reviewer,
                 content_cid.clone(),
                 reason.clone().unwrap_or_default(),
+                self.runtime.system_time(),
             )
             .await?;
         if !creation_chain {
@@ -861,9 +535,15 @@ impl Review {
         content_cid: String,
         reason: Option<String>,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ReviewError> {
         let content = self
-            .reject_content(reviewer, content_cid, reason.unwrap_or_default())
+            .state
+            .reject_content(
+                reviewer,
+                content_cid,
+                reason.unwrap_or_default(),
+                self.runtime.system_time(),
+            )
             .await?;
         if !creation_chain {
             return Ok(());
@@ -888,9 +568,15 @@ impl Review {
         cid: String,
         reason: Option<String>,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ReviewError> {
         let asset = self
-            .approve_asset(reviewer, cid, reason.unwrap_or_default())
+            .state
+            .approve_asset(
+                reviewer,
+                cid,
+                reason.unwrap_or_default(),
+                self.runtime.system_time(),
+            )
             .await?;
         if !creation_chain {
             return Ok(());
@@ -923,9 +609,15 @@ impl Review {
         cid: String,
         reason: Option<String>,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ReviewError> {
         let asset = self
-            .reject_asset(reviewer, cid, reason.unwrap_or_default())
+            .state
+            .reject_asset(
+                reviewer,
+                cid,
+                reason.unwrap_or_default(),
+                self.runtime.system_time(),
+            )
             .await?;
         if !creation_chain {
             return Ok(());
@@ -952,20 +644,21 @@ impl Review {
         uris: Vec<String>,
         price: Option<Amount>,
         name: String,
-    ) -> Result<(), ContractError> {
-        self.submit_asset(Asset {
-            cid,
-            author,
-            base_uri,
-            uris,
-            price,
-            name,
-            reviewers: HashMap::default(),
-            approved: 0,
-            rejected: 0,
-            created_at: system_api::current_system_time(),
-        })
-        .await?;
+    ) -> Result<(), ReviewError> {
+        self.state
+            .submit_asset(Asset {
+                cid,
+                author,
+                base_uri,
+                uris,
+                price,
+                name,
+                reviewers: HashMap::default(),
+                approved: 0,
+                rejected: 0,
+                created_at: self.runtime.system_time(),
+            })
+            .await?;
         Ok(())
     }
 
@@ -974,8 +667,14 @@ impl Review {
         activity_id: u64,
         activity_host: Owner,
         budget_amount: Amount,
-    ) -> Result<(), ContractError> {
-        self.submit_activity(activity_id, activity_host, budget_amount)
+    ) -> Result<(), ReviewError> {
+        self.state
+            .submit_activity(
+                activity_id,
+                activity_host,
+                budget_amount,
+                self.runtime.system_time(),
+            )
             .await?;
         Ok(())
     }
@@ -986,9 +685,15 @@ impl Review {
         activity_id: u64,
         reason: Option<String>,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), ReviewError> {
         let activity = self
-            .approve_activity(owner, activity_id, reason.unwrap_or_default())
+            .state
+            .approve_activity(
+                owner,
+                activity_id,
+                reason.unwrap_or_default(),
+                self.runtime.system_time(),
+            )
             .await?;
         if !creation_chain {
             return Ok(());
@@ -1008,8 +713,11 @@ impl Review {
         activity_id: u64,
         reason: String,
         creation_chain: bool,
-    ) -> Result<(), ContractError> {
-        let _activity = self.reject_activity(owner, activity_id, reason).await?;
+    ) -> Result<(), ReviewError> {
+        let _activity = self
+            .state
+            .reject_activity(owner, activity_id, reason, self.runtime.system_time())
+            .await?;
         if !creation_chain {
             return Ok(());
         }
@@ -1017,29 +725,634 @@ impl Review {
         self.reward_tokens().await?;
         Ok(())
     }
-}
 
-/// An error that can occur during the contract execution.
-#[derive(Debug, Error)]
-pub enum ContractError {
-    /// Failed to deserialize BCS bytes
-    #[error("Failed to deserialize BCS bytes")]
-    BcsError(#[from] bcs::Error),
+    fn require_message_id(&mut self) -> Result<MessageId, ReviewError> {
+        match self.runtime.message_id() {
+            Some(message_id) => Ok(message_id),
+            None => Err(ReviewError::InvalidMessageId),
+        }
+    }
 
-    /// Failed to deserialize JSON string
-    #[error("Failed to deserialize JSON string")]
-    JsonError(#[from] serde_json::Error),
+    fn require_authenticated_signer(&mut self) -> Result<Owner, ReviewError> {
+        match self.runtime.authenticated_signer() {
+            Some(owner) => Ok(owner),
+            None => Err(ReviewError::InvalidSigner),
+        }
+    }
 
-    // Add more error variants here.
-    #[error(transparent)]
-    StateError(#[from] state::StateError),
+    fn on_op_apply_reviewer(&mut self, resume: String) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::ApplyReviewer { resume })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
 
-    #[error("Invalid user")]
-    InvalidUser,
+    fn on_op_upeate_reviewer_resume(
+        &mut self,
+        resume: String,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::UpdateReviewerResume { resume })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
 
-    #[error("Cross-application sessions not supported")]
-    SessionsNotSupported,
+    fn on_op_approve_reviewer(
+        &mut self,
+        candidate: Owner,
+        reason: Option<String>,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::ApproveReviewer { candidate, reason })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
 
-    #[error("View error")]
-    ViewError(#[from] linera_views::views::ViewError),
+    fn on_op_reject_reviewer(
+        &mut self,
+        candidate: Owner,
+        reason: Option<String>,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::RejectReviewer { candidate, reason })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_submit_content(
+        &mut self,
+        cid: String,
+        title: String,
+        content: String,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::SubmitContent {
+                cid,
+                title,
+                content,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_approve_content(
+        &mut self,
+        content_cid: String,
+        reason_cid: Option<String>,
+        reason: Option<String>,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::ApproveContent {
+                content_cid,
+                reason_cid,
+                reason,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_reject_content(
+        &mut self,
+        content_cid: String,
+        reason: Option<String>,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::RejectContent {
+                content_cid,
+                reason,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_submit_comment(
+        &mut self,
+        cid: String,
+        comment_cid: String,
+        comment: String,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::SubmitComment {
+                cid,
+                comment_cid,
+                comment,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_approve_asset(
+        &mut self,
+        cid: String,
+        reason: Option<String>,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::ApproveAsset { cid, reason })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_reject_asset(
+        &mut self,
+        cid: String,
+        reason: Option<String>,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::RejectAsset { cid, reason })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_submit_asset(
+        &mut self,
+        cid: String,
+        base_uri: String,
+        uris: Vec<String>,
+        price: Option<Amount>,
+        name: String,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::SubmitAsset {
+                cid,
+                base_uri,
+                uris,
+                price,
+                name,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_request_subscribe(&mut self) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::RequestSubscribe)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        // TODO: send initialization argument to subscriber
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_approve_activity(
+        &mut self,
+        activity_id: u64,
+        reason: Option<String>,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::ApproveActivity {
+                activity_id,
+                reason,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        // TODO: send initialization argument to subscriber
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_reject_activity(
+        &mut self,
+        activity_id: u64,
+        reason: String,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::RejectActivity {
+                activity_id,
+                reason,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        // TODO: send initialization argument to subscriber
+        Ok(ReviewResponse::Ok)
+    }
+
+    fn on_op_submit_activity(
+        &mut self,
+        activity_id: u64,
+        activity_host: Owner,
+        budget_amount: Amount,
+    ) -> Result<ReviewResponse, ReviewError> {
+        self.runtime
+            .prepare_message(Message::SubmitActivity {
+                activity_id,
+                activity_host,
+                budget_amount,
+            })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        // TODO: send initialization argument to subscriber
+        Ok(ReviewResponse::Ok)
+    }
+
+    async fn on_op_activity_approved(
+        &mut self,
+        activity_id: u64,
+    ) -> Result<ReviewResponse, ReviewError> {
+        Ok(ReviewResponse::Approved(
+            self.state.activity_approved(activity_id).await?,
+        ))
+    }
+
+    async fn on_msg_initialization_argument(
+        &mut self,
+        argument: InitializationArgument,
+    ) -> Result<(), ReviewError> {
+        self.state.initialize_review(argument).await
+    }
+
+    async fn on_msg_genesis_reviewer(&mut self) -> Result<(), ReviewError> {
+        let chain_id = self.runtime.chain_id();
+        let reviewer = self.require_authenticated_signer()?;
+        self.state
+            .genesis_reviewer(chain_id, reviewer, self.runtime.system_time())
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::GenesisReviewer)
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_exist_reviewer(&mut self, reviewer: Reviewer) -> Result<(), ReviewError> {
+        self.state.add_exist_reviewer(reviewer).await?;
+        Ok(())
+    }
+
+    async fn on_msg_apply_reviewer(&mut self, resume: String) -> Result<(), ReviewError> {
+        let candidate = self.require_authenticated_signer()?;
+        let chain_id = self.runtime.chain_id();
+        self._apply_reviewer(chain_id, candidate, resume.clone())
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::ApplyReviewer { resume })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_upeate_reviewer_resume(&mut self, resume: String) -> Result<(), ReviewError> {
+        let candidate = self.require_authenticated_signer()?;
+        self._update_reviewer_resume(candidate, resume.clone())
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::UpdateReviewerResume { resume })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_approve_reviewer(
+        &mut self,
+        candidate: Owner,
+        reason: Option<String>,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._approve_reviewer(reviewer, candidate, reason.clone(), creation_chain)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::ApproveReviewer { candidate, reason })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_reject_reviewer(
+        &mut self,
+        candidate: Owner,
+        reason: Option<String>,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._reject_reviewer(reviewer, candidate, reason.clone(), creation_chain)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::RejectReviewer { candidate, reason })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_submit_content(
+        &mut self,
+        cid: String,
+        title: String,
+        content: String,
+    ) -> Result<(), ReviewError> {
+        let author = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._submit_content(
+            cid.clone(),
+            title.clone(),
+            content.clone(),
+            author,
+            creation_chain,
+        )
+        .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::SubmitContent {
+                cid,
+                title,
+                content,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_approve_content(
+        &mut self,
+        content_cid: String,
+        reason_cid: Option<String>,
+        reason: Option<String>,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._approve_content(
+            reviewer,
+            content_cid.clone(),
+            reason_cid.clone(),
+            reason.clone(),
+            creation_chain,
+        )
+        .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::ApproveContent {
+                content_cid,
+                reason_cid,
+                reason,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_reject_content(
+        &mut self,
+        content_cid: String,
+        reason: Option<String>,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._reject_content(
+            reviewer,
+            content_cid.clone(),
+            reason.clone(),
+            creation_chain,
+        )
+        .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::RejectContent {
+                content_cid,
+                reason,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_submit_comment(
+        &mut self,
+        cid: String,
+        comment_cid: String,
+        comment: String,
+    ) -> Result<(), ReviewError> {
+        let author = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._submit_comment(
+            comment_cid.clone(),
+            cid.clone(),
+            comment.clone(),
+            author,
+            creation_chain,
+        )
+        .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::SubmitComment {
+                cid,
+                comment_cid,
+                comment,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_approve_asset(
+        &mut self,
+        cid: String,
+        reason: Option<String>,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._approve_asset(reviewer, cid.clone(), reason.clone(), creation_chain)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::ApproveAsset { cid, reason })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_reject_asset(
+        &mut self,
+        cid: String,
+        reason: Option<String>,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._reject_asset(reviewer, cid.clone(), reason.clone(), creation_chain)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::RejectAsset { cid, reason })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_submit_asset(
+        &mut self,
+        cid: String,
+        base_uri: String,
+        uris: Vec<String>,
+        price: Option<Amount>,
+        name: String,
+    ) -> Result<(), ReviewError> {
+        let author = self.require_authenticated_signer()?;
+        self._submit_asset(
+            author,
+            cid.clone(),
+            base_uri.clone(),
+            uris.clone(),
+            price.clone(),
+            name.clone(),
+        )
+        .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::SubmitAsset {
+                cid,
+                base_uri,
+                uris,
+                price,
+                name,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_request_subscribe(&mut self) -> Result<(), ReviewError> {
+        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let message_id = self.require_message_id()?;
+        self.runtime.subscribe(
+            message_id.chain_id,
+            ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
+        );
+        for reviewer in self.state.reviewers.indices().await? {
+            let reviewer = self.state.reviewers.get(&reviewer).await?.unwrap();
+            self.runtime
+                .prepare_message(Message::ExistReviewer { reviewer })
+                .with_authentication()
+                .send_to(self.require_message_id()?.chain_id);
+        }
+        Ok(())
+    }
+
+    async fn on_msg_approve_activity(
+        &mut self,
+        activity_id: u64,
+        reason: Option<String>,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._approve_activity(reviewer, activity_id, reason.clone(), creation_chain)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::ApproveActivity {
+                activity_id,
+                reason,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_reject_activity(
+        &mut self,
+        activity_id: u64,
+        reason: String,
+    ) -> Result<(), ReviewError> {
+        let reviewer = self.require_authenticated_signer()?;
+        let creation_chain =
+            self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;
+        self._reject_activity(reviewer, activity_id, reason.clone(), creation_chain)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::RejectActivity {
+                activity_id,
+                reason,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_submit_activity(
+        &mut self,
+        activity_id: u64,
+        activity_host: Owner,
+        budget_amount: Amount,
+    ) -> Result<(), ReviewError> {
+        self._submit_activity(activity_id, activity_host, budget_amount)
+            .await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::SubmitActivity {
+                activity_id,
+                activity_host,
+                budget_amount,
+            })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
 }

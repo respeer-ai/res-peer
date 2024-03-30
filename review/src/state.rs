@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use async_graphql::SimpleObject;
 use linera_sdk::{
-    base::{Amount, ArithmeticError, ChainId, Owner},
-    contract::system_api,
+    base::{Amount, ChainId, Owner, Timestamp},
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use review::{Activity, Asset, Content, InitialState, Review as _Review, Reviewer};
-use thiserror::Error;
+use review::{
+    Activity, Asset, Content, InitializationArgument, Review as _Review, ReviewError, Reviewer,
+};
 
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
@@ -32,29 +32,31 @@ pub struct Review {
 impl Review {
     pub(crate) async fn initialize_review(
         &mut self,
-        state: InitialState,
-    ) -> Result<(), StateError> {
+        argument: InitializationArgument,
+    ) -> Result<(), ReviewError> {
         self.content_approved_threshold
-            .set(state.content_approved_threshold);
+            .set(argument.content_approved_threshold);
         self.content_rejected_threshold
-            .set(state.content_rejected_threshold);
+            .set(argument.content_rejected_threshold);
         self.asset_approved_threshold
-            .set(state.asset_approved_threshold);
+            .set(argument.asset_approved_threshold);
         self.asset_rejected_threshold
-            .set(state.asset_rejected_threshold);
+            .set(argument.asset_rejected_threshold);
         self.reviewer_approved_threshold
-            .set(state.reviewer_approved_threshold);
+            .set(argument.reviewer_approved_threshold);
         self.reviewer_rejected_threshold
-            .set(state.reviewer_rejected_threshold);
+            .set(argument.reviewer_rejected_threshold);
         self.activity_approved_threshold
-            .set(state.activity_approved_threshold);
+            .set(argument.activity_approved_threshold);
         self.activity_rejected_threshold
-            .set(state.activity_rejected_threshold);
+            .set(argument.activity_rejected_threshold);
         Ok(())
     }
 
-    pub(crate) async fn initial_state(&self) -> Result<InitialState, StateError> {
-        Ok(InitialState {
+    pub(crate) async fn initialization_argument(
+        &self,
+    ) -> Result<InitializationArgument, ReviewError> {
+        Ok(InitializationArgument {
             content_approved_threshold: *self.content_approved_threshold.get(),
             content_rejected_threshold: *self.content_rejected_threshold.get(),
             asset_approved_threshold: *self.asset_approved_threshold.get(),
@@ -70,7 +72,8 @@ impl Review {
         &mut self,
         chain_id: ChainId,
         creator: Owner,
-    ) -> Result<(), StateError> {
+        now: Timestamp,
+    ) -> Result<(), ReviewError> {
         self.reviewers.insert(
             &creator,
             Reviewer {
@@ -80,7 +83,7 @@ impl Review {
                 reviewers: HashMap::default(),
                 approved: 1,
                 rejected: 0,
-                created_at: system_api::current_system_time(),
+                created_at: now,
             },
         )?;
         self.reviewer_number.set(1);
@@ -90,13 +93,13 @@ impl Review {
     pub(crate) async fn add_exist_reviewer(
         &mut self,
         reviewer: Reviewer,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), ReviewError> {
         self.reviewers
             .insert(&reviewer.clone().reviewer, reviewer)?;
         Ok(())
     }
 
-    pub(crate) async fn is_reviewer(&self, owner: Owner) -> Result<bool, StateError> {
+    pub(crate) async fn is_reviewer(&self, owner: Owner) -> Result<bool, ReviewError> {
         match self.reviewers.get(&owner).await? {
             Some(_) => Ok(true),
             _ => Ok(false),
@@ -108,12 +111,13 @@ impl Review {
         chain_id: ChainId,
         owner: Owner,
         resume: String,
-    ) -> Result<(), StateError> {
+        now: Timestamp,
+    ) -> Result<(), ReviewError> {
         if self.is_reviewer(owner).await? {
-            return Err(StateError::InvalidReviewer);
+            return Err(ReviewError::InvalidReviewer);
         }
         match self.reviewer_applications.get(&owner).await? {
-            Some(_) => return Err(StateError::InvalidReviewer),
+            Some(_) => return Err(ReviewError::InvalidReviewer),
             _ => {}
         }
         self.reviewer_applications.insert(
@@ -125,7 +129,7 @@ impl Review {
                 reviewers: HashMap::default(),
                 approved: 0,
                 rejected: 0,
-                created_at: system_api::current_system_time(),
+                created_at: now,
             },
         )?;
         Ok(())
@@ -135,7 +139,7 @@ impl Review {
         &mut self,
         owner: Owner,
         resume: String,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), ReviewError> {
         match self.reviewers.get(&owner).await? {
             Some(mut reviewer) => {
                 reviewer.resume = Some(resume);
@@ -150,7 +154,7 @@ impl Review {
                 self.reviewer_applications.insert(&owner, reviewer)?;
                 return Ok(());
             }
-            _ => Err(StateError::InvalidReviewer),
+            _ => Err(ReviewError::InvalidReviewer),
         }
     }
 
@@ -158,16 +162,16 @@ impl Review {
         &self,
         reviewer: Owner,
         candidate: Owner,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), ReviewError> {
         if !self.is_reviewer(reviewer).await? {
-            return Err(StateError::InvalidReviewer);
+            return Err(ReviewError::InvalidReviewer);
         }
         match self.reviewer_applications.get(&candidate).await? {
             Some(_reviewer) => match _reviewer.reviewers.get(&reviewer) {
-                Some(_) => Err(StateError::AlreadyReviewed),
+                Some(_) => Err(ReviewError::AlreadyReviewed),
                 _ => Ok(()),
             },
-            None => Err(StateError::InvalidReviewer),
+            None => Err(ReviewError::InvalidReviewer),
         }
     }
 
@@ -176,9 +180,10 @@ impl Review {
         owner: Owner,
         candidate: Owner,
         reason: String,
-    ) -> Result<Option<Reviewer>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Reviewer>, ReviewError> {
         if owner == candidate {
-            return Err(StateError::InvalidReviewer);
+            return Err(ReviewError::InvalidReviewer);
         }
         self.validate_reviewer_review(owner, candidate.clone())
             .await?;
@@ -191,12 +196,12 @@ impl Review {
                         reviewer: owner,
                         approved: true,
                         reason,
-                        created_at: system_api::current_system_time(),
+                        created_at: now,
                     },
                 );
                 self.reviewer_applications.insert(&candidate, reviewer)?;
             }
-            _ => return Err(StateError::InvalidReviewer),
+            _ => return Err(ReviewError::InvalidReviewer),
         }
         match self.reviewer_applications.get(&candidate).await? {
             Some(reviewer) => {
@@ -219,9 +224,10 @@ impl Review {
         owner: Owner,
         candidate: Owner,
         reason: String,
-    ) -> Result<Option<Reviewer>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Reviewer>, ReviewError> {
         if owner == candidate {
-            return Err(StateError::InvalidReviewer);
+            return Err(ReviewError::InvalidReviewer);
         }
         self.validate_reviewer_review(owner, candidate.clone())
             .await?;
@@ -234,12 +240,12 @@ impl Review {
                         reviewer: owner,
                         approved: true,
                         reason,
-                        created_at: system_api::current_system_time(),
+                        created_at: now,
                     },
                 );
                 self.reviewer_applications.insert(&candidate, reviewer)?;
             }
-            _ => return Err(StateError::InvalidReviewer),
+            _ => return Err(ReviewError::InvalidReviewer),
         }
         match self.reviewer_applications.get(&candidate).await? {
             Some(reviewer) => {
@@ -258,20 +264,20 @@ impl Review {
         &self,
         reviewer: Owner,
         content_cid: String,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), ReviewError> {
         if !self.is_reviewer(reviewer).await? {
-            return Err(StateError::InvalidReviewer);
+            return Err(ReviewError::InvalidReviewer);
         }
         match self.content_applications.get(&content_cid).await? {
             Some(content) => match content.reviewers.get(&reviewer) {
-                Some(_) => Err(StateError::AlreadyReviewed),
+                Some(_) => Err(ReviewError::AlreadyReviewed),
                 _ => Ok(()),
             },
-            None => Err(StateError::InvalidContent),
+            None => Err(ReviewError::InvalidContent),
         }
     }
 
-    pub(crate) async fn submit_content(&mut self, content: Content) -> Result<(), StateError> {
+    pub(crate) async fn submit_content(&mut self, content: Content) -> Result<(), ReviewError> {
         self.content_applications
             .insert(&content.clone().cid, content)?;
         Ok(())
@@ -282,13 +288,14 @@ impl Review {
         reviewer: Owner,
         content_cid: String,
         reason: String,
-    ) -> Result<Option<Content>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Content>, ReviewError> {
         self.validate_content_review(reviewer, content_cid.clone())
             .await?;
         match self.content_applications.get(&content_cid).await? {
             Some(mut content) => {
                 if reviewer == content.author {
-                    return Err(StateError::InvalidReviewer);
+                    return Err(ReviewError::InvalidReviewer);
                 }
                 content.approved += 1;
                 content.reviewers.insert(
@@ -297,12 +304,12 @@ impl Review {
                         reviewer,
                         approved: true,
                         reason,
-                        created_at: system_api::current_system_time(),
+                        created_at: now,
                     },
                 );
                 self.content_applications.insert(&content_cid, content)?;
             }
-            _ => return Err(StateError::InvalidContent),
+            _ => return Err(ReviewError::InvalidContent),
         }
         match self.content_applications.get(&content_cid).await? {
             Some(content) => {
@@ -322,13 +329,14 @@ impl Review {
         reviewer: Owner,
         content_cid: String,
         reason: String,
-    ) -> Result<Option<Content>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Content>, ReviewError> {
         self.validate_content_review(reviewer, content_cid.clone())
             .await?;
         match self.content_applications.get(&content_cid).await? {
             Some(mut content) => {
                 if reviewer == content.author {
-                    return Err(StateError::InvalidReviewer);
+                    return Err(ReviewError::InvalidReviewer);
                 }
                 content.rejected += 1;
                 content.reviewers.insert(
@@ -337,12 +345,12 @@ impl Review {
                         reviewer,
                         approved: false,
                         reason,
-                        created_at: system_api::current_system_time(),
+                        created_at: now,
                     },
                 );
                 self.content_applications.insert(&content_cid, content)?;
             }
-            _ => return Err(StateError::InvalidReviewer),
+            _ => return Err(ReviewError::InvalidReviewer),
         }
         match self.content_applications.get(&content_cid).await? {
             Some(content) => {
@@ -361,13 +369,13 @@ impl Review {
         &self,
         reviewer: Owner,
         cid: String,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), ReviewError> {
         if !self.is_reviewer(reviewer).await? {
-            return Err(StateError::InvalidReviewer);
+            return Err(ReviewError::InvalidReviewer);
         }
         match self.asset_applications.get(&cid).await? {
             Some(asset) => match asset.reviewers.get(&reviewer) {
-                Some(_) => Err(StateError::AlreadyReviewed),
+                Some(_) => Err(ReviewError::AlreadyReviewed),
                 _ => Ok(()),
             },
             None => Ok(()),
@@ -379,12 +387,13 @@ impl Review {
         reviewer: Owner,
         cid: String,
         reason: String,
-    ) -> Result<Option<Asset>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Asset>, ReviewError> {
         self.validate_asset_review(reviewer, cid.clone()).await?;
         match self.asset_applications.get(&cid).await? {
             Some(mut asset) => {
                 if reviewer == asset.author {
-                    return Err(StateError::InvalidReviewer);
+                    return Err(ReviewError::InvalidReviewer);
                 }
                 asset.approved += 1;
                 asset.reviewers.insert(
@@ -393,12 +402,12 @@ impl Review {
                         reviewer,
                         approved: true,
                         reason,
-                        created_at: system_api::current_system_time(),
+                        created_at: now,
                     },
                 );
                 self.asset_applications.insert(&cid, asset)?;
             }
-            _ => return Err(StateError::InvalidReviewer),
+            _ => return Err(ReviewError::InvalidReviewer),
         }
         match self.asset_applications.get(&cid).await? {
             Some(asset) => {
@@ -418,12 +427,13 @@ impl Review {
         reviewer: Owner,
         cid: String,
         reason: String,
-    ) -> Result<Option<Asset>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Asset>, ReviewError> {
         self.validate_asset_review(reviewer, cid.clone()).await?;
         match self.asset_applications.get(&cid).await? {
             Some(mut asset) => {
                 if reviewer == asset.author {
-                    return Err(StateError::InvalidReviewer);
+                    return Err(ReviewError::InvalidReviewer);
                 }
                 asset.rejected += 1;
                 asset.reviewers.insert(
@@ -432,12 +442,12 @@ impl Review {
                         reviewer,
                         approved: false,
                         reason,
-                        created_at: system_api::current_system_time(),
+                        created_at: now,
                     },
                 );
                 self.asset_applications.insert(&cid, asset)?;
             }
-            _ => return Err(StateError::InvalidReviewer),
+            _ => return Err(ReviewError::InvalidReviewer),
         }
         match self.asset_applications.get(&cid).await? {
             Some(asset) => {
@@ -452,9 +462,9 @@ impl Review {
         Ok(None)
     }
 
-    pub(crate) async fn submit_asset(&mut self, asset: Asset) -> Result<(), StateError> {
+    pub(crate) async fn submit_asset(&mut self, asset: Asset) -> Result<(), ReviewError> {
         match self.asset_applications.get(&asset.clone().cid).await? {
-            Some(_) => return Err(StateError::AlreadyExists),
+            Some(_) => return Err(ReviewError::AlreadyExists),
             _ => {
                 self.asset_applications.insert(&asset.clone().cid, asset)?;
             }
@@ -467,9 +477,10 @@ impl Review {
         activity_id: u64,
         activity_host: Owner,
         budget_amount: Amount,
-    ) -> Result<(), StateError> {
+        now: Timestamp,
+    ) -> Result<(), ReviewError> {
         match self.activity_applications.get(&activity_id).await {
-            Ok(Some(_)) => Err(StateError::AlreadyExists),
+            Ok(Some(_)) => Err(ReviewError::AlreadyExists),
             _ => Ok(self.activity_applications.insert(
                 &activity_id,
                 Activity {
@@ -478,7 +489,7 @@ impl Review {
                     budget_amount,
                     approved: 0,
                     rejected: 0,
-                    created_at: system_api::current_system_time(),
+                    created_at: now,
                     reviewers: HashMap::default(),
                 },
             )?),
@@ -489,14 +500,14 @@ impl Review {
         &self,
         owner: Owner,
         activity_id: u64,
-    ) -> Result<(), StateError> {
+    ) -> Result<(), ReviewError> {
         match self.activity_applications.get(&activity_id).await {
             Ok(Some(activity)) => match activity.reviewers.get(&owner) {
-                Some(_) => Err(StateError::AlreadyReviewed),
+                Some(_) => Err(ReviewError::AlreadyReviewed),
                 _ => Ok(()),
             },
-            Ok(None) => Err(StateError::InvalidActivity),
-            Err(err) => Err(StateError::ViewError(err)),
+            Ok(None) => Err(ReviewError::InvalidActivity),
+            Err(err) => Err(ReviewError::ViewError(err)),
         }
     }
 
@@ -505,7 +516,8 @@ impl Review {
         owner: Owner,
         activity_id: u64,
         reason: String,
-    ) -> Result<Option<Activity>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Activity>, ReviewError> {
         self.validate_activity_review(owner, activity_id).await?;
 
         let mut activity = self.activity_applications.get(&activity_id).await?.unwrap();
@@ -515,7 +527,7 @@ impl Review {
                 reviewer: owner,
                 approved: true,
                 reason,
-                created_at: system_api::current_system_time(),
+                created_at: now,
             },
         );
         activity.approved += 1;
@@ -536,7 +548,8 @@ impl Review {
         owner: Owner,
         activity_id: u64,
         reason: String,
-    ) -> Result<Option<Activity>, StateError> {
+        now: Timestamp,
+    ) -> Result<Option<Activity>, ReviewError> {
         self.validate_activity_review(owner, activity_id).await?;
 
         let mut activity = self.activity_applications.get(&activity_id).await?.unwrap();
@@ -546,7 +559,7 @@ impl Review {
                 reviewer: owner,
                 approved: true,
                 reason,
-                created_at: system_api::current_system_time(),
+                created_at: now,
             },
         );
         activity.rejected += 1;
@@ -562,7 +575,7 @@ impl Review {
         Ok(None)
     }
 
-    pub(crate) async fn activity_approved(&self, activity_id: u64) -> Result<bool, StateError> {
+    pub(crate) async fn activity_approved(&self, activity_id: u64) -> Result<bool, ReviewError> {
         match self.activity_applications.get(&activity_id).await {
             Ok(Some(activity)) => {
                 let approved_threshold = *self.activity_approved_threshold.get();
@@ -572,32 +585,8 @@ impl Review {
                 }
                 Ok(false)
             }
-            Ok(None) => Err(StateError::InvalidActivity),
-            Err(err) => Err(StateError::ViewError(err)),
+            Ok(None) => Err(ReviewError::InvalidActivity),
+            Err(err) => Err(ReviewError::ViewError(err)),
         }
     }
-}
-
-#[derive(Debug, Error)]
-pub enum StateError {
-    #[error("View error")]
-    ViewError(#[from] linera_views::views::ViewError),
-
-    #[error("Arithmetic error")]
-    ArithmeticError(#[from] ArithmeticError),
-
-    #[error("Invalid reviewer")]
-    InvalidReviewer,
-
-    #[error("Already reviewed")]
-    AlreadyReviewed,
-
-    #[error("Invalid content")]
-    InvalidContent,
-
-    #[error("Already exists")]
-    AlreadyExists,
-
-    #[error("Invalid activity")]
-    InvalidActivity,
 }

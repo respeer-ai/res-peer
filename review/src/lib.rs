@@ -1,22 +1,35 @@
 use std::collections::HashMap;
 
 use async_graphql::{Request, Response, SimpleObject};
-use linera_sdk::base::{Amount, ApplicationId, ChainId, ContractAbi, Owner, ServiceAbi, Timestamp};
+use linera_sdk::{
+    base::{
+        Amount, ApplicationId, ArithmeticError, ChainId, ContractAbi, Owner, ServiceAbi, Timestamp,
+    },
+    graphql::GraphQLMutationRoot,
+};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 pub struct ReviewAbi;
 
 impl ContractAbi for ReviewAbi {
     type Parameters = ReviewParameters;
-    type InitializationArgument = InitialState;
+    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
-    type Response = bool;
+    type Response = ReviewResponse;
 }
 
 impl ServiceAbi for ReviewAbi {
     type Parameters = ReviewParameters;
     type Query = Request;
     type QueryResponse = Response;
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize, Default)]
+pub enum ReviewResponse {
+    #[default]
+    Ok,
+    Approved(bool),
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -28,7 +41,7 @@ pub struct ReviewParameters {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
-pub struct InitialState {
+pub struct InitializationArgument {
     pub content_approved_threshold: u16,
     pub content_rejected_threshold: u16,
     pub asset_approved_threshold: u16,
@@ -97,7 +110,7 @@ pub struct Activity {
     pub reviewers: HashMap<Owner, Review>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     ApplyReviewer {
         resume: String,
@@ -221,8 +234,8 @@ pub enum Message {
         name: String,
     },
     RequestSubscribe,
-    InitialState {
-        state: InitialState,
+    InitializationArgument {
+        argument: InitializationArgument,
     },
     SubmitActivity {
         activity_id: u64,
@@ -237,4 +250,47 @@ pub enum Message {
         activity_id: u64,
         reason: String,
     },
+}
+
+#[derive(Debug, Error)]
+pub enum ReviewError {
+    #[error("View error")]
+    ViewError(#[from] linera_views::views::ViewError),
+
+    #[error("Arithmetic error")]
+    ArithmeticError(#[from] ArithmeticError),
+
+    #[error("Invalid reviewer")]
+    InvalidReviewer,
+
+    #[error("Already reviewed")]
+    AlreadyReviewed,
+
+    #[error("Invalid content")]
+    InvalidContent,
+
+    #[error("Already exists")]
+    AlreadyExists,
+
+    #[error("Invalid activity")]
+    InvalidActivity,
+
+    #[error("Failed to deserialize BCS bytes")]
+    BcsError(#[from] bcs::Error),
+
+    /// Failed to deserialize JSON string
+    #[error("Failed to deserialize JSON string")]
+    JsonError(#[from] serde_json::Error),
+
+    #[error("Invalid user")]
+    InvalidUser,
+
+    #[error("Cross-application sessions not supported")]
+    SessionsNotSupported,
+
+    #[error("Invalid signer")]
+    InvalidSigner,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
 }
