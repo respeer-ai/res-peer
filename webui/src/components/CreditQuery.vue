@@ -26,14 +26,18 @@ const getBalance = () => {
   const { result, refetch /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getBalance($owner: String!) {
       spendables(
-        owner: $owner
+        entry(key: $owner) {
+          value
+        }
       )
-      balances(
-        owner: $owner
-      ) {
-        amounts {
-          amount
-          expired
+      balances {
+        entry(key: $owner) {
+          value {
+            amounts {
+              amount
+              expired
+            }
+          }
         }
       }
     }
@@ -49,6 +53,7 @@ const getBalance = () => {
     if (!ready()) {
       return
     }
+    console.log(result.value)
     user.spendable = (result.value as Record<string, string>).spendables
     const balance = (result.value as Record<string, Record<string, Array<AgeAmount>>>).balances
     if (balance) {

@@ -7,6 +7,7 @@ import { useReviewStore, Activity } from 'src/stores/review'
 import { computed, watch, ref, onMounted } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const review = useReviewStore()
 const activityApplicationsKeys = computed(() => review.activityApplicationsKeys)
@@ -21,15 +22,19 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const getActivityApplication = (activityApplicationKey: number, done?: () => void) => {
-  const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getActivityApplication($activityApplicationKey: Int!) {
-      activityApplications(u64: $activityApplicationKey) {
-        activityId
-        budgetAmount
-        reviewers
-        approved
-        rejected
-        createdAt
+      activityApplications {
+        entry(key: $activityApplicationKey) {
+          value {
+            activityId
+            budgetAmount
+            reviewers
+            approved
+            rejected
+            createdAt
+          }
+        }
       }
     }
   `, {
@@ -40,8 +45,10 @@ const getActivityApplication = (activityApplicationKey: number, done?: () => voi
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    activityApplications.value.set(activityApplicationKey, (result.value as Record<string, Activity>).activityApplications)
+  onResult((res) => {
+    if (res.loading) return
+    const _activityApplications = graphqlResult.data(res, 'activityApplications')
+    activityApplications.value.set(Number(activityApplicationKey), graphqlResult.entryValue(_activityApplications) as Activity)
     done?.()
   })
 }

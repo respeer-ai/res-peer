@@ -8,6 +8,7 @@ import { computed, onMounted, watch } from 'vue'
 import { targetChain } from 'src/stores/chain'
 import { useApplicationStore } from 'src/stores/application'
 import { useActivityStore } from 'src/stores/activity'
+import { graphqlResult } from 'src/utils'
 
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
@@ -24,7 +25,9 @@ const ready = () => {
 const getActivitiesKeys = () => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getActivitiesKeys {
-      activitiesKeys
+      activities {
+        keys
+      }
     }
   `, {
     endpoint: 'activity',
@@ -35,7 +38,8 @@ const getActivitiesKeys = () => {
 
   onResult((res) => {
     if (res.loading) return
-    activity.activitiesKeys = (res.data as Record<string, Array<number>>).activitiesKeys
+    const activities = graphqlResult.data(res, 'activities')
+    activity.activitiesKeys = graphqlResult.keys(activities) as Array<number>
   })
 }
 

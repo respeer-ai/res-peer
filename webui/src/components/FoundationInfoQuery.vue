@@ -9,6 +9,7 @@ import { ApolloClient } from '@apollo/client/core'
 import { useApplicationStore } from 'src/stores/application'
 import { targetChain } from 'src/stores/chain'
 import { useFoundationStore } from 'src/stores/foundation'
+import { graphqlResult } from 'src/utils'
 
 const user = useUserStore()
 const account = computed(() => user.account)
@@ -44,21 +45,8 @@ watch(blockHeight, () => {
   getFoundationInfo()
 })
 
-const onResult = (res: Record<string, unknown>) => {
-  foundation.userLineraBalance = (res as Record<string, string>).userBalances
-  foundation.foundationBalance = (res as Record<string, string>).foundationBalance
-  foundation.reviewRewardBalance = (res as Record<string, string>).reviewRewardBalance
-  foundation.authorRewardBalance = (res as Record<string, string>).authorRewardBalance
-  foundation.activityRewardBalance = (res as Record<string, string>).activityRewardBalance
-  foundation.reviewRewardPercent = (res as Record<string, number>).reviewRewardPercent
-  foundation.reviewRewardFactor = (res as Record<string, number>).reviewRewardFactor
-  foundation.authorRewardPercent = (res as Record<string, number>).authorRewardPercent
-  foundation.authorRewardFactor = (res as Record<string, number>).authorRewardFactor
-  foundation.activityRewardPercent = (res as Record<string, number>).activityRewardPercent
-}
-
 const getFoundationInfo = () => {
-  const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => {
+  const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => {
     if (account.value) {
       return useQuery(gql`
         query getFoundationInfo($account: String!) {
@@ -71,7 +59,11 @@ const getFoundationInfo = () => {
           authorRewardFactor
           activityRewardPercent
           activityRewardBalance
-          userBalances(owner: $account)
+          userBalances {
+            entry(key: $account) {
+              value
+            }
+          }
         }
       `, {
         account: `${account.value}`,
@@ -101,9 +93,19 @@ const getFoundationInfo = () => {
     })
   })
 
-  watch(result, () => {
-    const res = result.value as Record<string, unknown>
-    onResult(res)
+  onResult((res) => {
+    if (res.loading) return
+    const userBalances = graphqlResult.data(res, 'userBalances')
+    foundation.userLineraBalance = graphqlResult.entryValue(userBalances) as string
+    foundation.foundationBalance = graphqlResult.keyValue(res, 'foundationBalance') as string
+    foundation.reviewRewardBalance = graphqlResult.keyValue(res, 'reviewRewardBalance') as string
+    foundation.authorRewardBalance = graphqlResult.keyValue(res, 'reviewRewardBalance') as string
+    foundation.activityRewardBalance = graphqlResult.keyValue(res, 'reviewRewardBalance') as string
+    foundation.reviewRewardPercent = graphqlResult.keyValue(res, 'reviewRewardPercent') as number
+    foundation.reviewRewardFactor = graphqlResult.keyValue(res, 'reviewRewardFactor') as number
+    foundation.authorRewardPercent = graphqlResult.keyValue(res, 'authorRewardPercent') as number
+    foundation.authorRewardFactor = graphqlResult.keyValue(res, 'authorRewardFactor') as number
+    foundation.activityRewardPercent = graphqlResult.keyValue(res, 'activityRewardPercent') as number
   })
 }
 

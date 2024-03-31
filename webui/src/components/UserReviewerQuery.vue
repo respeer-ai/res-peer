@@ -9,6 +9,7 @@ import { computed, onMounted, watch } from 'vue'
 import { targetChain } from 'src/stores/chain'
 import { useBlockStore } from 'src/stores/block'
 import { Reviewer } from 'src/stores/review'
+import { graphqlResult } from 'src/utils'
 
 const application = useApplicationStore()
 const user = useUserStore()
@@ -24,18 +25,26 @@ const ready = (): boolean => {
 }
 
 const userReviewerQuery = () => {
-  const { result, refetch /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result,  */ refetch, /* fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query reviewers($owner: String!) {
-      reviewers(owner: $owner) {
-        reviewer
+      reviewers {
+        entry(key: $owner) {
+          value {
+            reviewer
+          }
+        }
       }
-      reviewerApplications(owner: $owner) {
-        chainId
-        reviewer
-        approved
-        rejected
-        reviewers
-        resume
+      reviewerApplications {
+        entry(key: $owner) {
+          value {
+            chainId
+            reviewer
+            approved
+            rejected
+            reviewers
+            resume
+          }
+        }
       }
     }
   `, {
@@ -46,11 +55,12 @@ const userReviewerQuery = () => {
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    const ret = result.value as Record<string, string>
-    if (ret.reviewers) user.reviewer = true
-    const ret1 = result.value as Record<string, Reviewer>
-    if (ret1.reviewerApplications) user.reviewerApplication = ret1.reviewerApplications
+  onResult((res) => {
+    if (res.loading) return
+    const reviewers = graphqlResult.data(res, 'reviewers')
+    if (graphqlResult.entryValue(reviewers)) user.reviewer = true
+    const reviewerApplications = graphqlResult.data(res, 'reviewerApplications')
+    user.reviewerApplication = graphqlResult.entryValue(reviewerApplications) as Reviewer
   })
 
   watch(blockHeight, () => {

@@ -7,6 +7,7 @@ import { useReviewStore, Content } from 'src/stores/review'
 import { computed, watch, ref } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const review = useReviewStore()
 const contentApplicationsKeys = computed(() => review.contentApplicationsKeys)
@@ -20,18 +21,22 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const getContentApplication = (contentApplicationKey: string, done?: () => void) => {
-  const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getContentApplication($contentApplicationKey: String!) {
-      contentApplications(string: $contentApplicationKey) {
-        cid
-        commentToCid
-        author
-        title
-        content
-        reviewers
-        approved
-        rejected
-        createdAt
+      contentApplications {
+        entry(key: $contentApplicationKey) {
+          value {
+            cid
+            commentToCid
+            author
+            title
+            content
+            reviewers
+            approved
+            rejected
+            createdAt
+          }
+        }
       }
     }
   `, {
@@ -42,8 +47,10 @@ const getContentApplication = (contentApplicationKey: string, done?: () => void)
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    contentApplications.value.set(contentApplicationKey, (result.value as Record<string, Content>).contentApplications)
+  onResult((res) => {
+    if (res.loading) return
+    const _contentApplications = graphqlResult.data(res, 'contentApplications')
+    contentApplications.value.set(contentApplicationKey, graphqlResult.entryValue(_contentApplications) as Content)
     done?.()
   })
 }
