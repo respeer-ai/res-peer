@@ -78,7 +78,9 @@ const getMarketInfo = () => {
     }
     return useQuery(gql`
         query getMarketInfo {
-          collectionsKeys
+          collections {
+            keys
+          }
           creditsPerLinera
           tradeFeePercent
           maxCreditsPercent
