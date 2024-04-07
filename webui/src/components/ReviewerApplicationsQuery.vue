@@ -7,6 +7,7 @@ import { useReviewStore, Reviewer } from 'src/stores/review'
 import { computed, watch, ref, onMounted } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const review = useReviewStore()
 const reviewerApplicationsKeys = computed(() => review.reviewerApplicationsKeys)
@@ -21,16 +22,20 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const getReviewerApplication = (reviewerApplicationKey: string, done?: () => void) => {
-  const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getReviewerApplication($reviewerApplicationKey: String!) {
-      reviewerApplications(owner: $reviewerApplicationKey) {
-        chainId
-        reviewer
-        resume
-        reviewers
-        approved
-        rejected
-        createdAt
+      reviewerApplications {
+        entry(key: $reviewerApplicationKey) {
+          value {
+            chainId
+            reviewer
+            resume
+            reviewers
+            approved
+            rejected
+            createdAt
+          }
+        }
       }
     }
   `, {
@@ -41,8 +46,10 @@ const getReviewerApplication = (reviewerApplicationKey: string, done?: () => voi
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    reviewerApplications.value.set(reviewerApplicationKey, (result.value as Record<string, Reviewer>).reviewerApplications)
+  onResult((res) => {
+    if (res.loading) return
+    const _reviewerApplications = graphqlResult.data(res, 'reviewerApplications')
+    reviewerApplications.value.set(reviewerApplicationKey, graphqlResult.entryValue(_reviewerApplications) as Reviewer)
     done?.()
   })
 }

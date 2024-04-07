@@ -7,6 +7,7 @@ import { computed, watch, ref } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { Activity, useActivityStore } from 'src/stores/activity'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const activity = useActivityStore()
 const activitiesKeys = computed(() => activity.activitiesKeys)
@@ -20,55 +21,59 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const getActivities = (activityKey: number, done?: () => void) => {
-  const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getActivities($activityKey: Int!) {
-      activities(u64: $activityKey) {
-        id
-        title
-        slogan
-        banner
-        posters
-        introduction
-        host
-        hostResume
-        createdAt
-        activityType
-        votable
-        voteType
-        objectType
-        objectCandidates
-        condition {
-          classes
-          minWords
-          maxWords
+      activities {
+        entry(key: $activityKey) {
+          value {
+            id
+            title
+            slogan
+            banner
+            posters
+            introduction
+            host
+            hostResume
+            createdAt
+            activityType
+            votable
+            voteType
+            objectType
+            objectCandidates
+            condition {
+              classes
+              minWords
+              maxWords
+            }
+            sponsors
+            prizeConfigs {
+              place
+              medal
+              title
+              rewardAmount
+            }
+            announcements
+            prizeAnnouncement
+            voterRewardPercent
+            votePowers
+            voters
+            budgetAmount
+            joinType
+            location
+            comments
+            registers
+            registerStartAt
+            registerEndAt
+            voteStartAt
+            voteEndAt
+            participantors
+            winners {
+              place
+              objectId
+            }
+            finalized
+          }
         }
-        sponsors
-        prizeConfigs {
-          place
-          medal
-          title
-          rewardAmount
-        }
-        announcements
-        prizeAnnouncement
-        voterRewardPercent
-        votePowers
-        voters
-        budgetAmount
-        joinType
-        location
-        comments
-        registers
-        registerStartAt
-        registerEndAt
-        voteStartAt
-        voteEndAt
-        participantors
-        winners {
-          place
-          objectId
-        }
-        finalized
       }
     }
   `, {
@@ -79,8 +84,10 @@ const getActivities = (activityKey: number, done?: () => void) => {
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    activities.value.set(Number(activityKey), (result.value as Record<string, Activity>).activities)
+  onResult((res) => {
+    if (res.loading) return
+    const _activities = graphqlResult.data(res, 'activities')
+    activities.value.set(Number(activityKey), graphqlResult.entryValue(_activities) as Activity)
     done?.()
   })
 }

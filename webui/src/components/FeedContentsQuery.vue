@@ -7,6 +7,7 @@ import { useContentStore, Content } from 'src/stores/content'
 import { computed, watch, ref, onMounted } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const content = useContentStore()
 const contentsKeys = computed(() => content.contentsKeys)
@@ -23,21 +24,33 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const getContent = (contentKey: string, done?: () => void) => {
-  const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getContent($contentKey: String!) {
-      contents(string: $contentKey) {
-        accounts
-        cid
-        commentToCid
-        title
-        content
-        author
-        likes
-        dislikes
-        createdAt
+      contents {
+        entry(key: $contentKey) {
+          value {
+            accounts
+            cid
+            commentToCid
+            title
+            content
+            author
+            likes
+            dislikes
+            createdAt
+          }
+        }
       }
-      contentRecommends(string: $contentKey)
-      contentComments(string: $contentKey)
+      contentRecommends {
+        entry(key: $contentKey) {
+          value
+        }
+      }
+      contentComments {
+        entry(key: $contentKey) {
+          value
+        }
+      }
     }
   `, {
     contentKey: `${contentKey}`,
@@ -47,10 +60,14 @@ const getContent = (contentKey: string, done?: () => void) => {
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    contents.value.set(contentKey, (result.value as Record<string, Content>).contents)
-    recommends.value.set(contentKey, (result.value as Record<string, Array<string>>).contentRecommends)
-    comments.value.set(contentKey, (result.value as Record<string, Array<string>>).contentComments)
+  onResult((res) => {
+    if (res.loading) return
+    const _contents = graphqlResult.data(res, 'contents')
+    contents.value.set(contentKey, graphqlResult.entryValue(_contents) as Content)
+    const _recommends = graphqlResult.data(res, 'contentRecommends')
+    recommends.value.set(contentKey, graphqlResult.entryValue(_recommends) as Array<string>)
+    const _comments = graphqlResult.data(res, 'contentComments')
+    comments.value.set(contentKey, graphqlResult.entryValue(_comments) as Array<string>)
     done?.()
   })
 }

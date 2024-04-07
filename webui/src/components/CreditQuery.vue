@@ -8,6 +8,7 @@ import gql from 'graphql-tag'
 import { getClientOptions } from 'src/apollo'
 import { useApplicationStore } from 'src/stores/application'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const user = useUserStore()
 const block = useBlockStore()
@@ -23,17 +24,21 @@ const ready = () => {
 }
 
 const getBalance = () => {
-  const { result, refetch /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result, */ refetch, /* fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getBalance($owner: String!) {
-      spendables(
-        owner: $owner
-      )
-      balances(
-        owner: $owner
-      ) {
-        amounts {
-          amount
-          expired
+      spendables {
+        entry(key: $owner) {
+          value
+        }
+      }
+      balances {
+        entry(key: $owner) {
+          value {
+            amounts {
+              amount
+              expired
+            }
+          }
         }
       }
     }
@@ -45,15 +50,12 @@ const getBalance = () => {
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    if (!ready()) {
-      return
-    }
-    user.spendable = (result.value as Record<string, string>).spendables
-    const balance = (result.value as Record<string, Record<string, Array<AgeAmount>>>).balances
-    if (balance) {
-      user.amounts = balance.amounts
-    }
+  onResult((res) => {
+    if (res.loading) return
+    const spendables = graphqlResult.data(res, 'spendables')
+    user.spendable = graphqlResult.entryValue(spendables) as string
+    const balances = graphqlResult.data(res, 'balances')
+    user.amounts = graphqlResult.entryValueKeyValue(balances, 'amounts') as Array<AgeAmount>
   })
 
   watch(blockHeight, () => {

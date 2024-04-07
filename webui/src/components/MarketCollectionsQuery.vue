@@ -7,6 +7,7 @@ import { useCollectionStore, Collection } from 'src/stores/collection'
 import { computed, watch, ref } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const collection = useCollectionStore()
 const collectionsKeys = computed(() => collection.collectionsKeys)
@@ -21,17 +22,21 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const getCollection = (collectionKey: number, done?: () => void) => {
-  const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+  const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getCollection($collectionKey: Int!) {
-      collections(u64: $collectionKey) {
-        price
-        baseUri
-        uris
-        nfts
-        collectionId
-        name
-        publisher
-        createdAt
+      collections {
+        entry(key: $collectionKey) {
+          value {
+            price
+            baseUri
+            uris
+            nfts
+            collectionId
+            name
+            publisher
+            createdAt
+          }
+        }
       }
     }
   `, {
@@ -42,8 +47,10 @@ const getCollection = (collectionKey: number, done?: () => void) => {
     fetchPolicy: 'network-only'
   }))
 
-  watch(result, () => {
-    collections.value.set(collectionKey, (result.value as Record<string, Collection>).collections)
+  onResult((res) => {
+    if (res.loading) return
+    const _collections = graphqlResult.data(res, 'collections')
+    collections.value.set(collectionKey, graphqlResult.entryValue(_collections) as Collection)
     done?.()
   })
 }

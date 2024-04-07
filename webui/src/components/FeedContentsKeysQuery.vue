@@ -8,6 +8,7 @@ import { useContentStore } from 'src/stores/content'
 import { computed, onMounted, watch } from 'vue'
 import { useApplicationStore } from 'src/stores/application'
 import { targetChain } from 'src/stores/chain'
+import { graphqlResult } from 'src/utils'
 
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
@@ -24,7 +25,9 @@ const ready = () => {
 const getContentsKeys = () => {
   const { /* result, */ refetch /*, fetchMore */, onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getContentsKeys {
-      contentsKeys
+      contents {
+        keys
+      }
     }
   `, {
     endpoint: 'feed',
@@ -39,10 +42,9 @@ const getContentsKeys = () => {
   })
 
   onResult((res) => {
-    if (res.loading) {
-      return
-    }
-    content.contentsKeys = (res.data as Record<string, Array<string>>).contentsKeys
+    if (res.loading) return
+    const contents = graphqlResult.data(res, 'contents')
+    content.contentsKeys = graphqlResult.keys(contents) as Array<string>
   })
 }
 

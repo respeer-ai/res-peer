@@ -8,6 +8,7 @@ import { useReviewStore } from 'src/stores/review'
 import { computed, onMounted, watch } from 'vue'
 import { targetChain } from 'src/stores/chain'
 import { useApplicationStore } from 'src/stores/application'
+import { graphqlResult } from 'src/utils'
 
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
@@ -24,7 +25,9 @@ const ready = () => {
 const getContentApplicationsKeys = () => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getContentApplicationsKeys {
-      contentApplicationsKeys
+      contentApplications {
+        keys
+      }
     }
   `, {
     endpoint: 'review',
@@ -35,7 +38,8 @@ const getContentApplicationsKeys = () => {
 
   onResult((res) => {
     if (res.loading) return
-    review.contentApplicationsKeys = (res.data as Record<string, Array<string>>).contentApplicationsKeys
+    const contentApplications = graphqlResult.data(res, 'contentApplications')
+    review.contentApplicationsKeys = graphqlResult.keys(contentApplications) as Array<string>
   })
 }
 
