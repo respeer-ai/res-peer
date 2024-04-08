@@ -53,9 +53,9 @@ done
 function generate_block() {
   linera --with-wallet 0 service --port 9080 &
   pid=$!
-  sleep 5
+  sleep 10
   kill -15 $pid
-  sleep 1
+  sleep 5
 }
 
 credit_chain=`linera --with-wallet 0 open-chain`
@@ -118,11 +118,15 @@ activity_chain=`linera --with-wallet 0 open-chain`
 activity_chain=`echo $activity_chain | awk '{print $2}'`
 print $'\U01F4AB' $YELLOW " Deploying Activity application on chain $activity_chain ..."
 linera --with-wallet 0 request-application $credit_appid --target-chain-id $credit_chain --requester-chain-id $activity_chain
-linera --with-wallet 0 request-application $feed_appid --target-chain-id $feed_chain --requester-chain-id $activity_chain
-linera --with-wallet 0 request-application $foundation_appid --target-chain-id $foundation_chain --requester-chain-id $activity_chain
-linera --with-wallet 0 request-application $market_appid --target-chain-id $market_chain --requester-chain-id $activity_chain
-linera --with-wallet 0 request-application $review_appid --target-chain-id $review_chain --requester-chain-id $activity_chain
 generate_block
+linera --with-wallet 0 request-application $feed_appid --target-chain-id $feed_chain --requester-chain-id $activity_chain
+generate_block
+linera --with-wallet 0 request-application $foundation_appid --target-chain-id $foundation_chain --requester-chain-id $activity_chain
+generate_block
+linera --with-wallet 0 request-application $market_appid --target-chain-id $market_chain --requester-chain-id $activity_chain
+generate_block
+linera --with-wallet 0 request-application $review_appid --target-chain-id $review_chain --requester-chain-id $activity_chain
+RUST_LOG=debug generate_block
 activity_bid=`linera --with-wallet 0 publish-bytecode ./target/wasm32-unknown-unknown/release/activity_{contract,service}.wasm $activity_chain`
 activity_appid=`linera --with-wallet 0 create-application $activity_bid $activity_chain --json-parameters "{\"review_app_id\":\"$review_appid\",\"foundation_app_id\":\"$foundation_appid\",\"feed_app_id\":\"$feed_appid\"}" --required-application-ids $review_appid --required-application-ids $foundation_appid --required-application-ids $feed_appid`
 print $'\U01f499' $LIGHTGREEN " Activity application deployed"
