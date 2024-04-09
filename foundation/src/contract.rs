@@ -286,10 +286,11 @@ impl FoundationContract {
     }
 
     fn on_msg_request_subscribe(&mut self) -> Result<(), FoundationError> {
-        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+        let message_id = self.require_message_id()?;
+        // The subscribe message must be from another chain
+        if message_id.chain_id == self.runtime.application_id().creation.chain_id {
             return Ok(());
         }
-        let message_id = self.require_message_id()?;
         self.runtime.subscribe(
             message_id.chain_id,
             ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),

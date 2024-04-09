@@ -23,7 +23,7 @@ lineradir=`whereis linera | awk '{print $2}'`
 lineradir=`dirname $lineradir`
 cd $lineradir
 # linera net up --extra-wallets $EXTRA_WALLET_NUMBER --shards 3 --validators 3 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
-linera net up --extra-wallets $EXTRA_WALLET_NUMBER 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
+RUST_LOG=debug linera net up --extra-wallets $EXTRA_WALLET_NUMBER 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
 cd -
 
 for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
@@ -106,7 +106,7 @@ function run_new_service() {
   linera --with-wallet $1 wallet show
   print $'\U01f499' $LIGHTGREEN " Run $port service ..."
   LOG_FILE=`echo $SERVICE_LOG_FILE | sed "s/8080/$port/g"`
-  linera --with-wallet $1 service --port $port > $LOG_FILE 2>&1 &
+  RUST_LOG=debug linera --with-wallet $1 service --port $port > $LOG_FILE 2>&1 &
 }
 
 for i in `seq 0 $EXTRA_WALLET_NUMBER`; do

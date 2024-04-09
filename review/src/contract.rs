@@ -899,6 +899,11 @@ impl ReviewContract {
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
+        log::info!(
+            "operation subscribe from chain {} to chain {}",
+            self.runtime.chain_id(),
+            self.runtime.application_id().creation.chain_id,
+        );
         // TODO: send initialization argument to subscriber
         Ok(ReviewResponse::Ok)
     }
@@ -1267,10 +1272,17 @@ impl ReviewContract {
     }
 
     async fn on_msg_request_subscribe(&mut self) -> Result<(), ReviewError> {
-        if self.require_message_id()?.chain_id != self.runtime.application_id().creation.chain_id {
+        let message_id = self.require_message_id()?;
+        // The subscribe message must be from another chain
+        if message_id.chain_id == self.runtime.application_id().creation.chain_id {
             return Ok(());
         }
-        let message_id = self.require_message_id()?;
+        log::info!(
+            "message subscribe from chain {} to chain {} on creation chain {}",
+            message_id.chain_id,
+            self.runtime.chain_id(),
+            self.runtime.application_id().creation.chain_id,
+        );
         self.runtime.subscribe(
             message_id.chain_id,
             ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),

@@ -126,8 +126,9 @@ generate_block
 linera --with-wallet 0 request-application $market_appid --target-chain-id $market_chain --requester-chain-id $activity_chain
 generate_block
 linera --with-wallet 0 request-application $review_appid --target-chain-id $review_chain --requester-chain-id $activity_chain
-RUST_LOG=debug generate_block
+generate_block
 activity_bid=`linera --with-wallet 0 publish-bytecode ./target/wasm32-unknown-unknown/release/activity_{contract,service}.wasm $activity_chain`
+generate_block
 activity_appid=`linera --with-wallet 0 create-application $activity_bid $activity_chain --json-parameters "{\"review_app_id\":\"$review_appid\",\"foundation_app_id\":\"$foundation_appid\",\"feed_app_id\":\"$feed_appid\"}" --required-application-ids $review_appid --required-application-ids $foundation_appid --required-application-ids $feed_appid`
 print $'\U01f499' $LIGHTGREEN " Activity application deployed"
 echo -e "    Bytecode ID:    $BLUE$activity_bid$NC"
