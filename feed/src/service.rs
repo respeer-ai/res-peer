@@ -4,7 +4,7 @@ mod state;
 
 use self::state::Feed;
 use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
-use feed::Operation;
+use feed::{Operation, FeedParamters};
 use linera_sdk::{
     base::{Amount, WithServiceAbi},
     Service, ServiceRuntime, ViewStateStorage,
@@ -26,6 +26,7 @@ impl Service for FeedService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
     type State = Feed;
+    type Parameters = FeedParamters;
 
     async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(FeedService {

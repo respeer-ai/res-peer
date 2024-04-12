@@ -2,12 +2,12 @@
 
 mod state;
 
-use self::state::{Activity, ActivityParameters};
+use self::state::Activity;
 use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
 use linera_sdk::{base::WithServiceAbi, Service, ServiceRuntime, ViewStateStorage};
 use std::sync::Arc;
 
-use activity::{ActivityError, AnnounceParams, CreateParams, Operation, UpdateParams};
+use activity::{ActivityError, AnnounceParams, CreateParams, Operation, UpdateParams, ActivityParameters};
 
 pub struct ActivityService {
     state: Arc<Activity>,

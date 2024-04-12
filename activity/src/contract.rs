@@ -4,9 +4,9 @@ mod state;
 
 use std::collections::HashSet;
 
-use self::state::{Activity, ActivityParameters, InitializationArgument};
+use self::state::Activity;
 use activity::{
-    ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType,
+    ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType, ActivityParameters, InitializationArgument,
 };
 use async_trait::async_trait;
 use feed::{FeedAbi, FeedResponse};
