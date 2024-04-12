@@ -14,14 +14,11 @@ use thiserror::Error;
 pub struct ActivityAbi;
 
 impl ContractAbi for ActivityAbi {
-    type Parameters = ActivityParameters;
-    type InitializationArgument = ();
     type Operation = Operation;
     type Response = ();
 }
 
 impl ServiceAbi for ActivityAbi {
-    type Parameters = ActivityParameters;
     type Query = Request;
     type QueryResponse = Response;
 }

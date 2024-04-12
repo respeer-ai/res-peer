@@ -2,7 +2,7 @@
 
 mod state;
 
-use self::state::Activity;
+use self::state::{Activity, ActivityParameters};
 use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
 use linera_sdk::{base::WithServiceAbi, Service, ServiceRuntime, ViewStateStorage};
 use std::sync::Arc;
@@ -23,6 +23,7 @@ impl Service for ActivityService {
     type Error = ActivityError;
     type Storage = ViewStateStorage<Self>;
     type State = Activity;
+    type Parameters = ActivityParameters;
 
     async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(ActivityService {

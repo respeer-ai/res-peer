@@ -4,7 +4,7 @@ mod state;
 
 use std::collections::HashSet;
 
-use self::state::Activity;
+use self::state::{Activity, ActivityParameters, InitializationArgument};
 use activity::{
     ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType,
 };
@@ -36,6 +36,8 @@ impl Contract for ActivityContract {
     type Storage = ViewStateStorage<Self>;
     type State = Activity;
     type Message = Message;
+    type InitializationArgument = InitializationArgument;
+    type Parameters = ActivityParameters;
 
     async fn new(state: Activity, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(ActivityContract { state, runtime })
