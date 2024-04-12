@@ -33,6 +33,8 @@ impl Contract for FoundationContract {
     type Storage = ViewStateStorage<Self>;
     type State = Foundation;
     type Message = Message;
+    type InitializationArgument = InitializationArgument;
+    type Parameters = ();
 
     async fn new(state: Foundation, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(FoundationContract { state, runtime })

@@ -8,14 +8,11 @@ use thiserror::Error;
 pub struct FeedAbi;
 
 impl ContractAbi for FeedAbi {
-    type Parameters = FeedParameters;
-    type InitializationArgument = InitialState;
     type Operation = Operation;
     type Response = FeedResponse;
 }
 
 impl ServiceAbi for FeedAbi {
-    type Parameters = FeedParameters;
     type Query = Request;
     type QueryResponse = Response;
 }
@@ -41,7 +38,7 @@ pub struct Content {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct InitialState {
+pub struct InitializationArgument {
     pub react_interval_ms: u64,
 }
 

@@ -33,6 +33,8 @@ impl Contract for FeedContract {
     type Storage = ViewStateStorage<Self>;
     type State = Feed;
     type Message = Message;
+    type InitializationArgument = InitializationArgument;
+    type Parameters = FeedParameters;
 
     async fn new(state: Feed, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(FeedContract { state, runtime })
@@ -43,6 +45,7 @@ impl Contract for FeedContract {
     }
 
     async fn initialize(&mut self, state: Self::InitializationArgument) -> Result<(), Self::Error> {
+        let _ = self.runtime.application_parameters();
         self.state.initialize_feed(state).await;
         Ok(())
     }

@@ -26,6 +26,7 @@ impl Service for FoundationService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
     type State = Foundation;
+    type Parameters = ();
 
     async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(FoundationService {

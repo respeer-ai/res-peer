@@ -51,6 +51,7 @@ impl Contract for ActivityContract {
         &mut self,
         _argument: Self::InitializationArgument,
     ) -> Result<(), Self::Error> {
+        let _ = self.runtime.application_parameters();
         Ok(())
     }
 

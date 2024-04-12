@@ -6,14 +6,11 @@ use thiserror::Error;
 pub struct CreditAbi;
 
 impl ContractAbi for CreditAbi {
-    type Parameters = ();
-    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
     type Response = ();
 }
 
 impl ServiceAbi for CreditAbi {
-    type Parameters = ();
     type Query = Request;
     type QueryResponse = Response;
 }

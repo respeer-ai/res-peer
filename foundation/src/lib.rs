@@ -7,14 +7,11 @@ use thiserror::Error;
 pub struct FoundationAbi;
 
 impl ContractAbi for FoundationAbi {
-    type Parameters = ();
-    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
     type Response = FoundationResponse;
 }
 
 impl ServiceAbi for FoundationAbi {
-    type Parameters = ();
     type Query = Request;
     type QueryResponse = Response;
 }

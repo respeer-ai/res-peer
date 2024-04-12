@@ -26,6 +26,7 @@ impl Service for CreditService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
     type State = Credit;
+    type Parameters = ();
 
     async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(CreditService {

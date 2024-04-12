@@ -29,6 +29,8 @@ impl Contract for CreditContract {
     type Storage = ViewStateStorage<Self>;
     type State = Credit;
     type Message = Message;
+    type InitializationArgument = InitializationArgument;
+    type Parameters = ();
 
     async fn new(state: Credit, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(CreditContract { state, runtime })
