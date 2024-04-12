@@ -18,8 +18,8 @@ use linera_sdk::{
 // use linera_views::views::ViewError;
 use market::MarketAbi;
 use review::{
-    Asset, Content, InitializationArgument, Message, Operation, ReviewError, ReviewResponse,
-    Reviewer,
+    Asset, Content, InitializationArgument, Message, Operation, ReviewError, ReviewParameters,
+    ReviewResponse, Reviewer,
 };
 
 pub struct ReviewContract {
@@ -41,6 +41,8 @@ impl Contract for ReviewContract {
     type Storage = ViewStateStorage<Self>;
     type State = Review;
     type Message = Message;
+    type InitializationArgument = InitializationArgument;
+    type Parameters = ReviewParameters;
 
     async fn new(state: Review, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(ReviewContract { state, runtime })
@@ -54,6 +56,7 @@ impl Contract for ReviewContract {
         &mut self,
         argument: Self::InitializationArgument,
     ) -> Result<(), Self::Error> {
+        let _ = self.runtime.application_parameters();
         self._initialize(argument).await?;
         // We should add creator here to be a reviewer, but we keep the message as an test case of application id
         self.runtime

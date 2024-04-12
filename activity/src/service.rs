@@ -7,7 +7,9 @@ use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
 use linera_sdk::{base::WithServiceAbi, Service, ServiceRuntime, ViewStateStorage};
 use std::sync::Arc;
 
-use activity::{ActivityError, AnnounceParams, CreateParams, Operation, UpdateParams, ActivityParameters};
+use activity::{
+    ActivityError, ActivityParameters, AnnounceParams, CreateParams, Operation, UpdateParams,
+};
 
 pub struct ActivityService {
     state: Arc<Activity>,

@@ -11,14 +11,11 @@ use thiserror::Error;
 pub struct MarketAbi;
 
 impl ContractAbi for MarketAbi {
-    type Parameters = MarketParameters;
-    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
     type Response = ();
 }
 
 impl ServiceAbi for MarketAbi {
-    type Parameters = MarketParameters;
     type Query = Request;
     type QueryResponse = Response;
 }

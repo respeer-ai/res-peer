@@ -7,7 +7,9 @@ use std::collections::HashMap;
 use self::state::Feed;
 use async_trait::async_trait;
 use credit::CreditAbi;
-use feed::{Content, FeedError, FeedResponse, Message, Operation, FeedParamters, InitializationArgument};
+use feed::{
+    Content, FeedError, FeedParameters, FeedResponse, InitializationArgument, Message, Operation,
+};
 use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},

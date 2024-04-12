@@ -41,6 +41,7 @@ impl Contract for CreditContract {
     }
 
     async fn initialize(&mut self, state: InitializationArgument) -> Result<(), Self::Error> {
+        let _ = self.runtime.application_parameters();
         self.state.initialize_credit(state).await;
         Ok(())
     }

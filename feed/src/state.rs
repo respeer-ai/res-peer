@@ -1,5 +1,5 @@
 use async_graphql::SimpleObject;
-use feed::{Content, FeedError, InitialState};
+use feed::{Content, FeedError, InitializationArgument};
 use linera_sdk::{
     base::{Owner, Timestamp},
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
@@ -20,8 +20,8 @@ pub struct Feed {
 
 #[allow(dead_code)]
 impl Feed {
-    pub(crate) async fn initialize_feed(&mut self, state: InitialState) {
-        self.react_interval_ms.set(state.react_interval_ms);
+    pub(crate) async fn initialize_feed(&mut self, argument: InitializationArgument) {
+        self.react_interval_ms.set(argument.react_interval_ms);
     }
 
     pub(crate) async fn create_content(
@@ -60,7 +60,7 @@ impl Feed {
     ) -> Result<(), FeedError> {
         match self.react_accounts.get(&owner).await {
             Ok(Some(reacted_at)) => {
-                if now.saturating_diff_micros(reacted_at) < *self.react_interval_ms.get() {
+                if now.micros() - reacted_at.micros() < *self.react_interval_ms.get() {
                     return Err(FeedError::TooFrequently);
                 }
             }

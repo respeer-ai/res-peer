@@ -124,7 +124,7 @@ impl Credit {
                 _ => continue,
             };
             amounts.amounts.retain(|amount| {
-                let expired = now.saturating_diff_micros(amount.expired) > 0;
+                let expired = now.micros() > amount.expired.micros();
                 if expired {
                     self._balance
                         .set(self._balance.get().saturating_add(amount.amount));

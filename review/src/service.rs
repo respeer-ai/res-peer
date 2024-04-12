@@ -9,7 +9,7 @@ use linera_sdk::{
     graphql::GraphQLMutationRoot,
     Service, ServiceRuntime, ViewStateStorage,
 };
-use review::Operation;
+use review::{Operation, ReviewParameters};
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -27,6 +27,7 @@ impl Service for ReviewService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
     type State = Review;
+    type Parameters = ReviewParameters;
 
     async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(ReviewService {

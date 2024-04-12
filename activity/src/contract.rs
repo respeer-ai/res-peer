@@ -6,7 +6,8 @@ use std::collections::HashSet;
 
 use self::state::Activity;
 use activity::{
-    ActivityError, AnnounceParams, CreateParams, Message, Operation, UpdateParams, VoteType, ActivityParameters, InitializationArgument,
+    ActivityError, ActivityParameters, AnnounceParams, CreateParams, Message, Operation,
+    UpdateParams, VoteType,
 };
 use async_trait::async_trait;
 use feed::{FeedAbi, FeedResponse};
@@ -36,7 +37,7 @@ impl Contract for ActivityContract {
     type Storage = ViewStateStorage<Self>;
     type State = Activity;
     type Message = Message;
-    type InitializationArgument = InitializationArgument;
+    type InitializationArgument = ();
     type Parameters = ActivityParameters;
 
     async fn new(state: Activity, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {

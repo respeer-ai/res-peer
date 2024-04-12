@@ -13,14 +13,11 @@ use thiserror::Error;
 pub struct ReviewAbi;
 
 impl ContractAbi for ReviewAbi {
-    type Parameters = ReviewParameters;
-    type InitializationArgument = InitializationArgument;
     type Operation = Operation;
     type Response = ReviewResponse;
 }
 
 impl ServiceAbi for ReviewAbi {
-    type Parameters = ReviewParameters;
     type Query = Request;
     type QueryResponse = Response;
 }

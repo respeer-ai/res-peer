@@ -10,7 +10,7 @@ use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
     Contract, ContractRuntime, ViewStateStorage,
 };
-use market::{InitializationArgument, MarketError, Message, Operation};
+use market::{InitializationArgument, MarketError, MarketParameters, Message, Operation};
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
@@ -31,6 +31,8 @@ impl Contract for MarketContract {
     type Storage = ViewStateStorage<Self>;
     type State = Market;
     type Message = Message;
+    type InitializationArgument = InitializationArgument;
+    type Parameters = MarketParameters;
 
     async fn new(state: Market, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(MarketContract { state, runtime })
@@ -44,6 +46,7 @@ impl Contract for MarketContract {
         &mut self,
         argument: Self::InitializationArgument,
     ) -> Result<(), Self::Error> {
+        let _ = self.runtime.application_parameters();
         self.state.initialize_market(argument).await;
         Ok(())
     }

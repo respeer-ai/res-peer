@@ -9,7 +9,7 @@ use linera_sdk::{
     graphql::GraphQLMutationRoot,
     Service, ServiceRuntime, ViewStateStorage,
 };
-use market::Operation;
+use market::{MarketParameters, Operation};
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -27,6 +27,7 @@ impl Service for MarketService {
     type Error = ServiceError;
     type Storage = ViewStateStorage<Self>;
     type State = Market;
+    type Parameters = MarketParameters;
 
     async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
         Ok(MarketService {
