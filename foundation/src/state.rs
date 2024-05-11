@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use async_graphql::SimpleObject;
-use foundation::{FoundationError, InitializationArgument, RewardType};
+use foundation::{FoundationError, InstantiationArgument, RewardType};
 use linera_sdk::{
     base::{Amount, Owner},
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
@@ -25,9 +25,9 @@ pub struct Foundation {
 
 #[allow(dead_code)]
 impl Foundation {
-    pub(crate) async fn initialize_foundation(
+    pub(crate) async fn instantiate_foundation(
         &mut self,
-        state: InitializationArgument,
+        state: InstantiationArgument,
     ) -> Result<(), FoundationError> {
         if state.review_reward_percent + state.author_reward_percent + state.activity_reward_percent
             > 100
@@ -45,8 +45,8 @@ impl Foundation {
 
     pub(crate) async fn initialization_argument(
         &self,
-    ) -> Result<InitializationArgument, FoundationError> {
-        Ok(InitializationArgument {
+    ) -> Result<InstantiationArgument, FoundationError> {
+        Ok(InstantiationArgument {
             review_reward_percent: *self.review_reward_percent.get(),
             review_reward_factor: *self.review_reward_factor.get(),
             author_reward_percent: *self.author_reward_percent.get(),

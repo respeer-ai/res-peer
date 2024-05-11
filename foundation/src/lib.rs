@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
-use async_graphql::{Request, Response};
-use linera_sdk::base::{Amount, ArithmeticError, ContractAbi, Owner, ServiceAbi};
+use async_graphql::{Enum, Request, Response};
+use linera_sdk::{
+    base::{Amount, ArithmeticError, ContractAbi, Owner, ServiceAbi},
+    graphql::GraphQLMutationRoot,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 pub struct FoundationAbi;
@@ -17,7 +20,7 @@ impl ServiceAbi for FoundationAbi {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
-pub struct InitializationArgument {
+pub struct InstantiationArgument {
     pub review_reward_percent: u8,
     pub review_reward_factor: u8,
     pub author_reward_percent: u8,
@@ -32,14 +35,14 @@ pub enum FoundationResponse {
     Balance(Amount),
 }
 
-#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
+#[derive(Debug, Deserialize, Serialize, Copy, Clone, Enum, Eq, PartialEq)]
 pub enum RewardType {
     Review,
     Publish,
     Activity,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     UserDeposit {
         amount: Amount,
@@ -84,8 +87,8 @@ pub enum Message {
         amount: Amount,
     },
     RequestSubscribe,
-    InitializationArgument {
-        argument: InitializationArgument,
+    InstantiationArgument {
+        argument: InstantiationArgument,
     },
     Deposit {
         from: Owner,

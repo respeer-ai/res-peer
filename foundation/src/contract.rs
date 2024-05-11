@@ -5,13 +5,13 @@ mod state;
 use std::collections::HashSet;
 
 use self::state::Foundation;
-use async_trait::async_trait;
 use foundation::{
-    FoundationError, FoundationResponse, InitializationArgument, Message, Operation, RewardType,
+    FoundationError, FoundationResponse, InstantiationArgument, Message, Operation, RewardType,
 };
 use linera_sdk::{
     base::{Amount, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    Contract, ContractRuntime, ViewStateStorage,
+    views::{RootView, View, ViewStorageContext},
+    Contract, ContractRuntime,
 };
 
 pub struct FoundationContract {
@@ -27,92 +27,118 @@ impl WithContractAbi for FoundationContract {
     type Abi = foundation::FoundationAbi;
 }
 
-#[async_trait]
 impl Contract for FoundationContract {
-    type Error = FoundationError;
-    type Storage = ViewStateStorage<Self>;
-    type State = Foundation;
     type Message = Message;
-    type InitializationArgument = InitializationArgument;
+    type InstantiationArgument = InstantiationArgument;
     type Parameters = ();
 
-    async fn new(state: Foundation, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
-        Ok(FoundationContract { state, runtime })
+    async fn load(runtime: ContractRuntime<Self>) -> Self {
+        let state = Foundation::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+        FoundationContract { state, runtime }
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
+    async fn instantiate(&mut self, state: Self::InstantiationArgument) {
+        self.runtime.application_parameters();
+        self.state
+            .instantiate_foundation(state)
+            .await
+            .expect("Failed instantiate foundation");
     }
 
-    async fn initialize(&mut self, state: Self::InitializationArgument) -> Result<(), Self::Error> {
-        self.state.initialize_foundation(state).await?;
-        Ok(())
-    }
-
-    async fn execute_operation(
-        &mut self,
-        operation: Self::Operation,
-    ) -> Result<FoundationResponse, Self::Error> {
+    async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::UserDeposit { amount } => self.on_op_user_deposit(amount),
-            Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            Operation::UserDeposit { amount } => self
+                .on_op_user_deposit(amount)
+                .expect("Failed OP: user deposit"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: subscribe"),
             Operation::ActivityRewards {
                 activity_id,
                 winner_user,
                 voter_users,
                 reward_amount,
                 voter_reward_percent,
-            } => self.on_op_activity_rewards(
-                activity_id,
-                winner_user,
-                voter_users,
-                reward_amount,
-                voter_reward_percent,
-            ),
-            Operation::Balance { owner } => self.on_op_balance(owner).await,
-            Operation::Deposit { from, amount } => self.on_op_deposit(from, amount),
+            } => self
+                .on_op_activity_rewards(
+                    activity_id,
+                    winner_user,
+                    voter_users,
+                    reward_amount,
+                    voter_reward_percent,
+                )
+                .expect("Failed OP: activity rewards"),
+            Operation::Balance { owner } => {
+                self.on_op_balance(owner).await.expect("Failed OP: balance")
+            }
+            Operation::Deposit { from, amount } => self
+                .on_op_deposit(from, amount)
+                .expect("Failed OP: deposit"),
             Operation::Lock {
                 activity_id,
                 amount,
-            } => self.on_op_lock(activity_id, amount),
+            } => self
+                .on_op_lock(activity_id, amount)
+                .expect("Failed OP: lock"),
             Operation::Reward {
                 reward_user,
                 reward_type,
                 activity_id,
-            } => self.on_op_reward(reward_user, reward_type, activity_id),
-            Operation::Transfer { from, to, amount } => self.on_op_transfer(from, to, amount),
+            } => self
+                .on_op_reward(reward_user, reward_type, activity_id)
+                .expect("Failed OP: reward"),
+            Operation::Transfer { from, to, amount } => self
+                .on_op_transfer(from, to, amount)
+                .expect("Failed OP: transfer"),
         }
     }
 
-    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) {
         match message {
-            Message::InitializationArgument { argument } => {
-                self.on_msg_initialization_argument(argument).await
-            }
-            Message::UserDeposit { amount } => self.on_msg_user_deposit(amount).await,
-            Message::RequestSubscribe => self.on_msg_request_subscribe(),
-            Message::Deposit { from, amount } => self.on_msg_deposit(from, amount).await,
+            Message::InstantiationArgument { argument } => self
+                .on_msg_instantiation_argument(argument)
+                .await
+                .expect("Failed MSG: instantiation argument"),
+            Message::UserDeposit { amount } => self
+                .on_msg_user_deposit(amount)
+                .await
+                .expect("Failed MSG: user deposit"),
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .expect("Failed MSG: subscribe"),
+            Message::Deposit { from, amount } => self
+                .on_msg_deposit(from, amount)
+                .await
+                .expect("Failed MSG: deposit"),
             Message::Lock {
                 activity_id,
                 amount,
-            } => self.on_msg_lock(activity_id, amount).await,
+            } => self
+                .on_msg_lock(activity_id, amount)
+                .await
+                .expect("Failed MSG: lock"),
             Message::Reward {
                 reward_user,
                 reward_type,
                 activity_id,
-            } => {
-                self.on_msg_reward(reward_user, reward_type, activity_id)
-                    .await
-            }
-            Message::Transfer { from, to, amount } => self.on_msg_transfer(from, to, amount).await,
+            } => self
+                .on_msg_reward(reward_user, reward_type, activity_id)
+                .await
+                .expect("Failed MSG: reward"),
+            Message::Transfer { from, to, amount } => self
+                .on_msg_transfer(from, to, amount)
+                .await
+                .expect("Failed MSG: transfer"),
             Message::ActivityRewards {
                 activity_id,
                 winner_user,
                 voter_users,
                 reward_amount,
                 voter_reward_percent,
-            } => {
-                self.on_msg_activity_rewards(
+            } => self
+                .on_msg_activity_rewards(
                     activity_id,
                     winner_user,
                     voter_users,
@@ -120,8 +146,12 @@ impl Contract for FoundationContract {
                     voter_reward_percent,
                 )
                 .await
-            }
+                .expect("Failed MSG: activity rewards"),
         }
+    }
+
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
     }
 }
 
@@ -167,7 +197,7 @@ impl FoundationContract {
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
-        // TODO: send initialization argument to subscriber
+        // TODO: send instantiation argument to subscriber
         Ok(FoundationResponse::Ok)
     }
 
@@ -266,11 +296,11 @@ impl FoundationContract {
         Ok(FoundationResponse::Ok)
     }
 
-    async fn on_msg_initialization_argument(
+    async fn on_msg_instantiation_argument(
         &mut self,
-        argument: InitializationArgument,
+        argument: InstantiationArgument,
     ) -> Result<(), FoundationError> {
-        self.state.initialize_foundation(argument).await
+        self.state.instantiate_foundation(argument).await
     }
 
     async fn on_msg_user_deposit(&mut self, amount: Amount) -> Result<(), FoundationError> {
