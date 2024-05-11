@@ -9,12 +9,12 @@ use activity::{
     ActivityError, ActivityParameters, AnnounceParams, CreateParams, Message, Operation,
     UpdateParams, VoteType,
 };
-use async_trait::async_trait;
 use feed::{FeedAbi, FeedResponse};
 use foundation::{FoundationAbi, FoundationResponse};
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    Contract, ContractRuntime, ViewStateStorage,
+    views::{RootView, View, ViewStorageContext},
+    Contract, ContractRuntime,
 };
 use review::{ReviewAbi, ReviewResponse};
 
@@ -31,65 +31,95 @@ impl WithContractAbi for ActivityContract {
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
-#[async_trait]
 impl Contract for ActivityContract {
-    type Error = ActivityError;
-    type Storage = ViewStateStorage<Self>;
-    type State = Activity;
     type Message = Message;
-    type InitializationArgument = ();
+    type InstantiationArgument = ();
     type Parameters = ActivityParameters;
 
-    async fn new(state: Activity, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
-        Ok(ActivityContract { state, runtime })
+    async fn load(runtime: ContractRuntime<Self>) -> Self {
+        let state = Activity::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+        ActivityContract { state, runtime }
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
+    async fn instantiate(&mut self, _argument: Self::InstantiationArgument) {
+        self.runtime.application_parameters();
     }
 
-    async fn initialize(
-        &mut self,
-        _argument: Self::InitializationArgument,
-    ) -> Result<(), Self::Error> {
-        let _ = self.runtime.application_parameters();
-        Ok(())
-    }
-
-    async fn execute_operation(&mut self, operation: Self::Operation) -> Result<(), Self::Error> {
+    async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::Create { params } => self.on_op_create(params),
-            Operation::Update { params } => self.on_op_update(params),
+            Operation::Create { params } => self
+                .on_op_create(params)
+                .expect("Failed OP: create activity"),
+            Operation::Update { params } => self
+                .on_op_update(params)
+                .expect("Failed OP: update activity"),
             Operation::Register {
                 activity_id,
                 object_id,
-            } => self.on_op_register(activity_id, object_id),
+            } => self
+                .on_op_register(activity_id, object_id)
+                .expect("Failed OP: register object"),
             Operation::Vote {
                 activity_id,
                 object_id,
-            } => self.on_op_vote(activity_id, object_id),
-            Operation::Announce { params } => self.on_op_announce(params),
-            Operation::RequestSubscribe => self.on_op_request_subscribe(),
-            Operation::Finalize { activity_id } => self.on_op_finalize(activity_id).await,
+            } => self
+                .on_op_vote(activity_id, object_id)
+                .expect("Failed OP: vote object"),
+            Operation::Announce { params } => self
+                .on_op_announce(params)
+                .expect("Failed OP: announce result"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: subscribe"),
+            Operation::Finalize { activity_id } => self
+                .on_op_finalize(activity_id)
+                .await
+                .expect("Failed OP: finalize activity"),
         }
     }
 
-    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) {
         match message {
-            Message::Create { params } => self.on_msg_create(params).await,
-            Message::Update { params } => self.on_msg_update(params).await,
+            Message::Create { params } => self
+                .on_msg_create(params)
+                .await
+                .expect("Failed MSG: create activity"),
+            Message::Update { params } => self
+                .on_msg_update(params)
+                .await
+                .expect("Failed MSG: update activity"),
             Message::Register {
                 activity_id,
                 object_id,
-            } => self.on_msg_register(activity_id, object_id).await,
+            } => self
+                .on_msg_register(activity_id, object_id)
+                .await
+                .expect("Failed MSG: register object"),
             Message::Vote {
                 activity_id,
                 object_id,
-            } => self.on_msg_vote(activity_id, object_id).await,
-            Message::Announce { params } => self.on_msg_announce(params).await,
-            Message::RequestSubscribe => self.on_msg_request_subscribe(),
-            Message::Finalize { activity_id } => self.on_msg_finalize(activity_id).await,
+            } => self
+                .on_msg_vote(activity_id, object_id)
+                .await
+                .expect("Failed MSG: vote object"),
+            Message::Announce { params } => self
+                .on_msg_announce(params)
+                .await
+                .expect("Failed MSG: announce result"),
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .expect("Failed MSG: subscribe"),
+            Message::Finalize { activity_id } => self
+                .on_msg_finalize(activity_id)
+                .await
+                .expect("Failed MSG: finalize activity"),
         }
+    }
+
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
     }
 }
 

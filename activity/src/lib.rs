@@ -3,9 +3,10 @@ use std::{
     convert::Infallible,
 };
 
-use async_graphql::{scalar, Enum, InputObject, Request, Response, SimpleObject};
-use linera_sdk::base::{
-    Amount, ApplicationId, ArithmeticError, ContractAbi, Owner, ServiceAbi, Timestamp,
+use async_graphql::{Enum, InputObject, Request, Response, SimpleObject};
+use linera_sdk::{
+    base::{Amount, ApplicationId, ArithmeticError, ContractAbi, Owner, ServiceAbi, Timestamp},
+    graphql::GraphQLMutationRoot,
 };
 use linera_views::views::ViewError;
 use serde::{Deserialize, Serialize};
@@ -53,7 +54,7 @@ pub enum ObjectType {
     Creator,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq, InputObject)]
 pub struct ObjectCondition {
     classes: Option<Vec<String>>,
     min_words: u32,
@@ -118,7 +119,7 @@ pub struct ActivityItem {
     pub finalized: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, SimpleObject, InputObject)]
 pub struct CreateParams {
     pub title: String,
     pub slogan: Option<String>,
@@ -143,9 +144,7 @@ pub struct CreateParams {
     pub vote_end_at: Timestamp,
 }
 
-scalar!(CreateParams);
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, InputObject)]
 pub struct UpdateParams {
     pub activity_id: u64,
     pub title: Option<String>,
@@ -171,9 +170,7 @@ pub struct UpdateParams {
     pub vote_end_at: Option<Timestamp>,
 }
 
-scalar!(UpdateParams);
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, InputObject)]
 pub struct AnnounceParams {
     pub activity_id: u64,
     pub cid: String,
@@ -182,9 +179,7 @@ pub struct AnnounceParams {
     pub announce_prize: bool,
 }
 
-scalar!(AnnounceParams);
-
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     Create { params: CreateParams },
     Update { params: UpdateParams },
@@ -194,8 +189,6 @@ pub enum Operation {
     RequestSubscribe,
     Finalize { activity_id: u64 },
 }
-
-scalar!(Operation);
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {

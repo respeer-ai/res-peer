@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use credit::{CreditAbi, CreditError, InitializationArgument, Message, Operation};
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    Contract, ContractRuntime, ViewStateStorage,
+    Contract, ContractRuntime,
 };
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
@@ -26,7 +26,6 @@ impl WithContractAbi for CreditContract {
 #[async_trait]
 impl Contract for CreditContract {
     type Error = CreditError;
-    type Storage = ViewStateStorage<Self>;
     type State = Credit;
     type Message = Message;
     type InitializationArgument = InitializationArgument;
