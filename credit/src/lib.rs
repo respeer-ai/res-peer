@@ -1,5 +1,8 @@
 use async_graphql::{Request, Response, SimpleObject};
-use linera_sdk::base::{Amount, ApplicationId, ContractAbi, Owner, ServiceAbi, Timestamp};
+use linera_sdk::{
+    base::{Amount, ApplicationId, ContractAbi, Owner, ServiceAbi, Timestamp},
+    graphql::GraphQLMutationRoot,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -37,12 +40,12 @@ impl AgeAmounts {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct InitializationArgument {
+pub struct InstantiationArgument {
     pub initial_supply: Amount,
     pub amount_alive_ms: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     Liquidate,
     Transfer {
@@ -69,8 +72,8 @@ pub enum Operation {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Message {
-    InitializationArgument {
-        argument: InitializationArgument,
+    InstantiationArgument {
+        argument: InstantiationArgument,
     },
     Liquidate,
     Reward {

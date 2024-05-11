@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use async_graphql::SimpleObject;
-use credit::{AgeAmount, AgeAmounts, CreditError, InitializationArgument};
+use credit::{AgeAmount, AgeAmounts, CreditError, InstantiationArgument};
 use linera_sdk::{
     base::{Amount, ApplicationId, Owner, Timestamp},
     views::{linera_views, MapView, RegisterView, RootView, SetView, ViewStorageContext},
@@ -21,7 +21,7 @@ pub struct Credit {
 
 #[allow(dead_code)]
 impl Credit {
-    pub(crate) async fn initialize_credit(&mut self, mut argument: InitializationArgument) {
+    pub(crate) async fn initialize_credit(&mut self, mut argument: InstantiationArgument) {
         if argument.initial_supply.eq(&Amount::ZERO) {
             argument.initial_supply = Amount::from_tokens(100000000);
         }
@@ -30,10 +30,10 @@ impl Credit {
         self.amount_alive_ms.set(argument.amount_alive_ms);
     }
 
-    pub(crate) async fn initialization_argument(
+    pub(crate) async fn instantiation_argument(
         &self,
-    ) -> Result<InitializationArgument, CreditError> {
-        Ok(InitializationArgument {
+    ) -> Result<InstantiationArgument, CreditError> {
+        Ok(InstantiationArgument {
             initial_supply: *self._initial_supply.get(),
             amount_alive_ms: *self.amount_alive_ms.get(),
         })

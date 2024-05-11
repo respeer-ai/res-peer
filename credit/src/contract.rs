@@ -3,10 +3,10 @@
 mod state;
 
 use self::state::Credit;
-use async_trait::async_trait;
-use credit::{CreditAbi, CreditError, InitializationArgument, Message, Operation};
+use credit::{CreditAbi, CreditError, InstantiationArgument, Message, Operation};
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
+    views::{RootView, View, ViewStorageContext},
     Contract, ContractRuntime,
 };
 
@@ -23,61 +23,86 @@ impl WithContractAbi for CreditContract {
     type Abi = CreditAbi;
 }
 
-#[async_trait]
 impl Contract for CreditContract {
-    type Error = CreditError;
-    type State = Credit;
     type Message = Message;
-    type InitializationArgument = InitializationArgument;
+    type InstantiationArgument = InstantiationArgument;
     type Parameters = ();
 
-    async fn new(state: Credit, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
-        Ok(CreditContract { state, runtime })
+    async fn load(runtime: ContractRuntime<Self>) -> Self {
+        let state = Credit::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+        CreditContract { state, runtime }
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
+    async fn instantiate(&mut self, argument: InstantiationArgument) {
+        self.runtime.application_parameters();
+        self.state.initialize_credit(argument).await;
     }
 
-    async fn initialize(&mut self, state: InitializationArgument) -> Result<(), Self::Error> {
-        let _ = self.runtime.application_parameters();
-        self.state.initialize_credit(state).await;
-        Ok(())
-    }
-
-    async fn execute_operation(&mut self, operation: Operation) -> Result<(), Self::Error> {
+    async fn execute_operation(&mut self, operation: Operation) -> Self::Response {
         match operation {
-            Operation::Liquidate => self.on_op_liquidate(),
-            Operation::SetRewardCallers { application_ids } => {
-                self.on_op_set_reward_callers(application_ids)
+            Operation::Liquidate => self.on_op_liquidate().expect("Failed OP: liquidate"),
+            Operation::SetRewardCallers { application_ids } => self
+                .on_op_set_reward_callers(application_ids)
+                .expect("Failed OP: set reward callers"),
+            Operation::SetTransferCallers { application_ids } => self
+                .on_op_set_transfer_callers(application_ids)
+                .expect("Failed OP: set transfer callers"),
+            Operation::Transfer { from, to, amount } => self
+                .on_op_transfer(from, to, amount)
+                .expect("Failed OP: transfer"),
+            Operation::TransferExt { to, amount } => self
+                .on_op_transfer_ext(to, amount)
+                .expect("Failed OP: transfer from application"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: subscribe"),
+            Operation::Reward { owner, amount } => {
+                self.on_op_reward(owner, amount).expect("Failed OP: reward")
             }
-            Operation::SetTransferCallers { application_ids } => {
-                self.on_op_set_transfer_callers(application_ids)
-            }
-            Operation::Transfer { from, to, amount } => self.on_op_transfer(from, to, amount),
-            Operation::TransferExt { to, amount } => self.on_op_transfer_ext(to, amount),
-            Operation::RequestSubscribe => self.on_op_request_subscribe(),
-            Operation::Reward { owner, amount } => self.on_op_reward(owner, amount),
         }
     }
 
-    async fn execute_message(&mut self, message: Message) -> Result<(), Self::Error> {
+    async fn execute_message(&mut self, message: Message) {
         match message {
-            Message::InitializationArgument { argument } => {
-                self.on_msg_initialization_argument(argument).await
-            }
-            Message::Liquidate => self.on_msg_liquidate().await,
-            Message::Reward { owner, amount } => self.on_msg_reward(owner, amount).await,
-            Message::SetRewardCallers { application_ids } => {
-                self.on_msg_set_reward_callers(application_ids).await
-            }
-            Message::SetTransferCallers { application_ids } => {
-                self.on_msg_set_transfer_callers(application_ids).await
-            }
-            Message::Transfer { from, to, amount } => self.on_msg_transfer(from, to, amount).await,
-            Message::TransferExt { to, amount } => self.on_msg_transfer_ext(to, amount).await,
-            Message::RequestSubscribe => self.on_msg_request_subscribe().await,
+            Message::InstantiationArgument { argument } => self
+                .on_msg_instantiation_argument(argument)
+                .await
+                .expect("Failed MSG: instantiation argument"),
+            Message::Liquidate => self
+                .on_msg_liquidate()
+                .await
+                .expect("Failed MSG: liquidate"),
+            Message::Reward { owner, amount } => self
+                .on_msg_reward(owner, amount)
+                .await
+                .expect("Failed MSG: reward"),
+            Message::SetRewardCallers { application_ids } => self
+                .on_msg_set_reward_callers(application_ids)
+                .await
+                .expect("Failed MSG: set reward callers"),
+            Message::SetTransferCallers { application_ids } => self
+                .on_msg_set_transfer_callers(application_ids)
+                .await
+                .expect("Failed MSG: set transfer callers"),
+            Message::Transfer { from, to, amount } => self
+                .on_msg_transfer(from, to, amount)
+                .await
+                .expect("Failed MSG: transfer"),
+            Message::TransferExt { to, amount } => self
+                .on_msg_transfer_ext(to, amount)
+                .await
+                .expect("Failed MSG: transfer from application"),
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .await
+                .expect("Failed MSG: subscribe"),
         }
+    }
+
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
     }
 }
 
@@ -166,9 +191,9 @@ impl CreditContract {
         Ok(())
     }
 
-    async fn on_msg_initialization_argument(
+    async fn on_msg_instantiation_argument(
         &mut self,
-        arg: InitializationArgument,
+        arg: InstantiationArgument,
     ) -> Result<(), CreditError> {
         self.state.initialize_credit(arg).await;
         Ok(())
@@ -289,8 +314,8 @@ impl CreditContract {
             ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
         );
         self.runtime
-            .prepare_message(Message::InitializationArgument {
-                argument: self.state.initialization_argument().await?,
+            .prepare_message(Message::InstantiationArgument {
+                argument: self.state.instantiation_argument().await?,
             })
             .with_authentication()
             .send_to(self.require_message_id()?.chain_id);
