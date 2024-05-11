@@ -38,7 +38,7 @@ pub struct ReviewParameters {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
-pub struct InitializationArgument {
+pub struct InstantiationArgument {
     pub content_approved_threshold: u16,
     pub content_rejected_threshold: u16,
     pub asset_approved_threshold: u16,
@@ -231,8 +231,8 @@ pub enum Message {
         name: String,
     },
     RequestSubscribe,
-    InitializationArgument {
-        argument: InitializationArgument,
+    InstantiationArgument {
+        argument: InstantiationArgument,
     },
     SubmitActivity {
         activity_id: u64,

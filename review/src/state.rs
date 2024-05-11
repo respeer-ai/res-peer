@@ -6,7 +6,7 @@ use linera_sdk::{
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
 use review::{
-    Activity, Asset, Content, InitializationArgument, Review as _Review, ReviewError, Reviewer,
+    Activity, Asset, Content, InstantiationArgument, Review as _Review, ReviewError, Reviewer,
 };
 
 #[derive(RootView, SimpleObject)]
@@ -30,9 +30,9 @@ pub struct Review {
 
 #[allow(dead_code)]
 impl Review {
-    pub(crate) async fn initialize_review(
+    pub(crate) async fn instantiate_review(
         &mut self,
-        argument: InitializationArgument,
+        argument: InstantiationArgument,
     ) -> Result<(), ReviewError> {
         self.content_approved_threshold
             .set(argument.content_approved_threshold);
@@ -53,10 +53,10 @@ impl Review {
         Ok(())
     }
 
-    pub(crate) async fn initialization_argument(
+    pub(crate) async fn instantiation_argument(
         &self,
-    ) -> Result<InitializationArgument, ReviewError> {
-        Ok(InitializationArgument {
+    ) -> Result<InstantiationArgument, ReviewError> {
+        Ok(InstantiationArgument {
             content_approved_threshold: *self.content_approved_threshold.get(),
             content_rejected_threshold: *self.content_rejected_threshold.get(),
             asset_approved_threshold: *self.asset_approved_threshold.get(),

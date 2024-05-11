@@ -5,7 +5,6 @@ mod state;
 use std::collections::HashMap;
 
 use self::state::Review;
-use async_trait::async_trait;
 use credit::CreditAbi;
 use feed::FeedAbi;
 use foundation::FoundationAbi;
@@ -13,12 +12,13 @@ use linera_sdk::{
     base::{
         Amount, ApplicationId, ChainId, ChannelName, Destination, MessageId, Owner, WithContractAbi,
     },
-    Contract, ContractRuntime, ViewStateStorage,
+    views::{RootView, View, ViewStorageContext},
+    Contract, ContractRuntime,
 };
 // use linera_views::views::ViewError;
 use market::MarketAbi;
 use review::{
-    Asset, Content, InitializationArgument, Message, Operation, ReviewError, ReviewParameters,
+    Asset, Content, InstantiationArgument, Message, Operation, ReviewError, ReviewParameters,
     ReviewResponse, Reviewer,
 };
 
@@ -35,167 +35,225 @@ impl WithContractAbi for ReviewContract {
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
-#[async_trait]
 impl Contract for ReviewContract {
-    type Error = ReviewError;
-    type Storage = ViewStateStorage<Self>;
-    type State = Review;
     type Message = Message;
-    type InitializationArgument = InitializationArgument;
+    type InstantiationArgument = InstantiationArgument;
     type Parameters = ReviewParameters;
 
-    async fn new(state: Review, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
-        Ok(ReviewContract { state, runtime })
+    async fn load(runtime: ContractRuntime<Self>) -> Self {
+        let state = Review::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+        ReviewContract { state, runtime }
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
-    }
-
-    async fn initialize(
-        &mut self,
-        argument: Self::InitializationArgument,
-    ) -> Result<(), Self::Error> {
-        let _ = self.runtime.application_parameters();
-        self._initialize(argument).await?;
+    async fn instantiate(&mut self, argument: Self::InstantiationArgument) {
+        self.runtime.application_parameters();
+        self._instantiate(argument)
+            .await
+            .expect("Failed to instantiate review");
         // We should add creator here to be a reviewer, but we keep the message as an test case of application id
         self.runtime
             .prepare_message(Message::GenesisReviewer)
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
-        Ok(())
     }
 
-    async fn execute_operation(
-        &mut self,
-        operation: Self::Operation,
-    ) -> Result<ReviewResponse, Self::Error> {
+    async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::ApplyReviewer { resume } => self.on_op_apply_reviewer(resume),
-            Operation::UpdateReviewerResume { resume } => self.on_op_upeate_reviewer_resume(resume),
-            Operation::ApproveReviewer { candidate, reason } => {
-                self.on_op_approve_reviewer(candidate, reason)
-            }
-            Operation::RejectReviewer { candidate, reason } => {
-                self.on_op_reject_reviewer(candidate, reason)
-            }
+            Operation::ApplyReviewer { resume } => self
+                .on_op_apply_reviewer(resume)
+                .expect("Failed OP: apply reviewer"),
+            Operation::UpdateReviewerResume { resume } => self
+                .on_op_upeate_reviewer_resume(resume)
+                .expect("Failed OP: update reviewer resume"),
+            Operation::ApproveReviewer { candidate, reason } => self
+                .on_op_approve_reviewer(candidate, reason)
+                .expect("Failed OP: approve reviewer"),
+            Operation::RejectReviewer { candidate, reason } => self
+                .on_op_reject_reviewer(candidate, reason)
+                .expect("Failed OP: reject reviewer"),
             Operation::SubmitContent {
                 cid,
                 title,
                 content,
-            } => self.on_op_submit_content(cid, title, content),
+            } => self
+                .on_op_submit_content(cid, title, content)
+                .expect("Failed OP: submit content"),
             Operation::ApproveContent {
                 content_cid,
                 reason_cid,
                 reason,
-            } => self.on_op_approve_content(content_cid, reason_cid, reason),
+            } => self
+                .on_op_approve_content(content_cid, reason_cid, reason)
+                .expect("Failed OP: approve content"),
             Operation::RejectContent {
                 content_cid,
                 reason,
-            } => self.on_op_reject_content(content_cid, reason),
+            } => self
+                .on_op_reject_content(content_cid, reason)
+                .expect("Failed OP: reject content"),
             Operation::SubmitComment {
                 cid,
                 comment_cid,
                 comment,
-            } => self.on_op_submit_comment(cid, comment_cid, comment),
-            Operation::ApproveAsset { cid, reason } => self.on_op_approve_asset(cid, reason),
-            Operation::RejectAsset { cid, reason } => self.on_op_reject_asset(cid, reason),
+            } => self
+                .on_op_submit_comment(cid, comment_cid, comment)
+                .expect("Failed OP: submit comment"),
+            Operation::ApproveAsset { cid, reason } => self
+                .on_op_approve_asset(cid, reason)
+                .expect("Failed OP: approve asset"),
+            Operation::RejectAsset { cid, reason } => self
+                .on_op_reject_asset(cid, reason)
+                .expect("Failed OP: reject asset"),
             Operation::SubmitAsset {
                 cid,
                 base_uri,
                 uris,
                 price,
                 name,
-            } => self.on_op_submit_asset(cid, base_uri, uris, price, name),
-            Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            } => self
+                .on_op_submit_asset(cid, base_uri, uris, price, name)
+                .expect("Failed OP: submit asset"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: subscribe"),
             Operation::ApproveActivity {
                 activity_id,
                 reason,
-            } => self.on_op_approve_activity(activity_id, reason),
+            } => self
+                .on_op_approve_activity(activity_id, reason)
+                .expect("Failed OP: approve activity"),
             Operation::RejectActivity {
                 activity_id,
                 reason,
-            } => self.on_op_reject_activity(activity_id, reason),
+            } => self
+                .on_op_reject_activity(activity_id, reason)
+                .expect("Failed OP: reject activity"),
             Operation::SubmitActivity {
                 activity_id,
                 activity_host,
                 budget_amount,
-            } => self.on_op_submit_activity(activity_id, activity_host, budget_amount),
-            Operation::ActivityApproved { activity_id } => {
-                self.on_op_activity_approved(activity_id).await
-            }
+            } => self
+                .on_op_submit_activity(activity_id, activity_host, budget_amount)
+                .expect("Failed OP: submit activity"),
+            Operation::ActivityApproved { activity_id } => self
+                .on_op_activity_approved(activity_id)
+                .await
+                .expect("Failed OP: activity approved"),
         }
     }
 
-    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) {
         match message {
-            Message::GenesisReviewer {} => self.on_msg_genesis_reviewer().await,
-            Message::ExistReviewer { reviewer } => self.on_msg_exist_reviewer(reviewer).await,
-            Message::ApplyReviewer { resume } => self.on_msg_apply_reviewer(resume).await,
-            Message::UpdateReviewerResume { resume } => {
-                self.on_msg_upeate_reviewer_resume(resume).await
-            }
-            Message::ApproveReviewer { candidate, reason } => {
-                self.on_msg_approve_reviewer(candidate, reason).await
-            }
-            Message::RejectReviewer { candidate, reason } => {
-                self.on_msg_reject_reviewer(candidate, reason).await
-            }
+            Message::GenesisReviewer {} => self
+                .on_msg_genesis_reviewer()
+                .await
+                .expect("Failed MSG: genesis reviewer"),
+            Message::ExistReviewer { reviewer } => self
+                .on_msg_exist_reviewer(reviewer)
+                .await
+                .expect("Failed MSG: exist reviewer"),
+            Message::ApplyReviewer { resume } => self
+                .on_msg_apply_reviewer(resume)
+                .await
+                .expect("Failed MSG: apply reviewer"),
+            Message::UpdateReviewerResume { resume } => self
+                .on_msg_upeate_reviewer_resume(resume)
+                .await
+                .expect("Failed MSG: update reviewer resume"),
+            Message::ApproveReviewer { candidate, reason } => self
+                .on_msg_approve_reviewer(candidate, reason)
+                .await
+                .expect("Failed MSG: approve reviewer"),
+            Message::RejectReviewer { candidate, reason } => self
+                .on_msg_reject_reviewer(candidate, reason)
+                .await
+                .expect("Failed MSG: reject reviewer"),
             Message::SubmitContent {
                 cid,
                 title,
                 content,
-            } => self.on_msg_submit_content(cid, title, content).await,
+            } => self
+                .on_msg_submit_content(cid, title, content)
+                .await
+                .expect("Failed MSG: submit content"),
             Message::ApproveContent {
                 content_cid,
                 reason_cid,
                 reason,
-            } => {
-                self.on_msg_approve_content(content_cid, reason_cid, reason)
-                    .await
-            }
+            } => self
+                .on_msg_approve_content(content_cid, reason_cid, reason)
+                .await
+                .expect("Failed MSG: approve content"),
             Message::RejectContent {
                 content_cid,
                 reason,
-            } => self.on_msg_reject_content(content_cid, reason).await,
+            } => self
+                .on_msg_reject_content(content_cid, reason)
+                .await
+                .expect("Failed MSG: reject content"),
             Message::SubmitComment {
                 cid,
                 comment_cid,
                 comment,
-            } => self.on_msg_submit_comment(cid, comment_cid, comment).await,
-            Message::ApproveAsset { cid, reason } => self.on_msg_approve_asset(cid, reason).await,
-            Message::RejectAsset { cid, reason } => self.on_msg_reject_asset(cid, reason).await,
+            } => self
+                .on_msg_submit_comment(cid, comment_cid, comment)
+                .await
+                .expect("Failed MSG: submit comment"),
+            Message::ApproveAsset { cid, reason } => self
+                .on_msg_approve_asset(cid, reason)
+                .await
+                .expect("Failed MSG: approve asset"),
+            Message::RejectAsset { cid, reason } => self
+                .on_msg_reject_asset(cid, reason)
+                .await
+                .expect("Failed MSG: reject asset"),
             Message::SubmitAsset {
                 cid,
                 base_uri,
                 uris,
                 price,
                 name,
-            } => {
-                self.on_msg_submit_asset(cid, base_uri, uris, price, name)
-                    .await
-            }
-            Message::RequestSubscribe => self.on_msg_request_subscribe().await,
-            Message::InitializationArgument { argument } => {
-                self.on_msg_initialization_argument(argument).await
-            }
+            } => self
+                .on_msg_submit_asset(cid, base_uri, uris, price, name)
+                .await
+                .expect("Failed MSG: submit asset"),
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .await
+                .expect("Failed MSG: subscribe"),
+            Message::InstantiationArgument { argument } => self
+                .on_msg_initialization_argument(argument)
+                .await
+                .expect("Failed MSG: instantiation argument"),
             Message::SubmitActivity {
                 activity_id,
                 activity_host,
                 budget_amount,
-            } => {
-                self.on_msg_submit_activity(activity_id, activity_host, budget_amount)
-                    .await
-            }
+            } => self
+                .on_msg_submit_activity(activity_id, activity_host, budget_amount)
+                .await
+                .expect("Failed MSG: submit activity"),
             Message::ApproveActivity {
                 activity_id,
                 reason,
-            } => self.on_msg_approve_activity(activity_id, reason).await,
+            } => self
+                .on_msg_approve_activity(activity_id, reason)
+                .await
+                .expect("Failed MSG: approve activity"),
             Message::RejectActivity {
                 activity_id,
                 reason,
-            } => self.on_msg_reject_activity(activity_id, reason).await,
+            } => self
+                .on_msg_reject_activity(activity_id, reason)
+                .await
+                .expect("Failed MSG: reject activity"),
         }
+    }
+
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
     }
 }
 
@@ -322,8 +380,8 @@ impl ReviewContract {
         Ok(())
     }
 
-    async fn _initialize(&mut self, argument: InitializationArgument) -> Result<(), ReviewError> {
-        self.state.initialize_review(argument).await?;
+    async fn _instantiate(&mut self, argument: InstantiationArgument) -> Result<(), ReviewError> {
+        self.state.instantiate_review(argument).await?;
         Ok(())
     }
 
@@ -972,9 +1030,9 @@ impl ReviewContract {
 
     async fn on_msg_initialization_argument(
         &mut self,
-        argument: InitializationArgument,
+        argument: InstantiationArgument,
     ) -> Result<(), ReviewError> {
-        self.state.initialize_review(argument).await
+        self.state.instantiate_review(argument).await
     }
 
     async fn on_msg_genesis_reviewer(&mut self) -> Result<(), ReviewError> {
