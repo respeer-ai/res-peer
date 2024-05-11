@@ -5,7 +5,7 @@ use linera_sdk::{
     base::{Amount, Owner, Timestamp},
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
 };
-use market::{Collection, InitializationArgument, MarketError, NFT};
+use market::{Collection, InstantiationArgument, MarketError, NFT};
 
 #[derive(RootView, SimpleObject)]
 #[view(context = "ViewStorageContext")]
@@ -32,15 +32,15 @@ pub struct Market {
 
 #[allow(dead_code)]
 impl Market {
-    pub(crate) async fn initialize_market(&mut self, state: InitializationArgument) {
+    pub(crate) async fn instantiate_market(&mut self, state: InstantiationArgument) {
         self.credits_per_linera.set(state.credits_per_linera);
         self.collection_id.set(state.collection_id.unwrap_or(1000));
         self.max_credits_percent.set(state.max_credits_percent);
         self.trade_fee_percent.set(state.trade_fee_percent);
     }
 
-    pub(crate) async fn initial_state(&self) -> Result<InitializationArgument, MarketError> {
-        Ok(InitializationArgument {
+    pub(crate) async fn initial_state(&self) -> Result<InstantiationArgument, MarketError> {
+        Ok(InstantiationArgument {
             credits_per_linera: *self.credits_per_linera.get(),
             max_credits_percent: *self.max_credits_percent.get(),
             trade_fee_percent: *self.trade_fee_percent.get(),

@@ -52,7 +52,7 @@ pub struct Collection {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct InitializationArgument {
+pub struct InstantiationArgument {
     pub credits_per_linera: Amount,
     pub max_credits_percent: u8,
     pub trade_fee_percent: u8,
@@ -106,8 +106,8 @@ pub enum Operation {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[allow(clippy::large_enum_variant)]
 pub enum Message {
-    InitializationArgument {
-        argument: InitializationArgument,
+    InstantiationArgument {
+        argument: InstantiationArgument,
     },
     CreateCollection {
         base_uri: String,

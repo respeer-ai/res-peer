@@ -3,14 +3,14 @@
 mod state;
 
 use self::state::Market;
-use async_trait::async_trait;
 use credit::CreditAbi;
 use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    Contract, ContractRuntime, ViewStateStorage,
+    views::{RootView, View, ViewStorageContext},
+    Contract, ContractRuntime,
 };
-use market::{InitializationArgument, MarketError, MarketParameters, Message, Operation};
+use market::{InstantiationArgument, MarketError, MarketParameters, Message, Operation};
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
@@ -25,132 +25,160 @@ impl WithContractAbi for MarketContract {
     type Abi = market::MarketAbi;
 }
 
-#[async_trait]
 impl Contract for MarketContract {
-    type Error = MarketError;
-    type Storage = ViewStateStorage<Self>;
-    type State = Market;
     type Message = Message;
-    type InitializationArgument = InitializationArgument;
+    type InstantiationArgument = InstantiationArgument;
     type Parameters = MarketParameters;
 
-    async fn new(state: Market, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
-        Ok(MarketContract { state, runtime })
+    async fn load(runtime: ContractRuntime<Self>) -> Self {
+        let state = Market::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+        MarketContract { state, runtime }
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
+    async fn instantiate(&mut self, argument: Self::InstantiationArgument) {
+        self.runtime.application_parameters();
+        self.state.instantiate_market(argument).await;
     }
 
-    async fn initialize(
-        &mut self,
-        argument: Self::InitializationArgument,
-    ) -> Result<(), Self::Error> {
-        let _ = self.runtime.application_parameters();
-        self.state.initialize_market(argument).await;
-        Ok(())
-    }
-
-    async fn execute_operation(&mut self, operation: Self::Operation) -> Result<(), Self::Error> {
-        let _ = self.require_authenticated_signer()?;
+    async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
+        let _ = self
+            .require_authenticated_signer()
+            .expect("Failed OP: check authenticated signer");
         match operation {
             Operation::MintNFT {
                 collection_id,
                 uri_index,
                 price,
                 name,
-            } => self.on_op_mint_nft(collection_id, uri_index, price, name),
+            } => self
+                .on_op_mint_nft(collection_id, uri_index, price, name)
+                .expect("Failed OP: mint nft"),
             Operation::BuyNFT {
                 collection_id,
                 token_id,
                 credits,
-            } => self.on_op_buy_nft(collection_id, token_id, credits),
-            Operation::UpdateCreditsPerLinera { credits_per_linera } => {
-                self.on_op_update_credits_per_linera(credits_per_linera)
-            }
+            } => self
+                .on_op_buy_nft(collection_id, token_id, credits)
+                .expect("Failed OP: buy nft"),
+            Operation::UpdateCreditsPerLinera { credits_per_linera } => self
+                .on_op_update_credits_per_linera(credits_per_linera)
+                .expect("Failed OP: update credits per linera"),
             Operation::UpdateNFTPrice {
                 collection_id,
                 token_id,
                 price,
-            } => self.on_op_update_nft_price(collection_id, token_id, price),
+            } => self
+                .on_op_update_nft_price(collection_id, token_id, price)
+                .expect("Failed OP: update nft price"),
             Operation::OnSaleNFT {
                 collection_id,
                 token_id,
-            } => self.on_op_on_sale_nft(collection_id, token_id),
+            } => self
+                .on_op_on_sale_nft(collection_id, token_id)
+                .expect("Failed OP: on sale nft"),
             Operation::OffSaleNFT {
                 collection_id,
                 token_id,
-            } => self.on_op_off_sale_nft(collection_id, token_id),
+            } => self
+                .on_op_off_sale_nft(collection_id, token_id)
+                .expect("Failed OP: off sale nft"),
             Operation::SetAvatar {
                 collection_id,
                 token_id,
-            } => self.on_op_set_avatar(collection_id, token_id),
-            Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            } => self
+                .on_op_set_avatar(collection_id, token_id)
+                .expect("Failed OP: set avatar"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: subscribe"),
             Operation::CreateCollection {
                 base_uri,
                 price,
                 name,
                 uris,
                 publisher,
-            } => self.on_op_create_collection(base_uri, price, name, uris, publisher),
+            } => self
+                .on_op_create_collection(base_uri, price, name, uris, publisher)
+                .expect("Failed OP: create collection"),
         }
     }
 
-    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) {
         match message {
-            Message::InitializationArgument { argument } => {
-                self.on_msg_initialization_argument(argument).await
-            }
+            Message::InstantiationArgument { argument } => self
+                .on_msg_instantiation_argument(argument)
+                .await
+                .expect("Failed MSG: instantiation argument"),
             Message::CreateCollection {
                 base_uri,
                 price,
                 name,
                 uris,
                 publisher,
-            } => {
-                self.on_msg_create_collection(base_uri, price, name, uris, publisher)
-                    .await
-            }
+            } => self
+                .on_msg_create_collection(base_uri, price, name, uris, publisher)
+                .await
+                .expect("Failed MSG: create collection"),
             Message::MintNFT {
                 collection_id,
                 uri_index,
                 price,
                 name,
-            } => {
-                self.on_msg_mint_nft(collection_id, uri_index, price, name)
-                    .await
-            }
+            } => self
+                .on_msg_mint_nft(collection_id, uri_index, price, name)
+                .await
+                .expect("Failed MSG: mint nft"),
             Message::BuyNFT {
                 collection_id,
                 token_id,
                 credits,
-            } => self.on_msg_buy_nft(collection_id, token_id, credits).await,
-            Message::UpdateCreditsPerLinera { credits_per_linera } => {
-                self.on_msg_update_credits_per_linera(credits_per_linera)
-                    .await
-            }
+            } => self
+                .on_msg_buy_nft(collection_id, token_id, credits)
+                .await
+                .expect("Failed MSG: buy NFT"),
+            Message::UpdateCreditsPerLinera { credits_per_linera } => self
+                .on_msg_update_credits_per_linera(credits_per_linera)
+                .await
+                .expect("Failed MSG: update credits per linera"),
             Message::UpdateNFTPrice {
                 collection_id,
                 token_id,
                 price,
-            } => {
-                self.on_msg_update_nft_price(collection_id, token_id, price)
-                    .await
-            }
+            } => self
+                .on_msg_update_nft_price(collection_id, token_id, price)
+                .await
+                .expect("Failed MSG: update nft price"),
             Message::OnSaleNFT {
                 collection_id,
                 token_id,
-            } => self.on_msg_on_sale_nft(collection_id, token_id).await,
+            } => self
+                .on_msg_on_sale_nft(collection_id, token_id)
+                .await
+                .expect("Failed MSG: on sale nft"),
             Message::OffSaleNFT {
                 collection_id,
                 token_id,
-            } => self.on_msg_off_sale_nft(collection_id, token_id).await,
+            } => self
+                .on_msg_off_sale_nft(collection_id, token_id)
+                .await
+                .expect("Failed MSG: off sale nft"),
             Message::SetAvatar {
                 collection_id,
                 token_id,
-            } => self.on_msg_set_avatar(collection_id, token_id).await,
-            Message::RequestSubscribe => self.on_msg_request_subscribe(),
+            } => self
+                .on_msg_set_avatar(collection_id, token_id)
+                .await
+                .expect("Failed MSG: set avatar"),
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .expect("Failed MSG: subscribe"),
         }
+    }
+
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
     }
 }
 
@@ -314,7 +342,7 @@ impl MarketContract {
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
-        // TODO: send initialization argument to subscriber
+        // TODO: send instantiation argument to subscriber
         Ok(())
     }
 
@@ -336,15 +364,15 @@ impl MarketContract {
             })
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
-        // TODO: send initialization argument to subscriber
+        // TODO: send instantiation argument to subscriber
         Ok(())
     }
 
-    async fn on_msg_initialization_argument(
+    async fn on_msg_instantiation_argument(
         &mut self,
-        argument: InitializationArgument,
+        argument: InstantiationArgument,
     ) -> Result<(), MarketError> {
-        self.state.initialize_market(argument).await;
+        self.state.instantiate_market(argument).await;
         Ok(())
     }
 
