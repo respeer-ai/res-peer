@@ -3,14 +3,15 @@
 mod state;
 
 use self::state::Feed;
-use async_graphql::{EmptySubscription, Object, Request, Response, Schema};
+use async_graphql::{EmptySubscription, Request, Response, Schema};
 use feed::{FeedParameters, Operation};
 use linera_sdk::{
-    base::{Amount, WithServiceAbi},
-    Service, ServiceRuntime, ViewStateStorage,
+    base::WithServiceAbi,
+    graphql::GraphQLMutationRoot,
+    views::{View, ViewStorageContext},
+    Service, ServiceRuntime,
 };
 use std::sync::Arc;
-use thiserror::Error;
 
 pub struct FeedService {
     state: Arc<Feed>,
@@ -23,59 +24,25 @@ impl WithServiceAbi for FeedService {
 }
 
 impl Service for FeedService {
-    type Error = ServiceError;
-    type Storage = ViewStateStorage<Self>;
-    type State = Feed;
     type Parameters = FeedParameters;
 
-    async fn new(state: Self::State, _runtime: ServiceRuntime<Self>) -> Result<Self, Self::Error> {
-        Ok(FeedService {
+    async fn new(runtime: ServiceRuntime<Self>) -> Self {
+        let state = Feed::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+        FeedService {
             state: Arc::new(state),
-        })
+        }
     }
 
-    async fn handle_query(&self, request: Request) -> Result<Response, Self::Error> {
+    async fn handle_query(&self, request: Request) -> Response {
         // TODO: we need to filter content according to requester and review state here
-        let schema: Schema<Arc<Feed>, MutationRoot, EmptySubscription> =
-            Schema::build(self.state.clone(), MutationRoot {}, EmptySubscription).finish();
-        let response = schema.execute(request).await;
-        Ok(response)
+        let schema = Schema::build(
+            self.state.clone(),
+            Operation::mutation_root(),
+            EmptySubscription,
+        )
+        .finish();
+        schema.execute(request).await
     }
-}
-
-struct MutationRoot;
-
-#[Object]
-impl MutationRoot {
-    async fn like(&self, ccid: String) -> Vec<u8> {
-        cid::Cid::try_from(ccid.clone()).expect("Invalid content cid");
-        bcs::to_bytes(&Operation::Like { cid: ccid }).unwrap()
-    }
-
-    async fn dislike(&self, ccid: String) -> Vec<u8> {
-        cid::Cid::try_from(ccid.clone()).expect("Invalid content cid");
-        bcs::to_bytes(&Operation::Dislike { cid: ccid }).unwrap()
-    }
-
-    async fn tip(&self, ccid: String, amount: Amount) -> Vec<u8> {
-        cid::Cid::try_from(ccid.clone()).expect("Invalid content cid");
-        bcs::to_bytes(&Operation::Tip { cid: ccid, amount }).unwrap()
-    }
-
-    async fn request_subscribe(&self) -> Vec<u8> {
-        bcs::to_bytes(&Operation::RequestSubscribe).unwrap()
-    }
-}
-
-/// An error that can occur while querying the service.
-#[derive(Debug, Error)]
-pub enum ServiceError {
-    /// Query not supported by the application.
-    #[error("Queries not supported by application")]
-    QueriesNotSupported,
-
-    /// Invalid query argument; could not deserialize request.
-    #[error("Invalid query argument; could not deserialize request")]
-    InvalidQuery(#[from] serde_json::Error),
-    // Add error variants here.
 }

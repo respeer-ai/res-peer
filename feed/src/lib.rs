@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use async_graphql::{Request, Response, SimpleObject};
-use linera_sdk::base::{Amount, ApplicationId, ContractAbi, Owner, ServiceAbi, Timestamp};
+use linera_sdk::{
+    base::{Amount, ApplicationId, ContractAbi, Owner, ServiceAbi, Timestamp},
+    graphql::GraphQLMutationRoot,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -38,11 +41,11 @@ pub struct Content {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct InitializationArgument {
+pub struct InstantiationArgument {
     pub react_interval_ms: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     Like {
         cid: String,

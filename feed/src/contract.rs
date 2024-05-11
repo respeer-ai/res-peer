@@ -5,15 +5,15 @@ mod state;
 use std::collections::HashMap;
 
 use self::state::Feed;
-use async_trait::async_trait;
 use credit::CreditAbi;
 use feed::{
-    Content, FeedError, FeedParameters, FeedResponse, InitializationArgument, Message, Operation,
+    Content, FeedError, FeedParameters, FeedResponse, InstantiationArgument, Message, Operation,
 };
 use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    Contract, ContractRuntime, ViewStateStorage,
+    views::{RootView, View, ViewStorageContext},
+    Contract, ContractRuntime,
 };
 
 pub struct FeedContract {
@@ -29,86 +29,104 @@ impl WithContractAbi for FeedContract {
 
 const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
-#[async_trait]
 impl Contract for FeedContract {
-    type Error = FeedError;
-    type Storage = ViewStateStorage<Self>;
-    type State = Feed;
     type Message = Message;
-    type InitializationArgument = InitializationArgument;
+    type InstantiationArgument = InstantiationArgument;
     type Parameters = FeedParameters;
 
-    async fn new(state: Feed, runtime: ContractRuntime<Self>) -> Result<Self, Self::Error> {
-        Ok(FeedContract { state, runtime })
+    async fn load(runtime: ContractRuntime<Self>) -> Self {
+        let state = Feed::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+        FeedContract { state, runtime }
     }
 
-    fn state_mut(&mut self) -> &mut Self::State {
-        &mut self.state
+    async fn instantiate(&mut self, state: Self::InstantiationArgument) {
+        self.runtime.application_parameters();
+        self.state.instantiate_feed(state).await;
     }
 
-    async fn initialize(&mut self, state: Self::InitializationArgument) -> Result<(), Self::Error> {
-        let _ = self.runtime.application_parameters();
-        self.state.initialize_feed(state).await;
-        Ok(())
-    }
-
-    async fn execute_operation(
-        &mut self,
-        operation: Self::Operation,
-    ) -> Result<Self::Response, Self::Error> {
+    async fn execute_operation(&mut self, operation: Self::Operation) -> Self::Response {
         match operation {
-            Operation::Like { cid } => self.on_op_like(cid),
-            Operation::Dislike { cid } => self.on_op_dislike(cid),
-            Operation::Tip { cid, amount } => self.on_op_tip(cid, amount),
-            Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            Operation::Like { cid } => self.on_op_like(cid).expect("Failed OP: like"),
+            Operation::Dislike { cid } => self.on_op_dislike(cid).expect("Failed OP: dislike"),
+            Operation::Tip { cid, amount } => self.on_op_tip(cid, amount).expect("Failed OP: tip"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: subscribe"),
             Operation::Recommend {
                 cid,
                 reason_cid,
                 reason,
-            } => self.on_op_recommend(cid, reason_cid, reason),
+            } => self
+                .on_op_recommend(cid, reason_cid, reason)
+                .expect("Failed OP: recommend"),
             Operation::Comment {
                 cid,
                 comment_cid,
                 comment,
                 commentor,
-            } => self.on_op_comment(cid, comment_cid, comment, commentor),
+            } => self
+                .on_op_comment(cid, comment_cid, comment, commentor)
+                .expect("Failed OP: comment"),
             Operation::Publish {
                 cid,
                 title,
                 content,
                 author,
-            } => self.on_op_publish(cid, title, content, author),
-            Operation::ContentAuthor { cid } => self.on_op_content_author(cid).await,
+            } => self
+                .on_op_publish(cid, title, content, author)
+                .expect("Failed OP: publish"),
+            Operation::ContentAuthor { cid } => self
+                .on_op_content_author(cid)
+                .await
+                .expect("Failed OP: content author"),
         }
     }
 
-    async fn execute_message(&mut self, message: Self::Message) -> Result<(), Self::Error> {
+    async fn execute_message(&mut self, message: Self::Message) {
         match message {
-            Message::Like { cid } => self.on_msg_like(cid).await,
-            Message::Dislike { cid } => self.on_msg_dislike(cid).await,
-            Message::Tip { cid, amount } => self.on_msg_tip(cid, amount).await,
+            Message::Like { cid } => self.on_msg_like(cid).await.expect("Failed MSG: like"),
+            Message::Dislike { cid } => {
+                self.on_msg_dislike(cid).await.expect("Failed MSG: dislike")
+            }
+            Message::Tip { cid, amount } => {
+                self.on_msg_tip(cid, amount).await.expect("Failed MSG: tip")
+            }
             Message::Publish {
                 cid,
                 title,
                 content,
                 author,
-            } => self.on_msg_publish(cid, title, content, author).await,
+            } => self
+                .on_msg_publish(cid, title, content, author)
+                .await
+                .expect("Failed MSG: publish"),
             Message::Recommend {
                 cid,
                 reason_cid,
                 reason,
-            } => self.on_msg_recommend(cid, reason_cid, reason).await,
+            } => self
+                .on_msg_recommend(cid, reason_cid, reason)
+                .await
+                .expect("Failed MSG: recommend"),
             Message::Comment {
                 cid,
                 comment_cid,
                 comment,
                 commentor,
-            } => {
-                self.on_msg_comment(cid, comment_cid, comment, commentor)
-                    .await
-            }
-            Message::RequestSubscribe => self.on_msg_request_subscribe(),
+            } => self
+                .on_msg_comment(cid, comment_cid, comment, commentor)
+                .await
+                .expect("Failed MSG: comment"),
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .expect("Failed MSG: subscribe"),
         }
+    }
+
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
     }
 }
 

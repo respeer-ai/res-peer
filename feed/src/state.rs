@@ -1,5 +1,5 @@
 use async_graphql::SimpleObject;
-use feed::{Content, FeedError, InitializationArgument};
+use feed::{Content, FeedError, InstantiationArgument};
 use linera_sdk::{
     base::{Owner, Timestamp},
     views::{linera_views, MapView, RegisterView, RootView, ViewStorageContext},
@@ -20,7 +20,7 @@ pub struct Feed {
 
 #[allow(dead_code)]
 impl Feed {
-    pub(crate) async fn initialize_feed(&mut self, argument: InitializationArgument) {
+    pub(crate) async fn instantiate_feed(&mut self, argument: InstantiationArgument) {
         self.react_interval_ms.set(argument.react_interval_ms);
     }
 
