@@ -22,24 +22,23 @@ serde_json = "1.0.114"
 thiserror = "1.0.57"
 cid = "0.10.1"
 log = "0.4.21"
-wasm-encoder = "0.24.1"
-wasmer = { version = "=3.1.1", features = ["singlepass"] }
-wasmer-middlewares = "3.1.1"
-wasmparser = "0.101.1"
-wasmtime = "1.0"
-wit-bindgen-guest-rust = { version = "0.2.0", package = "linera-wit-bindgen-guest-rust" }
-wit-bindgen-host-wasmer-rust = { version = "0.2.0", package = "linera-wit-bindgen-host-wasmer-rust" }
-wit-bindgen-host-wasmtime-rust = { version = "0.2.0", package = "linera-wit-bindgen-host-wasmtime-rust" }
 tokio-stream = "0.1.14"
-tokio = "1.36.0"
+tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 futures-util = "0.3.28"
+webassembly-test = "0.1.0"
+candle-core = "0.4.1"
+candle-transformers = "0.4.1"
+getrandom = { version = "0.2.12", default-features = false, features = ["custom"] }
+sha3 = "0.10.8"
+tokenizers = { git = "https://github.com/christos-h/tokenizers", default-features = false, features = ["unstable_wasm"] }
+rand = "0.8.5"
+
 credit = { path = "./credit" }
 feed = { path = "./feed" }
 review = { path = "./review" }
 foundation = { path = "./foundation" }
 market = { path = "./market" }
 copilot = { path = "./copilot" }
-webassembly-test = "0.1.0"
 
 [profile.release]
 debug = true

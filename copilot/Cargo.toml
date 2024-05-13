@@ -5,7 +5,14 @@ edition = "2021"
 
 [dependencies]
 async-graphql = { workspace = true, default-features = false }
-linera-sdk = { workspace = true }
+linera-sdk.workspace = true
+candle-core.workspace = true
+candle-transformers.workspace = true
+getrandom.workspace = true
+log.workspace = true
+rand.workspace = true
+serde.workspace = true
+tokenizers.workspace = true
 
 [dev-dependencies]
 linera-sdk = { workspace = true, features = ["test"] }

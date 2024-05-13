@@ -1,8 +1,7 @@
-use linera_sdk::views::{linera_views, RegisterView, RootView, ViewStorageContext};
+// Copyright (c) Zefchain Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
 
-#[derive(RootView, async_graphql::SimpleObject)]
-#[view(context = "ViewStorageContext")]
-pub struct Application {
-    pub value: RegisterView<u64>,
-    // Add fields here.
-}
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+pub struct Copilot {}

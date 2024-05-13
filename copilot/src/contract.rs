@@ -1,45 +1,36 @@
+// Copyright (c) Zefchain Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
 mod state;
 
-use linera_sdk::{
-    base::WithContractAbi,
-    views::{RootView, View, ViewStorageContext},
-    Contract, ContractRuntime,
-};
+use linera_sdk::{base::WithContractAbi, Contract, ContractRuntime};
 
-use self::state::Application;
+pub struct CopilotContract;
 
-pub struct ApplicationContract {
-    state: Application,
-    runtime: ContractRuntime<Self>,
+linera_sdk::contract!(CopilotContract);
+
+impl WithContractAbi for CopilotContract {
+    type Abi = copilot::CopilotAbi;
 }
 
-linera_sdk::contract!(ApplicationContract);
-
-impl WithContractAbi for ApplicationContract {
-    type Abi = copilot::ApplicationAbi;
-}
-
-impl Contract for ApplicationContract {
+impl Contract for CopilotContract {
     type Message = ();
-    type Parameters = ();
     type InstantiationArgument = ();
+    type Parameters = ();
 
-    async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Application::load(ViewStorageContext::from(runtime.key_value_store()))
-            .await
-            .expect("Failed to load state");
-        ApplicationContract { state, runtime }
+    async fn load(_runtime: ContractRuntime<Self>) -> Self {
+        CopilotContract
     }
 
-    async fn instantiate(&mut self, _argument: Self::InstantiationArgument) {}
+    async fn instantiate(&mut self, _value: ()) {}
 
-    async fn execute_operation(&mut self, _operation: Self::Operation) -> Self::Response {}
+    async fn execute_operation(&mut self, _operation: ()) -> Self::Response {}
 
-    async fn execute_message(&mut self, _message: Self::Message) {}
-
-    async fn store(mut self) {
-        self.state.save().await.expect("Failed to save state");
+    async fn execute_message(&mut self, _message: ()) {
+        panic!("Copilot application doesn't support any cross-chain messages");
     }
+
+    async fn store(self) {}
 }
