@@ -79,12 +79,20 @@ print $'\U01f499' $LIGHTGREEN " Activity application deployed"
 echo -e "    Bytecode ID:    $BLUE$activity_bid$NC"
 echo -e "    Application ID: $BLUE$activity_appid$NC"
 
+print $'\U01F4AB' $YELLOW " Deploying Copilot application ..."
+copilot_bid=`linera --with-wallet 0 publish-bytecode ./target/wasm32-unknown-unknown/release/copilot_{contract,service}.wasm`
+copilot_appid=`linera --with-wallet 0 create-application $copilot_bid`
+print $'\U01f499' $LIGHTGREEN " Copilot application deployed"
+echo -e "    Bytecode ID:    $BLUE$copilot_bid$NC"
+echo -e "    Application ID: $BLUE$copilot_appid$NC"
+
 sed -i "s/feedApp =.*/feedApp = '$feed_appid',/g" webui/src/const/index.ts
 sed -i "s/creditApp =.*/creditApp = '$credit_appid',/g" webui/src/const/index.ts
 sed -i "s/marketApp =.*/marketApp = '$market_appid',/g" webui/src/const/index.ts
 sed -i "s/reviewApp =.*/reviewApp = '$review_appid',/g" webui/src/const/index.ts
 sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid'/g" webui/src/const/index.ts
 sed -i "s/activityApp =.*/activityApp = '$activity_appid',/g" webui/src/const/index.ts
+sed -i "s/copilotApp =.*/copilotApp = '$copilot_appid',/g" webui/src/const/index.ts
 
 function run_new_service() {
   BASE_PORT=9080
@@ -101,9 +109,8 @@ for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
 done
 
 function cleanup() {
-  killall -15 linera > /dev/null 2>&1
-  killall -15 linera-proxy > /dev/null 2>&1
-  killall -15 linera-server > /dev/null 2>&1
+  service_pids=`ps -ef | grep "linera " | grep -v "amount\|net" | awk '{print $2}'`
+  kill -15 $service_pids > /dev/null 2>$1
 }
 
 trap cleanup INT
