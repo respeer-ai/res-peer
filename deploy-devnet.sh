@@ -1,8 +1,7 @@
 #!/bin/bash
 
-killall -15 linera > /dev/null 2>&1
-killall -15 linera-proxy > /dev/null 2>&1
-killall -15 linera-server > /dev/null 2>&1
+service_pids=`ps -ef | grep "linera " | grep -v "amount\|net" | awk '{print $2}'`
+kill -15 $service_pids > /dev/null 2>$1
 
 BLUE='\033[1;34m'
 YELLOW='\033[1;33m'
@@ -12,6 +11,15 @@ NC='\033[0m'
 function print() {
   echo -e $1$2$3$NC
 }
+
+options="f:"
+faucet_url=https://faucet.devnet.linera.net
+
+while getopts $options opt; do
+  case ${opt} in
+    f) faucet_url=${OPTARG} ;;
+  esac
+done
 
 NODE_LOG_FILE=$HOME/linera-project/linera.log
 SERVICE_LOG_FILE=$HOME/linera-project/service_8080.log
@@ -25,7 +33,7 @@ for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
   print $'\U01f499' $LIGHTGREEN " Initialize wallet $i"
   export LINERA_WALLET_$i="$WALLET_BASEDIR/wallet_$i.json"
   export LINERA_STORAGE_$i="rocksdb:$WALLET_BASEDIR/wallet_$i.db"
-  linera --with-wallet $i wallet init --with-new-chain --faucet https://faucet.devnet.linera.net
+  linera --with-wallet $i wallet init --with-new-chain --faucet $faucet_url
 done
 
 print $'\U01F4AB' $YELLOW " Deploying Credit bytecode ..."
