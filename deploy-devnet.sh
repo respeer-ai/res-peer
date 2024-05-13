@@ -93,7 +93,7 @@ function run_new_service() {
   linera --with-wallet $1 wallet show
   print $'\U01f499' $LIGHTGREEN " Run $port service ..."
   LOG_FILE=`echo $SERVICE_LOG_FILE | sed "s/8080/$port/g"`
-  linera --with-wallet $1 service --port $port > $LOG_FILE 2>&1 &
+  linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
 }
 
 for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
