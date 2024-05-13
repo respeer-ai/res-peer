@@ -5,7 +5,8 @@ members = [
     "market",
     "foundation",
     "review",
-    "activity"
+    "activity",
+    "copilot"
 ]
 resolver = "2"
 
@@ -37,6 +38,7 @@ feed = { path = "./feed" }
 review = { path = "./review" }
 foundation = { path = "./foundation" }
 market = { path = "./market" }
+copilot = { path = "./copilot" }
 webassembly-test = "0.1.0"
 
 [profile.release]

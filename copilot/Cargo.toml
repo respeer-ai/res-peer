@@ -1,0 +1,25 @@
+[package]
+name = "copilot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-graphql = { workspace = true, default-features = false }
+linera-sdk = { workspace = true }
+
+[dev-dependencies]
+linera-sdk = { workspace = true, features = ["test"] }
+
+[[bin]]
+name = "copilot_contract"
+path = "src/contract.rs"
+
+[[bin]]
+name = "copilot_service"
+path = "src/service.rs"
+
+[profile.release]
+debug = true
+lto = true
+opt-level = 'z'
+strip = 'debuginfo'
