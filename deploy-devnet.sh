@@ -1,7 +1,7 @@
 #!/bin/bash
 
 service_pids=`ps -ef | grep "linera " | grep -v "amount\|net" | awk '{print $2}'`
-kill -15 $service_pids > /dev/null 2>$1
+kill -15 $service_pids > /dev/null 2>&1
 
 BLUE='\033[1;34m'
 YELLOW='\033[1;33m'
@@ -110,7 +110,7 @@ done
 
 function cleanup() {
   service_pids=`ps -ef | grep "linera " | grep -v "amount\|net" | awk '{print $2}'`
-  kill -15 $service_pids > /dev/null 2>$1
+  kill -15 $service_pids > /dev/null 2>&1
 }
 
 trap cleanup INT
