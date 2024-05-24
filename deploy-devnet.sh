@@ -13,7 +13,7 @@ function print() {
 }
 
 options="f:"
-faucet_url=https://faucet.devnet.linera.net
+faucet_url=https://faucet.devnet-2024-05-07.linera.net
 
 while getopts $options opt; do
   case ${opt} in
