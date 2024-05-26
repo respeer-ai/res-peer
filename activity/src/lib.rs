@@ -55,7 +55,7 @@ pub enum ObjectType {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq, InputObject)]
-pub struct ObjectCondition {
+pub struct AbjectCondition {
     classes: Option<Vec<String>>,
     min_words: u32,
     max_words: u32,
@@ -97,7 +97,7 @@ pub struct ActivityItem {
     pub vote_type: VoteType,
     pub object_type: Option<ObjectType>,
     pub object_candidates: HashSet<String>,
-    pub condition: ObjectCondition,
+    pub condition: AbjectCondition,
     pub sponsors: Vec<Owner>,
     pub prize_configs: Vec<PrizeConfig>,
     pub announcements: HashSet<String>,
@@ -131,7 +131,7 @@ pub struct CreateParams {
     pub votable: bool,
     pub vote_type: VoteType,
     pub object_type: ObjectType,
-    pub condition: ObjectCondition,
+    pub condition: AbjectCondition,
     pub sponsors: Vec<Owner>,
     pub prize_configs: Vec<PrizeConfig>,
     pub voter_reward_percent: u8,
@@ -157,7 +157,7 @@ pub struct UpdateParams {
     pub votable: Option<bool>,
     pub vote_type: Option<VoteType>,
     pub object_type: Option<ObjectType>,
-    pub condition: Option<ObjectCondition>,
+    pub condition: Option<AbjectCondition>,
     pub sponsors: Option<Vec<Owner>>,
     pub prize_configs: Option<Vec<PrizeConfig>>,
     pub voter_reward_percent: Option<u8>,
