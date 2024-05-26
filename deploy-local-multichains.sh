@@ -51,7 +51,7 @@ for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
 done
 
 function generate_block() {
-  linera --with-wallet 0 service --port 9080 &
+  linera --with-wallet 0 service --external-signing false --port 9080 &
   pid=$!
   sleep 10
   kill -15 $pid
@@ -143,7 +143,7 @@ function run_new_service() {
   linera --with-wallet $1 wallet show
   print $'\U01f499' $LIGHTGREEN " Run $port service ..."
   LOG_FILE=`echo $SERVICE_LOG_FILE | sed "s/8080/$port/g"`
-  linera --with-wallet $1 service --port $port > $LOG_FILE 2>&1 &
+  linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
 }
 
 for i in `seq 0 $EXTRA_WALLET_NUMBER`; do

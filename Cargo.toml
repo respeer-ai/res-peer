@@ -12,6 +12,7 @@ resolver = "2"
 
 [workspace.dependencies]
 async-graphql = { version = "=7.0.2", default-features = false }
+async-graphql-derive = { version = "=7.0.2", default-features = false }
 async-trait = "0.1.77"
 bcs = "0.1.6"
 futures = "0.3.30"
@@ -53,3 +54,11 @@ debug = true
 version = "2.1.1"
 git = "https://github.com/respeer-ai/curve25519-dalek"
 branch = "respeer-pub-field-1efe6a93"
+
+[patch.crates-io.async-graphql-parser]
+git = "https://github.com/async-graphql/async-graphql.git"
+rev = "2830d430"
+
+[patch.crates-io.async-graphql-value]
+git = "https://github.com/async-graphql/async-graphql.git"
+rev = "2830d430"
