@@ -55,18 +55,54 @@ pub enum ObjectType {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq, InputObject)]
-pub struct ObjectCondition {
+pub struct ObjectConditionInput {
     classes: Option<Vec<String>>,
     min_words: u32,
     max_words: u32,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq, InputObject)]
-pub struct PrizeConfig {
+pub struct ObjectConditionOutput {
+    classes: Option<Vec<String>>,
+    min_words: u32,
+    max_words: u32,
+}
+
+impl Into<ObjectConditionOutput> for ObjectConditionInput {
+    fn into(self) -> ObjectConditionOutput {
+        ObjectConditionOutput {
+            classes: self.classes,
+            min_words: self.min_words,
+            max_words: self.max_words,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq, InputObject)]
+pub struct PrizeConfigInput {
     pub place: u16,
     pub medal: String,
     pub title: String,
     pub reward_amount: Option<Amount>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq, InputObject)]
+pub struct PrizeConfigOutput {
+    pub place: u16,
+    pub medal: String,
+    pub title: String,
+    pub reward_amount: Option<Amount>,
+}
+
+impl Into<PrizeConfigOutput> for PrizeConfigInput {
+    fn into(self) -> PrizeConfigOutput {
+        PrizeConfigOutput {
+            place: self.place,
+            medal: self.medal,
+            title: self.title,
+            reward_amount: self.reward_amount,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
@@ -97,9 +133,9 @@ pub struct ActivityItem {
     pub vote_type: VoteType,
     pub object_type: Option<ObjectType>,
     pub object_candidates: HashSet<String>,
-    pub condition: ObjectCondition,
+    pub condition: ObjectConditionOutput,
     pub sponsors: Vec<Owner>,
-    pub prize_configs: Vec<PrizeConfig>,
+    pub prize_configs: Vec<PrizeConfigOutput>,
     pub announcements: HashSet<String>,
     pub prize_announcement: String,
     pub voter_reward_percent: u8,
@@ -131,9 +167,9 @@ pub struct CreateParams {
     pub votable: bool,
     pub vote_type: VoteType,
     pub object_type: ObjectType,
-    pub condition: ObjectCondition,
+    pub condition: ObjectConditionInput,
     pub sponsors: Vec<Owner>,
-    pub prize_configs: Vec<PrizeConfig>,
+    pub prize_configs: Vec<PrizeConfigInput>,
     pub voter_reward_percent: u8,
     pub budget_amount: Amount,
     pub join_type: JoinType,
@@ -157,9 +193,9 @@ pub struct UpdateParams {
     pub votable: Option<bool>,
     pub vote_type: Option<VoteType>,
     pub object_type: Option<ObjectType>,
-    pub condition: Option<ObjectCondition>,
+    pub condition: Option<ObjectConditionInput>,
     pub sponsors: Option<Vec<Owner>>,
-    pub prize_configs: Option<Vec<PrizeConfig>>,
+    pub prize_configs: Option<Vec<PrizeConfigInput>>,
     pub voter_reward_percent: Option<u8>,
     pub budget_amount: Option<Amount>,
     pub join_type: Option<JoinType>,
