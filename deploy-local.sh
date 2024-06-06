@@ -15,7 +15,8 @@ function print() {
 
 NODE_LOG_FILE=$HOME/linera-project/linera.log
 SERVICE_LOG_FILE=$HOME/linera-project/service_8080.log
-WALLET_NUMBER=4
+FAUCET_LOG_FILE=$HOME/linera-project/faucet_8080.log
+WALLET_NUMBER=5
 EXTRA_WALLET_NUMBER=`expr $WALLET_NUMBER - 1`
 
 print $'\U01F4AB' $YELLOW " Running lienra net, log in $NODE_LOG_FILE ..."
@@ -109,9 +110,11 @@ function run_new_service() {
  linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
 }
 
-for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
+for i in `seq 1 $EXTRA_WALLET_NUMBER`; do
   run_new_service $i
 done
+
+linera --with-wallet 0 faucet --amount "10.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1
 
 function cleanup() {
   killall -15 linera > /dev/null 2>&1
