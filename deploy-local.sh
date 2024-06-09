@@ -18,6 +18,7 @@ SERVICE_LOG_FILE=$HOME/linera-project/service_8080.log
 FAUCET_LOG_FILE=$HOME/linera-project/faucet_8080.log
 WALLET_NUMBER=5
 EXTRA_WALLET_NUMBER=`expr $WALLET_NUMBER - 1`
+SERVICE_WALLET_NUMBER=`expr $EXTRA_WALLET_NUMBER - 1`
 
 print $'\U01F4AB' $YELLOW " Running lienra net, log in $NODE_LOG_FILE ..."
 lineradir=`whereis linera | awk '{print $2}'`
@@ -107,14 +108,17 @@ function run_new_service() {
   linera --with-wallet $1 wallet show
   print $'\U01f499' $LIGHTGREEN " Run $port service ..."
   LOG_FILE=`echo $SERVICE_LOG_FILE | sed "s/8080/$port/g"`
- linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
+  linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
 }
 
-for i in `seq 1 $EXTRA_WALLET_NUMBER`; do
+for i in `seq 0 $SERVICE_WALLET_NUMBER`; do
   run_new_service $i
 done
 
-linera --with-wallet 0 faucet --amount "10.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1 &
+  print $'\U01f499' $LIGHTGREEN " Wallet of faucet ..."
+linera --with-wallet $EXTRA_WALLET_NUMBER wallet show
+faucet_chain=`linera --with-wallet $EXTRA_WALLET_NUMBER wallet show | grep "Public Key" | awk '{print $2}'`
+linera --with-wallet $EXTRA_WALLET_NUMBER faucet --amount "10.0" $faucet_chain > $FAUCET_LOG_FILE 2>&1 &
 
 function cleanup() {
   killall -15 linera > /dev/null 2>&1
