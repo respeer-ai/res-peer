@@ -2,7 +2,7 @@
   <q-layout view='lHh Lpr lFf'>
     <q-header elevated>
       <q-toolbar>
-        <div class='row' :style='{width: "720px", margin: "0 auto"}'>
+        <div :style='{width: "720px", margin: "0 auto"}' class='flex justify-center items-center row'>
           <q-img
             src='~assets/ResPeer.png' width='160px' fit='contain' class='cursor-pointer'
             @click='onLogoClick'
@@ -12,11 +12,16 @@
             name='store' size='24px' :color='tab == "store" ? "green" : "black"' class='cursor-pointer'
             @click='onNFTMarketClick'
           />
-          <q-img
-            src='~assets/CheCko.png' width='24px' color='black' class='cursor-pointer'
-            :style='{marginLeft: "8px"}'
+          <q-btn
+            flat rounded class='bg-red-2'
             @click='onLoginClick'
-          />
+            :style='{marginLeft: "8px"}'
+          >
+            <q-img src='~assets/CheCko.png' width='24px' />
+            <div :style='{margin: "2px 0 0 8px"}' class='text-brown-8 text-bold'>
+              {{ account?.length ? shortid.shortId(account, 4) : 'Login' }}
+            </div>
+          </q-btn>
           <q-icon
             name='local_activity' size='24px' :color='tab == "activity" ? "green" : "black"' class='cursor-pointer'
             :style='{marginLeft: "8px"}'
@@ -27,12 +32,6 @@
             name='dashboard' size='24px' :color='tab == "dashboard" ? "green" : "black"' class='cursor-pointer'
             :style='{marginLeft: "8px"}'
             @click='onDashboardClick'
-          />
-          <q-icon
-            v-if='account?.length'
-            name='logout' size='24px' color='black' class='cursor-pointer'
-            :style='{marginLeft: "8px"}'
-            @click='onLogoutClick'
           />
         </div>
       </q-toolbar>
@@ -102,18 +101,14 @@
       @hide='onHide'
       position='standard'
     >
-      <q-card :style='{padding: "32px", width: "100%"}'>
-        <q-card-section>
-          <div class='text-h5'>
-            Login
-          </div>
-        </q-card-section>
-        <q-card-section>
-          <q-input :style='{width: "100%"}' label='Linera Address' v-model='account' />
-        </q-card-section>
-        <q-card-section>
-          <q-btn label='Login' @click='onLoginConfirmClick' />
-        </q-card-section>
+      <q-card :style='{height: "160px", width: "100%"}' flat>
+        Connecting Linera through CheCko...
+        <q-inner-loading
+          :showing='processing'
+          class='text-red-4'
+        >
+          <q-spinner-facebook size='80px' />
+        </q-inner-loading>
       </q-card>
     </q-dialog>
   </q-layout>
@@ -121,10 +116,11 @@
 
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import { onBeforeMount, onMounted, ref } from 'vue'
+import { onBeforeMount, onMounted, ref, computed } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
 import * as constants from 'src/const'
+import { shortid } from 'src/utils'
 
 import CreditQuery from 'src/components/CreditQuery.vue'
 import BlockSubscription from 'src/components/BlockSubscription.vue'
@@ -155,11 +151,11 @@ import ActivityApplicationsKeysQuery from 'src/components/ActivityApplicationsKe
 import ActivityApplicationsQuery from 'src/components/ActivityApplicationsQuery.vue'
 
 const router = useRouter()
-const account = ref('')
 const logining = ref(false)
 const user = useUserStore()
 const route = useRoute()
 const tab = ref('feed')
+const account = computed(() => user.account?.trim())
 
 interface Query {
   port: number
@@ -206,39 +202,29 @@ const onLoginClick = () => {
   if (!window.linera) {
     return window.open('https://github.com/respeer-ai/linera-wallet.git')
   }
+  logining.value = true
   window.linera.request({
     method: 'eth_requestAccounts'
-  }).then((result) => {
-    console.log(result)
+  }).then((accounts: string[]) => {
+    logining.value = false
+    if (accounts.length) {
+      Cookies.set('account', accounts[0])
+      user.account = accounts[0]
+    }
   }).catch((e) => {
     console.log(e)
   })
 }
-const onHide = () => {
-  logining.value = false
-}
-const onLoginConfirmClick = () => {
-  if (account.value.length === 0) {
-    return
-  }
-  onHide()
-  Cookies.set('account', account.value)
-  user.account = account.value
-}
+
 onBeforeMount(() => {
   Cookies.set('service-port', port.value.toString())
   Cookies.set('service-host', host.value.toString())
 })
+
 onMounted(() => {
-  account.value = Cookies.get('account')
-  user.account = account.value
+  user.account = Cookies.get('account')
 })
 
-const onLogoutClick = () => {
-  Cookies.remove('account')
-  user.account = undefined as unknown as string
-  account.value = undefined as unknown as string
-}
 const onNFTMarketClick = () => {
   tab.value = 'store'
   void router.push({
