@@ -14,6 +14,7 @@
     "start": "quasar dev"
   },
   "dependencies": {
+    "@metamask/providers": "^17.0.0",
     "@quasar/app": "^3.3.3",
     "@quasar/extras": "^1.16.4",
     "@types/uuid": "^9.0.7",

@@ -65,15 +65,53 @@ const requestApplication = async (index: number, retry: boolean) => {
   })
 }
 
+const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
+  if (index >= constants.appIds.length) {
+    return
+  }
+  if (retry) {
+    setTimeout(() => {
+      void requestApplication(index + 1, retry)
+    }, 3000)
+    return
+  }
+  const appId = constants.appIds[index]
+  const query = gql`
+    mutation requestApplication ($chainId: String!, $applicationId: String!, $targetChainId: String!) {
+      requestApplication(chainId: $chainId, applicationId: $applicationId, targetChainId: $targetChainId)
+    }`
+  console.log({
+    applicationId: appId,
+    query: {
+      query: query.loc?.source?.body,
+      variables: {
+        chainId: targetChain.value,
+        applicationId: appId,
+        targetChainId: constants.appDeployChain
+      },
+      operationName: 'requestApplication'
+    }
+  })
+  window.linera.request({
+    method: 'linera_graphqlMutation'
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(targetChain, () => {
   if (targetChain.value) {
     void requestApplication(0, false)
+    void requestApplicationThroughCheCko(0, false)
   }
 })
 
 onMounted(() => {
   if (targetChain.value) {
     void requestApplication(0, false)
+    void requestApplicationThroughCheCko(0, false)
   }
 })
 
