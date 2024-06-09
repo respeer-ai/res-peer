@@ -114,7 +114,7 @@ for i in `seq 1 $EXTRA_WALLET_NUMBER`; do
   run_new_service $i
 done
 
-linera --with-wallet 0 faucet --amount "10.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1
+linera --with-wallet 0 faucet --amount "10.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1 &
 
 function cleanup() {
   killall -15 linera > /dev/null 2>&1
