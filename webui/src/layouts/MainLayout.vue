@@ -101,14 +101,18 @@
       @hide='onHide'
       position='standard'
     >
-      <q-card :style='{height: "160px", width: "100%"}' flat>
-        Connecting Linera through CheCko...
-        <q-inner-loading
-          :showing='processing'
-          class='text-red-4'
-        >
-          <q-spinner-facebook size='80px' />
-        </q-inner-loading>
+      <q-card :style='{padding: "48px", width: "100%"}'>
+        <div class='text-center text-brown-8 text-bold' :style='{fontSize: "20px"}'>
+          Connecting Linera through CheCko...
+        </div>
+        <q-card :style='{height: "160px", width: "100%", padding: "48px"}' flat>
+          <q-inner-loading
+            :showing='logining'
+            class='text-red-4'
+          >
+            <q-spinner-facebook size='80px' />
+          </q-inner-loading>
+        </q-card>
       </q-card>
     </q-dialog>
   </q-layout>
