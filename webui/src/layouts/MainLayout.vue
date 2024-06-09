@@ -12,9 +12,8 @@
             name='store' size='24px' :color='tab == "store" ? "green" : "black"' class='cursor-pointer'
             @click='onNFTMarketClick'
           />
-          <q-icon
-            v-if='!account?.length'
-            name='login' size='24px' color='black' class='cursor-pointer'
+          <q-img
+            src='~assets/CheCko.png' width='24px' color='black' class='cursor-pointer'
             :style='{marginLeft: "8px"}'
             @click='onLoginClick'
           />
@@ -204,7 +203,16 @@ const onLogoClick = () => {
   })
 }
 const onLoginClick = () => {
-  logining.value = true
+  if (!window.linera) {
+    return window.open('https://github.com/respeer-ai/linera-wallet.git')
+  }
+  window.linera.request({
+    method: 'eth_requestAccounts'
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
 }
 const onHide = () => {
   logining.value = false

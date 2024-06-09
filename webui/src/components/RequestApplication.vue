@@ -80,25 +80,28 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
     mutation requestApplication ($chainId: String!, $applicationId: String!, $targetChainId: String!) {
       requestApplication(chainId: $chainId, applicationId: $applicationId, targetChainId: $targetChainId)
     }`
-  console.log({
-    applicationId: appId,
-    query: {
-      query: query.loc?.source?.body,
-      variables: {
-        chainId: targetChain.value,
-        applicationId: appId,
-        targetChainId: constants.appDeployChain
-      },
-      operationName: 'requestApplication'
-    }
-  })
+  console.log(appId, query)
+  /*
   window.linera.request({
-    method: 'linera_graphqlMutation'
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: appId,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          chainId: targetChain.value,
+          applicationId: appId,
+          targetChainId: constants.appDeployChain
+        },
+        operationName: 'requestApplication'
+      }
+    }
   }).then((result) => {
     console.log(result)
   }).catch((e) => {
     console.log(e)
   })
+  */
 }
 
 watch(targetChain, () => {
