@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, computed } from 'vue'
 import gql from 'graphql-tag'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
@@ -7,11 +7,15 @@ import { provideApolloClient, useMutation } from '@vue/apollo-composable'
 import * as constants from 'src/const'
 import { targetChain } from 'src/stores/chain'
 import { useApplicationStore } from 'src/stores/application'
+import { useUserStore } from 'src/stores/user'
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 const application = useApplicationStore()
+const user = useUserStore()
+const account = computed(() => user.account)
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const requestApplication = async (index: number, retry: boolean) => {
   if (index >= constants.appIds.length) {
     return
@@ -71,7 +75,7 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
   }
   if (retry) {
     setTimeout(() => {
-      void requestApplication(index + 1, retry)
+      void requestApplicationThroughCheCko(index + 1, retry)
     }, 3000)
     return
   }
@@ -80,16 +84,12 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
     mutation requestApplication ($chainId: String!, $applicationId: String!, $targetChainId: String!) {
       requestApplication(chainId: $chainId, applicationId: $applicationId, targetChainId: $targetChainId)
     }`
-  console.log(appId, query)
-  /*
   window.linera.request({
     method: 'linera_graphqlMutation',
     params: {
-      applicationId: appId,
       query: {
         query: query.loc?.source?.body,
         variables: {
-          chainId: targetChain.value,
           applicationId: appId,
           targetChainId: constants.appDeployChain
         },
@@ -101,19 +101,22 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
   }).catch((e) => {
     console.log(e)
   })
-  */
 }
 
+watch(account, () => {
+  if (targetChain.value && account) {
+    void requestApplicationThroughCheCko(0, false)
+  }
+})
+
 watch(targetChain, () => {
-  if (targetChain.value) {
-    void requestApplication(0, false)
+  if (targetChain.value && account) {
     void requestApplicationThroughCheCko(0, false)
   }
 })
 
 onMounted(() => {
-  if (targetChain.value) {
-    void requestApplication(0, false)
+  if (targetChain.value && account) {
     void requestApplicationThroughCheCko(0, false)
   }
 })
