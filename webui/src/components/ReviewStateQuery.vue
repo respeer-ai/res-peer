@@ -86,7 +86,6 @@ const getReviewStateThroughCheCko = () => {
       }
     }
   }).then((result) => {
-    console.log(result)
     const ret = (result as Record<string, number>)
     review.contentApprovedThreshold = ret.contentApprovedThreshold
     review.contentRejectedThreshold = ret.contentRejectedThreshold

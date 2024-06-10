@@ -965,7 +965,6 @@ impl ReviewContract {
             self.runtime.chain_id(),
             self.runtime.application_id().creation.chain_id,
         );
-        // TODO: send initialization argument to subscriber
         Ok(ReviewResponse::Ok)
     }
 
