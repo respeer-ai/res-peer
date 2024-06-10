@@ -81,8 +81,8 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
   }
   const appId = constants.appIds[index]
   const query = gql`
-    mutation requestApplication ($chainId: String!, $applicationId: String!, $targetChainId: String!) {
-      requestApplication(chainId: $chainId, applicationId: $applicationId, targetChainId: $targetChainId)
+    mutation requestApplicationWithoutBlockProposal ($chainId: String!, $applicationId: String!, $targetChainId: String!) {
+      requestApplicationWithoutBlockProposal(chainId: $chainId, applicationId: $applicationId, targetChainId: $targetChainId)
     }`
   window.linera.request({
     method: 'linera_graphqlMutation',
@@ -93,7 +93,7 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
           applicationId: appId,
           targetChainId: constants.appDeployChain
         },
-        operationName: 'requestApplication'
+        operationName: 'requestApplicationWithoutBlockProposal'
       }
     }
   }).then((result) => {
