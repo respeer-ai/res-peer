@@ -96,9 +96,32 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
         operationName: 'requestApplicationWithoutBlockProposal'
       }
     }
-  }).then((result) => {
-    console.log(result)
+  }).then(() => {
+    setTimeout(() => {
+      switch (index) {
+        case 0:
+          application.feedApp = constants.Apps.feedApp
+          break
+        case 1:
+          application.creditApp = constants.Apps.creditApp
+          break
+        case 2:
+          application.marketApp = constants.Apps.marketApp
+          break
+        case 3:
+          application.reviewApp = constants.Apps.reviewApp
+          break
+        case 4:
+          application.foundationApp = constants.Apps.foundationApp
+          break
+        case 5:
+          application.activityApp = constants.Apps.activityApp
+          break
+      }
+    }, 1000)
+    void requestApplicationThroughCheCko(index + 1, false)
   }).catch((e) => {
+    void requestApplicationThroughCheCko(index, true)
     console.log(e)
   })
 }

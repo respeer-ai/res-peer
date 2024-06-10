@@ -34,6 +34,29 @@ const requestSubscribe = async () => {
   })
 }
 
+const requestSubscribeThroughCheCko = () => {
+  const query = gql`
+    mutation requestSubscribe {
+      requestSubscribe
+    }
+  `
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {},
+        operationName: 'requestSubscribe'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(targetChain, () => {
   if (!ready()) return
   void requestSubscribe()
@@ -41,11 +64,13 @@ watch(targetChain, () => {
 
 watch(reviewApp, () => {
   if (!ready()) return
-  void requestSubscribe()
+  // void requestSubscribe()
+  void requestSubscribeThroughCheCko()
 })
 
 onMounted(() => {
   if (!ready()) return
-  void requestSubscribe()
+  // void requestSubscribe()
+  void requestSubscribeThroughCheCko()
 })
 </script>

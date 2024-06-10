@@ -33,6 +33,7 @@ import { sha256 } from 'multiformats/hashes/sha2'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
+import * as constants from 'src/const'
 
 const title = ref('')
 const content = ref('')
@@ -41,11 +42,8 @@ const editing = ref(false)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
-const onPublishClick = async () => {
-  if (title.value.length <= 0 || content.value.length <= 0) {
-    return
-  }
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const submitContent = async () => {
   const bytes = json.encode({ content })
   const hash = await sha256.digest(bytes)
   const cid = CID.create(1, json.code, hash).toString()
@@ -68,6 +66,46 @@ const onPublishClick = async () => {
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const submitContentThroughCheCko = async () => {
+  const bytes = json.encode({ content })
+  const hash = await sha256.digest(bytes)
+  const cid = CID.create(1, json.code, hash).toString()
+
+  const query = gql`
+    mutation submitContent ($cid: String!, $title: String!, $content: String!) {
+      submitContent(cid: $cid, title: $title, content: $content)
+    }
+  `
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: constants.Apps.reviewApp,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          cid,
+          title: title.value,
+          content: content.value,
+          chainId: targetChain.value
+        },
+        operationName: 'submitContent'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onPublishClick = () => {
+  if (title.value.length <= 0 || content.value.length <= 0) {
+    return
+  }
+  // void submitContent()
+  void submitContentThroughCheCko()
 }
 
 </script>
