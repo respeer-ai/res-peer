@@ -10,7 +10,7 @@ export enum Apps {
 export const appIds = Object.values(Apps)
 
 /// Chain which is the application originally deployed
-export const appDeployChain = 'e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65'
+export const appDeployChain = '1db1936dad0717597a7743a8353c9c0191c14c3a129b258e9743aec2b4f05d03'
 
 /// Port should be set with different service
 export const port = '9080'

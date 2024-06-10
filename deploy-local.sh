@@ -94,15 +94,15 @@ print $'\U01f499' $LIGHTGREEN " Activity application deployed"
 echo -e "    Bytecode ID:    $BLUE$activity_bid$NC"
 echo -e "    Application ID: $BLUE$activity_appid$NC"
 
+app_deploy_chain=`linera --with-wallet 1 wallet show | grep "Public Key" | awk '{print $2}'`
+
 sed -i "s/feedApp =.*/feedApp = '$feed_appid',/g" webui/src/const/index.ts
 sed -i "s/creditApp =.*/creditApp = '$credit_appid',/g" webui/src/const/index.ts
 sed -i "s/marketApp =.*/marketApp = '$market_appid',/g" webui/src/const/index.ts
 sed -i "s/reviewApp =.*/reviewApp = '$review_appid',/g" webui/src/const/index.ts
 sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid'/g" webui/src/const/index.ts
 sed -i "s/activityApp =.*/activityApp = '$activity_appid',/g" webui/src/const/index.ts
-
-  print $'\U01f499' $LIGHTGREEN " Wallet of faucet ..."
-linera --with-wallet $EXTRA_WALLET_NUMBER wallet show
+sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
 
 function run_new_service() {
   BASE_PORT=9080
@@ -118,6 +118,7 @@ for i in `seq 1 $SERVICE_WALLET_NUMBER`; do
   run_new_service $i
 done
 
+print $'\U01f499' $LIGHTGREEN " Wallet of faucet ..."
 linera --with-wallet 0 wallet show
 linera --with-wallet 0 faucet --amount "10.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1 &
 
