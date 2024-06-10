@@ -1355,6 +1355,12 @@ impl ReviewContract {
                 .with_authentication()
                 .send_to(self.require_message_id()?.chain_id);
         }
+        self.runtime
+            .prepare_message(Message::InstantiationArgument {
+                argument: self.state.instantiation_argument().await?,
+            })
+            .with_authentication()
+            .send_to(self.require_message_id()?.chain_id);
         Ok(())
     }
 
