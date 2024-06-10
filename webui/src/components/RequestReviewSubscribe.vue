@@ -13,9 +13,10 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const ready = () => {
-  return targetChain.value?.length > 0 && reviewApp.value?.length > 0
+  return /* targetChain.value?.length > 0 && */ reviewApp.value?.length > 0
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const requestSubscribe = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation requestSubscribe {
@@ -58,8 +59,8 @@ const requestSubscribeThroughCheCko = () => {
 }
 
 watch(targetChain, () => {
-  if (!ready()) return
-  void requestSubscribe()
+  // if (!ready()) return
+  // void requestSubscribe()
 })
 
 watch(reviewApp, () => {

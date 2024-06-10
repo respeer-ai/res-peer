@@ -15,6 +15,10 @@ const application = useApplicationStore()
 const user = useUserStore()
 const account = computed(() => user.account)
 
+const ready = () => {
+  return /* targetChain.value?.length > 0 && */ account.value?.length > 0
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const requestApplication = async (index: number, retry: boolean) => {
   if (index >= constants.appIds.length) {
@@ -127,20 +131,24 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
 }
 
 watch(account, () => {
-  if (targetChain.value && account) {
-    void requestApplicationThroughCheCko(0, false)
+  if (ready()) {
+    setTimeout(() => {
+      void requestApplicationThroughCheCko(0, false)
+    }, 500)
   }
 })
 
 watch(targetChain, () => {
-  if (targetChain.value && account) {
+  if (ready()) {
     void requestApplicationThroughCheCko(0, false)
   }
 })
 
 onMounted(() => {
-  if (targetChain.value && account) {
-    void requestApplicationThroughCheCko(0, false)
+  if (ready()) {
+    setTimeout(() => {
+      void requestApplicationThroughCheCko(0, false)
+    }, 500)
   }
 })
 

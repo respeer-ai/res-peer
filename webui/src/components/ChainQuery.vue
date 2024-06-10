@@ -13,6 +13,7 @@ const apolloClient = new ApolloClient(options)
 
 const chain = useChainStore()
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getChains = () => {
   const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getChains {
@@ -37,7 +38,8 @@ const getChains = () => {
 }
 
 onMounted(() => {
-  getChains()
+  // getChains()
+  // For user select their chain in wallet, we do nothing here
 })
 
 </script>
