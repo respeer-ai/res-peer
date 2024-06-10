@@ -16,12 +16,14 @@
 import { useFoundationStore } from 'src/stores/foundation'
 import { useReviewStore, Content } from 'src/stores/review'
 import { useUserStore } from 'src/stores/user'
-import { computed } from 'vue'
+import { publickeytoowner } from 'src/utils'
+import { computed, ref, watch } from 'vue'
 
 const review = useReviewStore()
 const user = useUserStore()
 const account = computed(() => user.account)
-const contents = computed(() => review.contents(account.value))
+const owner = ref('')
+const contents = computed(() => [...review.contents(account.value), ...review.contents(owner.value)])
 const foundation = useFoundationStore()
 const estimatedReward = computed(() => Number(foundation.authorRewardBalance) / foundation.authorRewardFactor)
 
@@ -84,5 +86,9 @@ const columns = computed(() => [
     }
   }
 ])
+
+watch(account, async () => {
+  owner.value = await publickeytoowner.publicKeyToOwner(account.value)
+})
 
 </script>
