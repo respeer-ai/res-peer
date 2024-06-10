@@ -19,9 +19,10 @@ const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const ready = () => {
-  return targetChain.value?.length > 0 && reviewApp.value?.length > 0
+  return /* targetChain.value?.length > 0 && */ reviewApp.value?.length > 0
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getContentApplicationsKeys = () => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getContentApplicationsKeys {
@@ -43,19 +44,45 @@ const getContentApplicationsKeys = () => {
   })
 }
 
+const getContentApplicationsKeysThroughCheCko = () => {
+  const query = gql`
+    query getContentApplicationsKeys {
+      contentApplications {
+        keys
+      }
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {},
+        operationName: 'getContentApplicationsKeys'
+      }
+    }
+  }).then((result) => {
+    const contentApplications = graphqlResult.keyValue(result, 'contentApplications')
+    review.contentApplicationsKeys = graphqlResult.keyValue(contentApplications, 'keys') as Array<string>
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(blockHeight, () => {
   if (!ready()) return
-  getContentApplicationsKeys()
+  getContentApplicationsKeysThroughCheCko()
 })
 
 watch(reviewApp, () => {
   if (!ready()) return
-  getContentApplicationsKeys()
+  getContentApplicationsKeysThroughCheCko()
 })
 
 onMounted(() => {
   if (!ready()) return
-  getContentApplicationsKeys()
+  getContentApplicationsKeysThroughCheCko()
 })
 
 </script>

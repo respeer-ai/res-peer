@@ -8,6 +8,7 @@ import { computed, watch, ref } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
 import { graphqlResult } from 'src/utils'
+import { useApplicationStore } from 'src/stores/application'
 
 const review = useReviewStore()
 const contentApplicationsKeys = computed(() => review.contentApplicationsKeys)
@@ -16,10 +17,17 @@ const contentIndex = ref(-1)
 const contentApplicationKey = computed(() => contentIndex.value >= 0 ? contentApplicationsKeys.value[contentIndex.value] : undefined)
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
+const ready = () => {
+  return /* targetChain.value?.length > 0 && */ reviewApp.value?.length > 0
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getContentApplication = (contentApplicationKey: string, done?: () => void) => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getContentApplication($contentApplicationKey: String!) {
@@ -55,16 +63,59 @@ const getContentApplication = (contentApplicationKey: string, done?: () => void)
   })
 }
 
+const getContentApplicationThroughCheCko = (contentApplicationKey: string, done?: () => void) => {
+  const query = gql`
+    query getContentApplication($contentApplicationKey: String!) {
+      contentApplications {
+        entry(key: $contentApplicationKey) {
+          value {
+            cid
+            commentToCid
+            author
+            title
+            content
+            reviewers
+            approved
+            rejected
+            createdAt
+          }
+        }
+      }
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          contentApplicationKey: `${contentApplicationKey}`
+        },
+        operationName: 'getContentApplication'
+      }
+    }
+  }).then((result) => {
+    const _contentApplications = graphqlResult.keyValue(result, 'contentApplications')
+    contentApplications.value.set(contentApplicationKey, graphqlResult.entryValue(_contentApplications) as Content)
+    done?.()
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(contentApplicationKey, () => {
+  if (!ready()) return
   if (!contentApplicationKey.value) {
     return
   }
-  getContentApplication(contentApplicationKey.value, () => {
+  getContentApplicationThroughCheCko(contentApplicationKey.value, () => {
     contentIndex.value++
   })
 })
 
 watch(contentApplicationsKeys, () => {
+  if (!ready()) return
   if (contentApplicationsKeys.value.length === 0) {
     return
   }
@@ -72,6 +123,7 @@ watch(contentApplicationsKeys, () => {
 })
 
 watch(blockHeight, () => {
+  if (!ready()) return
   if (contentApplicationsKeys.value.length === 0) {
     return
   }
