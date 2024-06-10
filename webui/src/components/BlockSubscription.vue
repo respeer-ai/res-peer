@@ -37,9 +37,13 @@ watch(targetChain, () => {
   subscribeThroughCheCko()
 })
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const subscriptionHandler = (msg: unknown) => {
-  // console.log('Subscription', msg)
+  const _msg = msg as Record<string, Record<string, Record<string, Record<string, Record<string, Record<string, unknown>>>>>>
+  const data = _msg.data.result
+  if (data.notifications.reason.NewBlock) {
+    block.blockHeight = data.notifications.reason.NewBlock.height as number
+    block.blockHash = data.notifications.reason.NewBlock.hash as string
+  }
 }
 
 const subscriptionId = ref('')
