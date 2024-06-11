@@ -98,7 +98,6 @@
     </q-footer>
     <q-dialog
       v-model='logining'
-      @hide='onHide'
       position='standard'
     >
       <q-card :style='{padding: "48px", width: "100%"}'>
@@ -123,6 +122,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { onBeforeMount, onMounted, ref, computed } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
+import { useSettingStore } from 'src/stores/setting'
 import * as constants from 'src/const'
 import { shortid } from 'src/utils'
 
@@ -160,14 +160,17 @@ const user = useUserStore()
 const route = useRoute()
 const tab = ref('feed')
 const account = computed(() => user.account?.trim())
+const setting = useSettingStore()
 
 interface Query {
   port: number
   host: string
+  cheCkoConnect?: boolean
 }
 
 const port = ref((route.query as unknown as Query).port || constants.port)
 const host = ref((route.query as unknown as Query).host || constants.host)
+const cheCkoConnect = ref((route.query as unknown as Query).cheCkoConnect)
 
 const onGithubClick = (uri: string) => {
   window.open(uri)
@@ -209,11 +212,12 @@ const onLoginClick = () => {
   logining.value = true
   window.linera.request({
     method: 'eth_requestAccounts'
-  }).then((accounts: string[]) => {
+  }).then((accounts) => {
     logining.value = false
-    if (accounts.length) {
-      Cookies.set('account', accounts[0])
-      user.account = accounts[0]
+    const _accounts = accounts as string[]
+    if (_accounts.length) {
+      Cookies.set('account', _accounts[0])
+      user.account = _accounts[0]
     }
   }).catch((e) => {
     console.log(e)
@@ -227,6 +231,7 @@ onBeforeMount(() => {
 
 onMounted(() => {
   user.account = Cookies.get('account')
+  setting.cheCkoConnect = cheCkoConnect.value === undefined ? true : cheCkoConnect.value
 })
 
 const onNFTMarketClick = () => {
