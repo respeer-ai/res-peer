@@ -305,7 +305,7 @@ const getProviderState = () => {
 }
 
 const onLoginClick = () => {
-  if (account.value.length) {
+  if (account.value?.length) {
     return
   }
   if (!window.linera) {

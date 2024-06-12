@@ -88,6 +88,9 @@ const columns = computed(() => [
 ])
 
 watch(account, async () => {
+  if (!account.value) {
+    return
+  }
   owner.value = await publickeytoowner.publicKeyToOwner(account.value)
 })
 
