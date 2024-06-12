@@ -178,7 +178,7 @@ const voteObjectThroughCheCko = (cid: string) => {
           activityId: parseInt(`${activityId.value}`),
           objectId: cid
         },
-        operationName: 'register'
+        operationName: 'vote'
       }
     }
   }).then((result) => {

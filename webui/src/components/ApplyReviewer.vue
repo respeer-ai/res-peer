@@ -23,6 +23,7 @@ import { useUserStore } from 'src/stores/user'
 import { computed, ref } from 'vue'
 import { targetChain } from 'src/stores/chain'
 import { useReviewStore } from 'src/stores/review'
+import { useSettingStore } from 'src/stores/setting'
 
 const application = useApplicationStore()
 const user = useUserStore()
@@ -37,9 +38,11 @@ const account = computed(() => user.account)
 const resume = ref(reviewerApplication.value?.resume)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
 
 const ready = (): boolean => {
-  return account.value?.length > 0 && reviewApp.value?.length > 0 && targetChain.value?.length > 0 && resume.value?.length > 0
+  return account.value?.length > 0 && reviewApp.value?.length > 0 && (cheCkoConnect.value || targetChain.value?.length > 0) && resume.value?.length > 0
 }
 
 const applyReviewer = async () => {
@@ -61,9 +64,38 @@ const applyReviewer = async () => {
   })
 }
 
+const applyReviewerThroughCheCko = () => {
+  const query = gql`
+    mutation applyReviewer($resume: String!) {
+      applyReviewer(resume: $resume)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          resume: resume.value
+        },
+        operationName: 'applyReviewer'
+      }
+    }
+  }).then(() => {
+    review.reviewerMutateKeys.push(account.value)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 const onApplyClick = async () => {
   if (!ready()) return
-  await applyReviewer()
+  if (cheCkoConnect.value) {
+    applyReviewerThroughCheCko()
+  } else {
+    await applyReviewer()
+  }
 }
 
 </script>
