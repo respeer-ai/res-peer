@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
 import { provideApolloClient, useMutation } from '@vue/apollo-composable'
@@ -48,6 +48,8 @@ import { targetChain } from 'src/stores/chain'
 import { CID } from 'multiformats/cid'
 import * as json from 'multiformats/codecs/json'
 import { sha256 } from 'multiformats/hashes/sha2'
+import { useApplicationStore } from 'src/stores/application'
+import { useSettingStore } from 'src/stores/setting'
 
 const editing = ref(false)
 const baseUri = ref('')
@@ -61,17 +63,12 @@ const adding = ref(false)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
-const onSubmitClick = async () => {
-  if (!baseUri.value.length) {
-    return
-  }
-  if (!name.value.length) {
-    return
-  }
-  if (!uris.value.length) {
-    return
-  }
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
+const submitAsset = async () => {
   const bytes = json.encode({ uris })
   const hash = await sha256.digest(bytes)
   const cid = CID.create(1, json.code, hash).toString()
@@ -96,6 +93,55 @@ const onSubmitClick = async () => {
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const submitAssetThroughCheCko = async () => {
+  const bytes = json.encode({ uris })
+  const hash = await sha256.digest(bytes)
+  const cid = CID.create(1, json.code, hash).toString()
+
+  const query = gql`
+    mutation submitAsset ($cid: String!, $baseUri: String!, $uris: [String!]!, $price: String, $name: String!) {
+      submitAsset(cid: $cid, baseUri: $baseUri, uris: $uris, price: $price, name: $name)
+    }`
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          cid,
+          baseUri: baseUri.value,
+          uris: uris.value,
+          price: uniquePrice.value ? price.value : undefined,
+          name: name.value
+        },
+        operationName: 'submitAsset'
+      }
+    }
+  }).then(() => {
+    editing.value = !editing.value
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onSubmitClick = () => {
+  if (!baseUri.value.length) {
+    return
+  }
+  if (!name.value.length) {
+    return
+  }
+  if (!uris.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    void submitAssetThroughCheCko()
+  } else {
+    void submitAsset()
+  }
 }
 
 const onAddUriClick = () => {

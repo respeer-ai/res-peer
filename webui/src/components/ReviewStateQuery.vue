@@ -8,6 +8,7 @@ import { useReviewStore } from 'src/stores/review'
 import { computed, onMounted, watch } from 'vue'
 import { targetChain } from 'src/stores/chain'
 import { useApplicationStore } from 'src/stores/application'
+import { useSettingStore } from 'src/stores/setting'
 
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
@@ -16,12 +17,13 @@ const application = useApplicationStore()
 const reviewApp = computed(() => application.reviewApp)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
 
 const ready = (): boolean => {
-  return reviewApp.value?.length > 0 /* && targetChain.value?.length > 0 */
+  return reviewApp.value?.length > 0 && (cheCkoConnect.value || targetChain.value?.length > 0)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getReviewState = () => {
   const { /* result, */ refetch /*, fetchMore */, onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getReviewState {
@@ -103,22 +105,38 @@ const getReviewStateThroughCheCko = () => {
 
 watch(blockHeight, () => {
   if (!ready()) return
-  getReviewStateThroughCheCko()
+  if (cheCkoConnect.value) {
+    getReviewStateThroughCheCko()
+  } else {
+    getReviewState()
+  }
 })
 
 watch(targetChain, () => {
   if (!ready()) return
-  getReviewStateThroughCheCko()
+  if (cheCkoConnect.value) {
+    getReviewStateThroughCheCko()
+  } else {
+    getReviewState()
+  }
 })
 
 watch(reviewApp, () => {
   if (!ready()) return
-  getReviewStateThroughCheCko()
+  if (cheCkoConnect.value) {
+    getReviewStateThroughCheCko()
+  } else {
+    getReviewState()
+  }
 })
 
 onMounted(() => {
   if (!ready()) return
-  getReviewStateThroughCheCko()
+  if (cheCkoConnect.value) {
+    getReviewStateThroughCheCko()
+  } else {
+    getReviewState()
+  }
 })
 
 </script>

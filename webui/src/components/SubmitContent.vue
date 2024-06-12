@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { provideApolloClient, useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import { CID } from 'multiformats/cid'
@@ -33,7 +33,8 @@ import { sha256 } from 'multiformats/hashes/sha2'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
-import * as constants from 'src/const'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const title = ref('')
 const content = ref('')
@@ -42,7 +43,11 @@ const editing = ref(false)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
+
 const submitContent = async () => {
   const bytes = json.encode({ content })
   const hash = await sha256.digest(bytes)
@@ -81,7 +86,7 @@ const submitContentThroughCheCko = async () => {
   window.linera.request({
     method: 'linera_graphqlMutation',
     params: {
-      applicationId: constants.Apps.reviewApp,
+      applicationId: reviewApp.value,
       query: {
         query: query.loc?.source?.body,
         variables: {
@@ -104,8 +109,11 @@ const onPublishClick = () => {
   if (title.value.length <= 0 || content.value.length <= 0) {
     return
   }
-  // void submitContent()
-  void submitContentThroughCheCko()
+  if (cheCkoConnect.value) {
+    void submitContentThroughCheCko()
+  } else {
+    void submitContent()
+  }
 }
 
 </script>
