@@ -91,8 +91,11 @@
                   flat rounded class='bg-red-2 full-width'
                   @click='onLogoutClick'
                   label='Logout'
-                  :style='{margin: "24px 0 24px 0"}'
+                  :style='{margin: "24px 0 0 0"}'
                 />
+                <div class='text-grey-6 text-center' :style='{margin: "8px 0 16px 0"}'>
+                  Powered by CheCko
+                </div>
               </q-card>
             </q-menu>
             <q-img src='~assets/CheCko.png' width='24px' />
