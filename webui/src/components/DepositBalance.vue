@@ -23,12 +23,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
 import { provideApolloClient, useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import { targetChain } from 'src/stores/chain'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const editing = ref(false)
 const amount = ref(0)
@@ -36,11 +38,12 @@ const amount = ref(0)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
-const onDepositClick = async () => {
-  if (amount.value < 0) {
-    return
-  }
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const foundationApp = computed(() => application.foundationApp)
 
+const deposit = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation userDeposit ($amount: String!) {
       userDeposit(amount: $amount)
@@ -57,6 +60,41 @@ const onDepositClick = async () => {
     endpoint: 'foundation',
     chainId: targetChain.value
   })
+}
+
+const depositThroughCheCko = () => {
+  const query = gql`
+    mutation userDeposit ($amount: String!) {
+      userDeposit(amount: $amount)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: foundationApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          amount: amount.value.toString()
+        }
+      }
+    }
+  }).then(() => {
+    editing.value = !editing.value
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onDepositClick = () => {
+  if (amount.value < 0) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    depositThroughCheCko()
+  } else {
+    void deposit()
+  }
 }
 
 </script>
