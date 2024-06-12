@@ -9,6 +9,9 @@ export interface AgeAmount {
 export const useUserStore = defineStore('user', {
   state: () => ({
     account: undefined as unknown as string,
+    chainId: undefined as unknown as string,
+    accountBalance: '0.',
+    chainBalance: '0,',
     spendable: '0.',
     amounts: [] as Array<AgeAmount>,
     reviewer: false,
