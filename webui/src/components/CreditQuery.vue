@@ -95,10 +95,9 @@ const getBalanceThroughCheCko = () => {
       }
     }
   }).then((result) => {
-    console.log('Credits', result)
     const spendables = graphqlResult.keyValue(result, 'spendables')
     user.spendable = graphqlResult.entryValue(spendables) as string
-    const balances = graphqlResult.data(result, 'balances')
+    const balances = graphqlResult.keyValue(result, 'balances')
     user.amounts = graphqlResult.entryValueKeyValue(balances, 'amounts') as Array<AgeAmount>
   }).catch((e) => {
     console.log(e)
