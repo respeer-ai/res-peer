@@ -168,7 +168,7 @@ const getActivitiesThroughCheCko = (activityKey: number, done?: () => void) => {
       }
     }
   }).then((result) => {
-    const _activities = graphqlResult.data(result, 'activities')
+    const _activities = graphqlResult.keyValue(result, 'activities')
     activities.value.set(Number(activityKey), graphqlResult.entryValue(_activities) as Activity)
     done?.()
   }).catch((e) => {
