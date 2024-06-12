@@ -84,6 +84,8 @@ import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
 import { Content } from 'src/stores/review'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 interface Query {
   activityId: number
@@ -101,6 +103,11 @@ const activityId = ref((route.query as unknown as Query).activityId || toRef(_pr
 const activity = useActivityStore()
 const _activity = computed(() => activity.activity(Number(activityId.value)))
 const objectCandidates = computed(() => activity.objectCandidates(Number(activityId.value)))
+
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const activityApp = computed(() => application.activityApp)
 
 const user = useUserStore()
 const account = computed(() => user.account)
@@ -135,7 +142,7 @@ const objectVoted = (cid: string) => {
   return activity.objectVoted(Number(activityId.value), cid, account.value)
 }
 
-const onVoteClick = async (cid: string) => {
+const voteObject = async (cid: string) => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation vote ($activityId: Int!, $objectId: String!) {
       vote(activityId: $activityId, objectId: $objectId)
@@ -153,6 +160,40 @@ const onVoteClick = async (cid: string) => {
     endpoint: 'activity',
     chainId: targetChain.value
   })
+}
+
+const voteObjectThroughCheCko = (cid: string) => {
+  const query = gql`
+    mutation vote ($activityId: Int!, $objectId: String!) {
+      vote(activityId: $activityId, objectId: $objectId)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: activityApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          activityId: parseInt(`${activityId.value}`),
+          objectId: cid
+        },
+        operationName: 'register'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onVoteClick = (cid: string) => {
+  if (cheCkoConnect.value) {
+    voteObjectThroughCheCko(cid)
+  } else {
+    void voteObject(cid)
+  }
 }
 
 const columns = ref([
