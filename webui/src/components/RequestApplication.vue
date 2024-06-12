@@ -8,15 +8,18 @@ import * as constants from 'src/const'
 import { targetChain } from 'src/stores/chain'
 import { useApplicationStore } from 'src/stores/application'
 import { useUserStore } from 'src/stores/user'
+import { useSettingStore } from 'src/stores/setting'
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 const application = useApplicationStore()
 const user = useUserStore()
 const account = computed(() => user.account)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
 
 const ready = () => {
-  return /* targetChain.value?.length > 0 && */ account.value?.length > 0
+  return (cheCkoConnect.value || targetChain.value?.length > 0) && account.value?.length > 0
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -131,24 +134,33 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
 }
 
 watch(account, () => {
-  if (ready()) {
+  if (!ready()) return
+  if (cheCkoConnect.value) {
     setTimeout(() => {
       void requestApplicationThroughCheCko(0, false)
     }, 500)
+  } else {
+    void requestApplication(0, false)
   }
 })
 
 watch(targetChain, () => {
-  if (ready()) {
+  if (!ready()) return
+  if (cheCkoConnect.value) {
     void requestApplicationThroughCheCko(0, false)
+  } else {
+    void requestApplication(0, false)
   }
 })
 
 onMounted(() => {
-  if (ready()) {
+  if (!ready()) return
+  if (cheCkoConnect.value) {
     setTimeout(() => {
       void requestApplicationThroughCheCko(0, false)
     }, 500)
+  } else {
+    void requestApplication(0, false)
   }
 })
 
