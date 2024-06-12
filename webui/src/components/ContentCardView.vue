@@ -115,6 +115,8 @@ import { useCollectionStore } from 'src/stores/collection'
 import { targetChain } from 'src/stores/chain'
 import { Cookies, date } from 'quasar'
 import { useRouter } from 'vue-router'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 interface Props {
   cid: string
@@ -136,6 +138,10 @@ const collection = useCollectionStore()
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 const router = useRouter()
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const marketApp = computed(() => application.marketApp)
 
 const userAvatar = (account: string) => {
   const ids = collection.avatars.get(account)
@@ -146,15 +152,11 @@ const userAvatar = (account: string) => {
 }
 
 const ready = () => {
-  return targetChain.value?.length && _content.value
+  return (cheCkoConnect.value || targetChain.value?.length) && _content.value
 }
 
-const getContentAvatar = () => {
+const _getContentAvatar = () => {
   const account = _content.value?.author
-  if (collection.avatars.get(account)) {
-    return
-  }
-
   const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getMarketInfo($account: String!) {
         avatars(owner: $account)
@@ -169,6 +171,46 @@ const getContentAvatar = () => {
     const res = result.value as Record<string, Array<number>>
     collection.avatars.set(account, res.avatars)
   })
+}
+
+const getContentAvatarThroughCheCko = () => {
+  const account = _content.value?.author
+  const query = gql`
+    query getMarketInfo($account: String!) {
+      avatars(owner: $account)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: marketApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          account: `${account}`
+        },
+        operationName: 'getMarketInfo'
+      }
+    }
+  }).then((result) => {
+    console.log('Avatar', result)
+    const res = result as Record<string, Array<number>>
+    collection.avatars.set(account, res.avatars)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const getContentAvatar = () => {
+  const account = _content.value?.author
+  if (collection.avatars.get(account)) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    getContentAvatarThroughCheCko()
+  } else {
+    _getContentAvatar()
+  }
 }
 
 watch(targetChain, () => {
