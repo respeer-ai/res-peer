@@ -69,6 +69,8 @@ import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
 import { useUserStore } from 'src/stores/user'
 import { v4 as uuidv4 } from 'uuid'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 interface Query {
   reviewer: string
@@ -86,12 +88,12 @@ const account = computed(() => user.account)
 const reviewed = computed(() => review.reviewerReviewed(candidate.value, account.value))
 const _review = computed(() => review.reviewerReview(candidate.value, account.value))
 const reason = ref(_review.value?.reason || 'I supper like this man not only it\'s from Linera, but also it\'s recommended by KK.' + uuidv4())
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
-const onApproveClick = async () => {
-  if (!reviewer.value || !reason.value.length) {
-    return
-  }
-
+const approveReviewer = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation approveReviewer ($candidate: String!, $reason: String!) {
       approveReviewer(candidate: $candidate, reason: $reason)
@@ -104,11 +106,47 @@ const onApproveClick = async () => {
     console.log(error)
   })
   await mutate({
-    candidate: reviewer.value.reviewer,
+    candidate: reviewer.value?.reviewer,
     reason: reason.value,
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const approveReviewerThroughCheCko = () => {
+  const query = gql`
+    mutation approveReviewer ($candidate: String!, $reason: String!) {
+      approveReviewer(candidate: $candidate, reason: $reason)
+    }`
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          candidate: reviewer.value?.reviewer,
+          reason: reason.value
+        },
+        operationName: 'approveReviewer'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onApproveClick = () => {
+  if (!reviewer.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    approveReviewerThroughCheCko()
+  } else {
+    void approveReviewer()
+  }
   void router.push({
     path: '/dashboard',
     query: {
@@ -119,11 +157,7 @@ const onApproveClick = async () => {
   })
 }
 
-const onRejectClick = async () => {
-  if (!reviewer.value || !reason.value.length) {
-    return
-  }
-
+const rejectReviewer = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation rejectReviewer ($candidate: String!, $reason: String!) {
       rejectReviewer(candidate: $candidate, reason: $reason)
@@ -136,11 +170,47 @@ const onRejectClick = async () => {
     console.log(error)
   })
   await mutate({
-    candidate: reviewer.value.reviewer,
+    candidate: reviewer.value?.reviewer,
     reason: reason.value,
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const rejectReviewerThroughCheCko = () => {
+  const query = gql`
+    mutation rejectReviewer ($candidate: String!, $reason: String!) {
+      rejectReviewer(candidate: $candidate, reason: $reason)
+    }`
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          candidate: reviewer.value?.reviewer,
+          reason: reason.value
+        },
+        operationName: 'rejectReviewer'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onRejectClick = () => {
+  if (!reviewer.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    rejectReviewerThroughCheCko()
+  } else {
+    void rejectReviewer()
+  }
   void router.push({
     path: '/dashboard',
     query: {
