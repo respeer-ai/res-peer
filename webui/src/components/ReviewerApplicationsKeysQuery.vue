@@ -9,6 +9,7 @@ import { computed, onMounted, watch } from 'vue'
 import { targetChain } from 'src/stores/chain'
 import { useApplicationStore } from 'src/stores/application'
 import { graphqlResult } from 'src/utils'
+import { useSettingStore } from 'src/stores/setting'
 
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
@@ -17,9 +18,11 @@ const application = useApplicationStore()
 const reviewApp = computed(() => application.reviewApp)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
 
 const ready = () => {
-  return targetChain.value?.length > 0 && reviewApp.value?.length > 0
+  return (cheCkoConnect.value || targetChain.value?.length > 0) && reviewApp.value?.length > 0
 }
 
 const getReviewerApplicationsKeys = () => {
@@ -43,24 +46,65 @@ const getReviewerApplicationsKeys = () => {
   })
 }
 
+const getReviewerApplicationsKeysThroughCheCko = () => {
+  const query = gql`
+    query getReviewerApplicationsKeys {
+      reviewerApplications {
+        keys
+      }
+    }`
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {},
+        operationName: 'getReviewerApplicationsKeys'
+      }
+    }
+  }).then((result) => {
+    const reviewerApplications = graphqlResult.keyValue(result, 'reviewerApplications')
+    review.reviewerApplicationsKeys = graphqlResult.keys(reviewerApplications) as Array<string>
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(blockHeight, () => {
   if (!ready()) return
-  getReviewerApplicationsKeys()
+  if (cheCkoConnect.value) {
+    getReviewerApplicationsKeysThroughCheCko()
+  } else {
+    getReviewerApplicationsKeys()
+  }
 })
 
 watch(reviewApp, () => {
   if (!ready()) return
-  getReviewerApplicationsKeys()
+  if (cheCkoConnect.value) {
+    getReviewerApplicationsKeysThroughCheCko()
+  } else {
+    getReviewerApplicationsKeys()
+  }
 })
 
 watch(targetChain, () => {
   if (!ready()) return
-  getReviewerApplicationsKeys()
+  if (cheCkoConnect.value) {
+    getReviewerApplicationsKeysThroughCheCko()
+  } else {
+    getReviewerApplicationsKeys()
+  }
 })
 
 onMounted(() => {
   if (!ready()) return
-  getReviewerApplicationsKeys()
+  if (cheCkoConnect.value) {
+    getReviewerApplicationsKeysThroughCheCko()
+  } else {
+    getReviewerApplicationsKeys()
+  }
 })
 
 </script>

@@ -8,6 +8,8 @@ import { computed, watch, ref, onMounted } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
 import { graphqlResult } from 'src/utils'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const review = useReviewStore()
 const reviewerApplicationsKeys = computed(() => review.reviewerApplicationsKeys)
@@ -17,6 +19,10 @@ const reviewerIndex = ref(-1)
 const reviewerApplicationKey = computed(() => reviewerIndex.value >= 0 ? reviewerApplicationsKeys.value[reviewerIndex.value] : undefined)
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
@@ -54,6 +60,45 @@ const getReviewerApplication = (reviewerApplicationKey: string, done?: () => voi
   })
 }
 
+const getReviewerApplicationThroughCheCko = (reviewerApplicationKey: string, done?: () => void) => {
+  const query = gql`
+    query getReviewerApplication($reviewerApplicationKey: String!) {
+      reviewerApplications {
+        entry(key: $reviewerApplicationKey) {
+          value {
+            chainId
+            reviewer
+            resume
+            reviewers
+            approved
+            rejected
+            createdAt
+          }
+        }
+      }
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          reviewerApplicationKey: `${reviewerApplicationKey}`
+        },
+        operationName: 'getReviewerApplication'
+      }
+    }
+  }).then((result) => {
+    const _reviewerApplications = graphqlResult.keyValue(result, 'reviewerApplications')
+    reviewerApplications.value.set(reviewerApplicationKey, graphqlResult.entryValue(_reviewerApplications) as Reviewer)
+    done?.()
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(reviewerApplicationKey, () => {
   if (!reviewerApplicationKey.value) {
     return
@@ -65,10 +110,17 @@ watch(reviewerApplicationKey, () => {
     return
   }
 
-  getReviewerApplication(reviewerApplicationKey.value, () => {
-    reviewerIndex.value++
-    reviewerMutateKeys.value.splice(index, 1)
-  })
+  if (cheCkoConnect.value) {
+    getReviewerApplicationThroughCheCko(reviewerApplicationKey.value, () => {
+      reviewerIndex.value++
+      reviewerMutateKeys.value.splice(index, 1)
+    })
+  } else {
+    getReviewerApplication(reviewerApplicationKey.value, () => {
+      reviewerIndex.value++
+      reviewerMutateKeys.value.splice(index, 1)
+    })
+  }
 })
 
 watch(reviewerApplicationsKeys, () => {
@@ -87,7 +139,11 @@ watch(blockHeight, () => {
 
 onMounted(() => {
   reviewerMutateKeys.value.forEach((reviewerKey) => {
-    getReviewerApplication(reviewerKey)
+    if (cheCkoConnect.value) {
+      getReviewerApplicationThroughCheCko(reviewerKey)
+    } else {
+      getReviewerApplication(reviewerKey)
+    }
   })
   review.reviewerMutateKeys = []
 })
