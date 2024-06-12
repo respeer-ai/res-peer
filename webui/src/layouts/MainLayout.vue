@@ -125,6 +125,7 @@ import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
 import * as constants from 'src/const'
 import { shortid } from 'src/utils'
+import { Web3 } from 'web3'
 
 import CreditQuery from 'src/components/CreditQuery.vue'
 import BlockSubscription from 'src/components/BlockSubscription.vue'
@@ -209,19 +210,21 @@ const onLoginClick = () => {
   if (!window.linera) {
     return window.open('https://github.com/respeer-ai/linera-wallet.git')
   }
+
   logining.value = true
-  window.linera.request({
-    method: 'eth_requestAccounts'
-  }).then((accounts) => {
-    logining.value = false
-    const _accounts = accounts as string[]
-    if (_accounts.length) {
-      Cookies.set('account', _accounts[0])
-      user.account = _accounts[0]
-    }
-  }).catch((e) => {
-    console.log(e)
-  })
+  const web3 = new Web3(window.linera)
+  web3.eth.requestAccounts()
+    .then((accounts) => {
+      logining.value = false
+      if (accounts.length) {
+        Cookies.set('account', accounts[0])
+        user.account = accounts[0]
+      }
+    })
+    .catch((e) => {
+      logining.value = false
+      console.log('eth_requestAccounts', e)
+    })
 }
 
 onBeforeMount(() => {
