@@ -56,6 +56,8 @@ import gql from 'graphql-tag'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 interface Query {
   activityId: number
@@ -70,6 +72,11 @@ const account = computed(() => user.account)
 
 const content = useContentStore()
 const contents = computed(() => content._contents(account.value))
+
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const activityApp = computed(() => application.activityApp)
 
 const router = useRouter()
 const options = /* await */ getClientOptions(/* {app, router ...} */)
@@ -90,7 +97,7 @@ const objectRegistered = (cid: string) => {
   return activity.objectRegistered(Number(activityId.value), cid)
 }
 
-const onRegisterClick = async (cid: string) => {
+const rejgisterObject = async (cid: string) => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation register ($activityId: Int!, $objectId: String!) {
       register(activityId: $activityId, objectId: $objectId)
@@ -108,6 +115,40 @@ const onRegisterClick = async (cid: string) => {
     endpoint: 'activity',
     chainId: targetChain.value
   })
+}
+
+const rejgisterObjectThroughCheCko = (cid: string) => {
+  const query = gql`
+    mutation register ($activityId: Int!, $objectId: String!) {
+      register(activityId: $activityId, objectId: $objectId)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: activityApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          activityId: parseInt(`${activityId.value}`),
+          objectId: cid
+        },
+        operationName: 'register'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onRegisterClick = (cid: string) => {
+  if (cheCkoConnect.value) {
+    rejgisterObjectThroughCheCko(cid)
+  } else {
+    void rejgisterObject(cid)
+  }
 }
 
 </script>
