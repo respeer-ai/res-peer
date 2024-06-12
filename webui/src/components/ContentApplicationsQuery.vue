@@ -9,6 +9,7 @@ import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
 import { graphqlResult } from 'src/utils'
 import { useApplicationStore } from 'src/stores/application'
+import { useSettingStore } from 'src/stores/setting'
 
 const review = useReviewStore()
 const contentApplicationsKeys = computed(() => review.contentApplicationsKeys)
@@ -19,15 +20,16 @@ const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
 const application = useApplicationStore()
 const reviewApp = computed(() => application.reviewApp)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const ready = () => {
-  return /* targetChain.value?.length > 0 && */ reviewApp.value?.length > 0
+  return (cheCkoConnect.value || targetChain.value?.length > 0) && reviewApp.value?.length > 0
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getContentApplication = (contentApplicationKey: string, done?: () => void) => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getContentApplication($contentApplicationKey: String!) {
@@ -109,9 +111,15 @@ watch(contentApplicationKey, () => {
   if (!contentApplicationKey.value) {
     return
   }
-  getContentApplicationThroughCheCko(contentApplicationKey.value, () => {
-    contentIndex.value++
-  })
+  if (cheCkoConnect.value) {
+    getContentApplicationThroughCheCko(contentApplicationKey.value, () => {
+      contentIndex.value++
+    })
+  } else {
+    getContentApplication(contentApplicationKey.value, () => {
+      contentIndex.value++
+    })
+  }
 })
 
 watch(contentApplicationsKeys, () => {
