@@ -35,6 +35,8 @@ import gql from 'graphql-tag'
 import { useCollectionStore } from 'src/stores/collection'
 import { useUserStore } from 'src/stores/user'
 import { targetChain } from 'src/stores/chain'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const editing = ref(false)
 const collectionId = ref(0)
@@ -42,18 +44,15 @@ const tokenId = ref(0)
 const collection = useCollectionStore()
 const user = useUserStore()
 const account = computed(() => user.account)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const marketApp = computed(() => application.marketApp)
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
-const onSetAvatarClick = async () => {
-  if (collectionId.value <= 0) {
-    return
-  }
-  if (tokenId.value <= 0) {
-    return
-  }
-
+const setAvatar = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation setAvatar ($collectionId: Int!, $tokenId: Int!) {
       setAvatar(collectionId: $collectionId, tokenId: $tokenId)
@@ -72,6 +71,47 @@ const onSetAvatarClick = async () => {
     endpoint: 'market',
     chainId: targetChain.value
   })
+}
+
+const setAvatarThroughCheCko = () => {
+  const query = gql`
+    mutation setAvatar ($collectionId: Int!, $tokenId: Int!) {
+      setAvatar(collectionId: $collectionId, tokenId: $tokenId)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: marketApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          collectionId: parseInt(collectionId.value.toString()),
+          tokenId: parseInt(tokenId.value.toString())
+        },
+        operationName: 'submitContent'
+      }
+    }
+  }).then(() => {
+    editing.value = !editing.value
+    collection.avatars.set(account.value, [collectionId.value, tokenId.value])
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onSetAvatarClick = () => {
+  if (collectionId.value <= 0) {
+    return
+  }
+  if (tokenId.value <= 0) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    setAvatarThroughCheCko()
+  } else {
+    void setAvatar()
+  }
 }
 
 </script>
