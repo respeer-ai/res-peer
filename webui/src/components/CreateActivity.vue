@@ -168,6 +168,8 @@ import gql from 'graphql-tag'
 import { targetChain } from 'src/stores/chain'
 import { useRoute, useRouter } from 'vue-router'
 import { date } from 'quasar'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
@@ -179,6 +181,10 @@ const route = useRoute()
 const activityId = ref((route.query as unknown as Query).activityId)
 const activity = useActivityStore()
 const _activity = computed(() => activity.activity(Number(activityId.value)))
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const activityApp = computed(() => application.activityApp)
 
 const activity2Params = () => {
   if (!_activity.value) {
@@ -223,7 +229,10 @@ const params = ref({
     'https://ipfs.moralis.io:2053/ipfs/Qmdco6YbN7qK81tNbQw3RmnowSUXiEuaKjG6tt8FsChDuA',
     'https://ipfs.moralis.io:2053/ipfs/QmTSfgqeKUNvNUqRfQSFTbPkjjFDtGZFxWQkhyqWwMHhAJ'
   ],
-  introduction: 'Within the vote period, user can vote for their favorite novel listed in the candidates. The only criteria is how much you like the novel. The author of the winner novel will get 90% of the reward amount. Remainant part of the reward will be distributed to voter according to their vote power when they vote.',
+  introduction: 'Within the vote period, user can vote for their favorite novel listed in the candidates. ' +
+                'The only criteria is how much you like the novel. The author of the winner novel will get ' +
+                '90% of the reward amount. Remainant part of the reward will be distributed to voter according ' +
+                'to their vote power when they vote.',
   votable: true,
   activityType: ActivityType.Campaign,
   voteType: VoteType.Power,
@@ -396,9 +405,8 @@ const params2Gql = () => {
   return s
 }
 
-const onSubmitClick = async () => {
+const createActivity = async () => {
   const gqlStr = params2Gql()
-  console.log(gqlStr)
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql(
     gqlStr
   )))
@@ -418,6 +426,41 @@ const onSubmitClick = async () => {
     endpoint: 'activity',
     chainId: targetChain.value
   })
+}
+
+const createActivityThroughCheCko = () => {
+  const gqlStr = params2Gql()
+  const query = gql(gqlStr)
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: activityApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          params
+        }
+      }
+    }
+  }).then(() => {
+    void router.push({
+      path: '/dashboard',
+      query: {
+        tab: 'activity'
+      }
+    })
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onSubmitClick = () => {
+  if (cheCkoConnect.value) {
+    createActivityThroughCheCko()
+  } else {
+    void createActivity()
+  }
 }
 
 const onDeletePrizeConfig = (place: number) => {
