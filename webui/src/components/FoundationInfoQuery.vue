@@ -10,6 +10,7 @@ import { useApplicationStore } from 'src/stores/application'
 import { targetChain } from 'src/stores/chain'
 import { useFoundationStore } from 'src/stores/foundation'
 import { graphqlResult } from 'src/utils'
+import { useSettingStore } from 'src/stores/setting'
 
 const user = useUserStore()
 const account = computed(() => user.account)
@@ -20,29 +21,47 @@ const blockHeight = computed(() => block.blockHeight)
 const foundation = useFoundationStore()
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
 
 const ready = (): boolean => {
-  return account.value?.length > 0 && foundationApp.value?.length > 0 && targetChain.value?.length > 0
+  return account.value?.length > 0 && foundationApp.value?.length > 0 && (cheCkoConnect.value || targetChain.value?.length > 0)
 }
 
 watch(targetChain, () => {
   if (!ready()) return
-  getFoundationInfo()
+  if (cheCkoConnect.value) {
+    getFoundationInfoThroughCheCko()
+  } else {
+    getFoundationInfo()
+  }
 })
 
 watch(foundationApp, () => {
   if (!ready()) return
-  getFoundationInfo()
+  if (cheCkoConnect.value) {
+    getFoundationInfoThroughCheCko()
+  } else {
+    getFoundationInfo()
+  }
 })
 
 watch(account, () => {
   if (!ready()) return
-  getFoundationInfo()
+  if (cheCkoConnect.value) {
+    getFoundationInfoThroughCheCko()
+  } else {
+    getFoundationInfo()
+  }
 })
 
 watch(blockHeight, () => {
   if (!ready()) return
-  getFoundationInfo()
+  if (cheCkoConnect.value) {
+    getFoundationInfoThroughCheCko()
+  } else {
+    getFoundationInfo()
+  }
 })
 
 const getFoundationInfo = () => {
@@ -109,9 +128,79 @@ const getFoundationInfo = () => {
   })
 }
 
+const getFoundationInfoThroughCheCko = () => {
+  const query = (() => {
+    if (account.value) {
+      return gql`
+        query getFoundationInfo($account: String!) {
+          foundationBalance
+          reviewRewardPercent
+          reviewRewardBalance
+          reviewRewardFactor
+          authorRewardPercent
+          authorRewardBalance
+          authorRewardFactor
+          activityRewardPercent
+          activityRewardBalance
+          userBalances {
+            entry(key: $account) {
+              value
+            }
+          }
+        }`
+    }
+    return gql`
+      query getFoundationInfo {
+        foundationBalance
+        reviewRewardPercent
+        reviewRewardBalance
+        reviewRewardFactor
+        authorRewardPercent
+        authorRewardBalance
+        authorRewardFactor
+        activityRewardPercent
+        activityRewardBalance
+      }`
+  })()
+  const variables = {} as Record<string, string>
+  if (account.value) {
+    variables.account = `${account.value}`
+  }
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: foundationApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables,
+        operationName: 'getFoundationInfo'
+      }
+    }
+  }).then((result) => {
+    const userBalances = graphqlResult.keyValue(result, 'userBalances')
+    foundation.userLineraBalance = graphqlResult.entryValue(userBalances) as string
+    foundation.foundationBalance = graphqlResult.keyValue(result, 'foundationBalance') as string
+    foundation.reviewRewardBalance = graphqlResult.keyValue(result, 'reviewRewardBalance') as string
+    foundation.authorRewardBalance = graphqlResult.keyValue(result, 'reviewRewardBalance') as string
+    foundation.activityRewardBalance = graphqlResult.keyValue(result, 'reviewRewardBalance') as string
+    foundation.reviewRewardPercent = graphqlResult.keyValue(result, 'reviewRewardPercent') as number
+    foundation.reviewRewardFactor = graphqlResult.keyValue(result, 'reviewRewardFactor') as number
+    foundation.authorRewardPercent = graphqlResult.keyValue(result, 'authorRewardPercent') as number
+    foundation.authorRewardFactor = graphqlResult.keyValue(result, 'authorRewardFactor') as number
+    foundation.activityRewardPercent = graphqlResult.keyValue(result, 'activityRewardPercent') as number
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 onMounted(() => {
   if (!ready()) return
-  getFoundationInfo()
+  if (cheCkoConnect.value) {
+    getFoundationInfoThroughCheCko()
+  } else {
+    getFoundationInfo()
+  }
 })
 
 </script>

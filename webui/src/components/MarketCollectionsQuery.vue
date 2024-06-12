@@ -8,6 +8,8 @@ import { computed, watch, ref } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
 import { graphqlResult } from 'src/utils'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const collection = useCollectionStore()
 const collectionsKeys = computed(() => collection.collectionsKeys)
@@ -20,6 +22,10 @@ const blockHeight = computed(() => block.blockHeight)
 const forceFetch = ref(false)
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const marketApp = computed(() => application.marketApp)
 
 const getCollection = (collectionKey: number, done?: () => void) => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
@@ -55,6 +61,46 @@ const getCollection = (collectionKey: number, done?: () => void) => {
   })
 }
 
+const getCollectionThroughCheCko = (collectionKey: number, done?: () => void) => {
+  const query = gql`
+    query getCollection($collectionKey: Int!) {
+      collections {
+        entry(key: $collectionKey) {
+          value {
+            price
+            baseUri
+            uris
+            nfts
+            collectionId
+            name
+            publisher
+            createdAt
+          }
+        }
+      }
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: marketApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          collectionKey: parseInt(collectionKey.toString())
+        },
+        operationName: 'getCollection'
+      }
+    }
+  }).then((result) => {
+    const _collections = graphqlResult.data(result, 'collections')
+    collections.value.set(collectionKey, graphqlResult.entryValue(_collections) as Collection)
+    done?.()
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(collectionKey, () => {
   if (!collectionKey.value) {
     return
@@ -64,9 +110,15 @@ watch(collectionKey, () => {
     collectionIndex.value++
     return
   }
-  getCollection(collectionKey.value, () => {
-    collectionIndex.value++
-  })
+  if (cheCkoConnect.value) {
+    getCollectionThroughCheCko(collectionKey.value, () => {
+      collectionIndex.value++
+    })
+  } else {
+    getCollection(collectionKey.value, () => {
+      collectionIndex.value++
+    })
+  }
 })
 
 watch(targetChain, () => {
