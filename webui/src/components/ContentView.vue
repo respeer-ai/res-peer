@@ -28,11 +28,17 @@ import { sha256 } from 'multiformats/hashes/sha2'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 import ContentCardView from './ContentCardView.vue'
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
 interface Query {
   cid: string
@@ -47,11 +53,7 @@ const onCommentClick = () => {
   commenting.value = true
 }
 
-const onSubmitClick = async () => {
-  if (comment.value.length <= 0) {
-    return
-  }
-
+const commentContent = async () => {
   const bytes = json.encode({ comment })
   const hash = await sha256.digest(bytes)
   const commentCid = CID.create(1, json.code, hash).toString()
@@ -74,6 +76,49 @@ const onSubmitClick = async () => {
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const commentContentThroughCheCko = async () => {
+  const bytes = json.encode({ comment })
+  const hash = await sha256.digest(bytes)
+  const commentCid = CID.create(1, json.code, hash).toString()
+
+  const query = gql`
+    mutation submitComment ($cid: String!, $commentCid: String!, $comment: String!) {
+      submitComment(cid: $cid, commentCid: $commentCid, comment: $comment)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          cid: cid.value,
+          commentCid,
+          comment: comment.value
+        },
+        operationName: 'submitComment'
+      }
+    }
+  }).then(() => {
+    commenting.value = false
+  }).catch((e) => {
+    commenting.value = false
+    console.log(e)
+  })
+}
+
+const onSubmitClick = () => {
+  if (comment.value.length <= 0) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    void commentContentThroughCheCko()
+  } else {
+    void commentContent()
+  }
 }
 
 const onCancelClick = () => {
