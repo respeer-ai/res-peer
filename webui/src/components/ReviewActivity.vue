@@ -42,6 +42,8 @@ import { targetChain } from 'src/stores/chain'
 import { useUserStore } from 'src/stores/user'
 import { Activity, useActivityStore } from 'src/stores/activity'
 import { v4 as uuidv4 } from 'uuid'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 import ActivityCard from './ActivityCard.vue'
 
@@ -63,12 +65,12 @@ const account = computed(() => user.account)
 const reviewed = computed(() => review.activityReviewed(Number(activityId.value), account.value))
 const _review = computed(() => review.activityReview(Number(activityId.value), account.value))
 const reason = ref(_review.value?.reason || 'I supper like this activity, it will promote liquidity of Linera' + uuidv4())
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
-const onApproveClick = async () => {
-  if (!activityApplication.value || !reason.value.length) {
-    return
-  }
-
+const approveActivity = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation approveActivity($activityId: Int!, $reason: String!) {
       approveActivity(activityId: $activityId, reason: $reason)
@@ -86,6 +88,42 @@ const onApproveClick = async () => {
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const approveActivityThroughCheCko = () => {
+  const query = gql`
+    mutation approveActivity($activityId: Int!, $reason: String!) {
+      approveActivity(activityId: $activityId, reason: $reason)
+    }`
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          activityId: parseInt(activityId.value.toString()),
+          reason: reason.value
+        },
+        operationName: 'approveActivity'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onApproveClick = () => {
+  if (!activityApplication.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    approveActivityThroughCheCko()
+  } else {
+    void approveActivity()
+  }
   void router.push({
     path: '/dashboard',
     query: {
@@ -96,11 +134,7 @@ const onApproveClick = async () => {
   })
 }
 
-const onRejectClick = async () => {
-  if (!activityApplication.value || !reason.value.length) {
-    return
-  }
-
+const rejectActivity = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation rejectActivity ($activityId: Int!, $reason: String!) {
       rejectActivity(activityId: $activityId, reason: $reason)
@@ -118,14 +152,43 @@ const onRejectClick = async () => {
     endpoint: 'review',
     chainId: targetChain.value
   })
-  void router.push({
-    path: '/dashboard',
-    query: {
-      tab: 'review-activities',
-      host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+}
+
+const rejectActivityThroughCheCko = () => {
+  const query = gql`
+    mutation rejectActivity ($activityId: Int!, $reason: String!) {
+      rejectActivity(activityId: $activityId, reason: $reason)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          activityId: parseInt(activityId.value.toString()),
+          reason: reason.value
+        },
+        operationName: 'rejectActivity'
+      }
     }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
   })
+}
+
+const onRejectClick = () => {
+  if (!activityApplication.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    rejectActivityThroughCheCko()
+  } else {
+    void rejectActivity()
+  }
 }
 
 const onBackClick = () => {
