@@ -76,7 +76,8 @@ const depositThroughCheCko = () => {
         query: query.loc?.source?.body,
         variables: {
           amount: amount.value.toString()
-        }
+        },
+        operationName: 'userDeposit'
       }
     }
   }).then(() => {

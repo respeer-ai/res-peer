@@ -8,6 +8,8 @@ import { computed, watch, ref, onMounted } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
 import { graphqlResult } from 'src/utils'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const content = useContentStore()
 const contentsKeys = computed(() => content.contentsKeys)
@@ -19,6 +21,10 @@ const contentKey = computed(() => contentIndex.value >= 0 ? contentsKeys.value[c
 const mutateKeys = computed(() => content.mutateKeys)
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const feedApp = computed(() => application.feedApp)
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
@@ -72,6 +78,61 @@ const getContent = (contentKey: string, done?: () => void) => {
   })
 }
 
+const getContentThroughCheCko = (contentKey: string, done?: () => void) => {
+  const query = gql`
+    query getContent($contentKey: String!) {
+      contents {
+        entry(key: $contentKey) {
+          value {
+            accounts
+            cid
+            commentToCid
+            title
+            content
+            author
+            likes
+            dislikes
+            createdAt
+          }
+        }
+      }
+      contentRecommends {
+        entry(key: $contentKey) {
+          value
+        }
+      }
+      contentComments {
+        entry(key: $contentKey) {
+          value
+        }
+      }
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: feedApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          contentKey: `${contentKey}`
+        },
+        operationName: 'getContent'
+      }
+    }
+  }).then((result) => {
+    const _contents = graphqlResult.keyValue(result, 'contents')
+    contents.value.set(contentKey, graphqlResult.entryValue(_contents) as Content)
+    const _recommends = graphqlResult.keyValue(result, 'contentRecommends')
+    recommends.value.set(contentKey, graphqlResult.entryValue(_recommends) as Array<string>)
+    const _comments = graphqlResult.keyValue(result, 'contentComments')
+    comments.value.set(contentKey, graphqlResult.entryValue(_comments) as Array<string>)
+    done?.()
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(contentKey, () => {
   if (!contentKey.value) {
     return
@@ -82,10 +143,17 @@ watch(contentKey, () => {
     return
   }
 
-  getContent(contentKey.value, () => {
-    contentIndex.value++
-    mutateKeys.value.splice(index, 1)
-  })
+  if (cheCkoConnect.value) {
+    getContentThroughCheCko(contentKey.value, () => {
+      contentIndex.value++
+      mutateKeys.value.splice(index, 1)
+    })
+  } else {
+    getContent(contentKey.value, () => {
+      contentIndex.value++
+      mutateKeys.value.splice(index, 1)
+    })
+  }
 })
 
 watch(contentsKeys, () => {
@@ -104,7 +172,11 @@ watch(blockHeight, () => {
 
 onMounted(() => {
   content.mutateKeys.forEach((contentKey) => {
-    getContent(contentKey)
+    if (cheCkoConnect.value) {
+      getContentThroughCheCko(contentKey)
+    } else {
+      getContent(contentKey)
+    }
   })
   content.mutateKeys = []
 })
