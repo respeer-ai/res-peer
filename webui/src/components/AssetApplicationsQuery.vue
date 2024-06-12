@@ -8,6 +8,8 @@ import { computed, watch, ref } from 'vue'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
 import { graphqlResult } from 'src/utils'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 const review = useReviewStore()
 const assetApplicationsKeys = computed(() => review.assetApplicationsKeys)
@@ -16,6 +18,10 @@ const contentIndex = ref(-1)
 const assetApplicationKey = computed(() => contentIndex.value >= 0 ? assetApplicationsKeys.value[contentIndex.value] : undefined)
 const block = useBlockStore()
 const blockHeight = computed(() => block.blockHeight)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
@@ -52,13 +58,57 @@ const getAssetApplication = (assetApplicationKey: string, done?: () => void) => 
   })
 }
 
+const getAssetApplicationThroughCheCko = (assetApplicationKey: string, done?: () => void) => {
+  const query = gql`
+    query getAssetApplication($assetApplicationKey: String!) {
+      assetApplications(string: $assetApplicationKey) {
+        cid
+        baseUri
+        uris
+        author
+        price
+        name
+        reviewers
+        approved
+        rejected
+        createdAt
+      }
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          assetApplicationKey
+        },
+        operationName: 'getActivityApplication'
+      }
+    }
+  }).then((result) => {
+    const _assetApplications = graphqlResult.keyValue(result, 'assetApplications')
+    assetApplications.value.set(assetApplicationKey, graphqlResult.entryValue(_assetApplications) as Asset)
+    done?.()
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
 watch(assetApplicationKey, () => {
   if (!assetApplicationKey.value) {
     return
   }
-  getAssetApplication(assetApplicationKey.value, () => {
-    contentIndex.value++
-  })
+  if (cheCkoConnect.value) {
+    getAssetApplicationThroughCheCko(assetApplicationKey.value, () => {
+      contentIndex.value++
+    })
+  } else {
+    getAssetApplication(assetApplicationKey.value, () => {
+      contentIndex.value++
+    })
+  }
 })
 
 watch(assetApplicationsKeys, () => {
