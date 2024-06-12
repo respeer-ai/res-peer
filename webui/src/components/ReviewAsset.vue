@@ -83,6 +83,8 @@ import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
 import { useUserStore } from 'src/stores/user'
 import { v4 as uuidv4 } from 'uuid'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 interface Query {
   cid: string
@@ -100,12 +102,12 @@ const account = computed(() => user.account)
 const reviewed = computed(() => review.assetReviewed(cid.value, account.value))
 const _review = computed(() => review.assetReview(cid.value, account.value))
 const reason = ref(_review.value?.reason || 'I supper like this art not only it\'s about Linera, but also it\'s created by KK.' + uuidv4())
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
-const onApproveClick = async () => {
-  if (!asset.value || !reason.value.length) {
-    return
-  }
-
+const approveAsset = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation approveAsset ($cid: String!, $reason: String!) {
       approveAsset(cid: $cid reason: $reason)
@@ -118,11 +120,47 @@ const onApproveClick = async () => {
     console.log(error)
   })
   await mutate({
-    cid: asset.value.cid,
+    cid: asset.value?.cid,
     reason: reason.value,
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const approveAssetThroughCheCko = () => {
+  const query = gql`
+    mutation approveAsset ($cid: String!, $reason: String!) {
+      approveAsset(cid: $cid reason: $reason)
+    }`
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          cid: asset.value?.cid,
+          reason: reason.value
+        },
+        operationName: 'approveAsset'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onApproveClick = () => {
+  if (!asset.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    approveAssetThroughCheCko()
+  } else {
+    void approveAsset()
+  }
   void router.push({
     path: '/dashboard',
     query: {
@@ -133,11 +171,7 @@ const onApproveClick = async () => {
   })
 }
 
-const onRejectClick = async () => {
-  if (!asset.value || !reason.value.length) {
-    return
-  }
-
+const rejectAsset = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation rejectAsset ($cid: String!, $reason: String!) {
       rejectAsset(cid: $cid, reason: $reason)
@@ -150,11 +184,47 @@ const onRejectClick = async () => {
     console.log(error)
   })
   await mutate({
-    cid: asset.value.cid,
+    cid: asset.value?.cid,
     reason: reason.value,
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const rejectAssetThroughCheCko = () => {
+  const query = gql`
+    mutation rejectAsset ($cid: String!, $reason: String!) {
+      rejectAsset(cid: $cid, reason: $reason)
+    }`
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          cid: asset.value?.cid,
+          reason: reason.value
+        },
+        operationName: 'rejectAsset'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onRejectClick = () => {
+  if (!asset.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    rejectAssetThroughCheCko()
+  } else {
+    void rejectAsset()
+  }
   void router.push({
     path: '/dashboard',
     query: {
