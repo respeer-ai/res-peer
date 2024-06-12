@@ -196,6 +196,8 @@ import { provideApolloClient, useMutation } from '@vue/apollo-composable'
 import gql from 'graphql-tag'
 import { getClientOptions } from 'src/apollo'
 import { ApolloClient } from '@apollo/client/core'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 import ActivityVote from './ActivityVote.vue'
 import { targetChain } from 'src/stores/chain'
@@ -205,6 +207,10 @@ const apolloClient = new ApolloClient(options)
 
 const collection = useCollectionStore()
 const splitter = ref(200)
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
 interface Query {
   activityId: number
@@ -265,7 +271,7 @@ const onVoteClick = () => {
   })
 }
 
-const onFinalizeClick = async () => {
+const finalizeActivity = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation finalize($activityId: Int!) {
       finalize(activityId: $activityId)
@@ -282,6 +288,39 @@ const onFinalizeClick = async () => {
     endpoint: 'activity',
     chainId: targetChain.value
   })
+}
+
+const finalizeActivityThroughCheCko = () => {
+  const query = gql`
+    mutation finalize($activityId: Int!) {
+      finalize(activityId: $activityId)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          activityId: parseInt(activityId.value.toString())
+        },
+        operationName: 'finalize'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onFinalizeClick = () => {
+  if (cheCkoConnect.value) {
+    finalizeActivityThroughCheCko()
+  } else {
+    void finalizeActivity()
+  }
 }
 
 </script>
