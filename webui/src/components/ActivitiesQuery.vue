@@ -164,7 +164,7 @@ const getActivitiesThroughCheCko = (activityKey: number, done?: () => void) => {
         variables: {
           activityKey
         },
-        operationName: 'getActivitiesKeys'
+        operationName: 'getActivities'
       }
     }
   }).then((result) => {
