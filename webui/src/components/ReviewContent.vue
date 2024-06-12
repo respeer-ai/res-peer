@@ -68,6 +68,8 @@ import { sha256 } from 'multiformats/hashes/sha2'
 import { targetChain } from 'src/stores/chain'
 import { useUserStore } from 'src/stores/user'
 import { v4 as uuidv4 } from 'uuid'
+import { useSettingStore } from 'src/stores/setting'
+import { useApplicationStore } from 'src/stores/application'
 
 interface Query {
   cid: string
@@ -85,12 +87,12 @@ const account = computed(() => user.account)
 const reviewed = computed(() => review.contentReviewed(cid.value, account.value))
 const _review = computed(() => review.contentReview(cid.value, account.value))
 const reason = ref(_review.value?.reason || 'I supper like this article not only it\'s about Linera, but also it\'s write by KK.' + uuidv4())
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const application = useApplicationStore()
+const reviewApp = computed(() => application.reviewApp)
 
-const onApproveClick = async () => {
-  if (!content.value || !reason.value.length) {
-    return
-  }
-
+const approveContent = async () => {
   const bytes = json.encode({ reason })
   const hash = await sha256.digest(bytes)
   const cid = CID.create(1, json.code, hash).toString()
@@ -107,12 +109,54 @@ const onApproveClick = async () => {
     console.log(error)
   })
   await mutate({
-    contentCid: content.value.cid,
+    contentCid: content.value?.cid,
     reasonCid: cid,
     reason: reason.value,
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const approveContentThroughCheCko = async () => {
+  const bytes = json.encode({ reason })
+  const hash = await sha256.digest(bytes)
+  const cid = CID.create(1, json.code, hash).toString()
+
+  const query = gql`
+    mutation approveContent ($contentCid: String!, $reasonCid: String!, $reason: String!) {
+      approveContent(contentCid: $contentCid, reasonCid: $reasonCid, reason: $reason)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          contentCid: content.value?.cid,
+          reasonCid: cid,
+          reason: reason.value
+        },
+        operationName: 'approveContent'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onApproveClick = () => {
+  if (!content.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    void approveContentThroughCheCko()
+  } else {
+    void approveContent()
+  }
   void router.push({
     path: '/',
     query: {
@@ -122,11 +166,7 @@ const onApproveClick = async () => {
   })
 }
 
-const onRejectClick = async () => {
-  if (!content.value || !reason.value.length) {
-    return
-  }
-
+const rejectContent = async () => {
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
     mutation rejectContent ($contentCid: String!, $reason: String!) {
       rejectContent(contentCid: $contentCid, reason: $reason)
@@ -139,11 +179,48 @@ const onRejectClick = async () => {
     console.log(error)
   })
   await mutate({
-    contentCid: content.value.cid,
+    contentCid: content.value?.cid,
     reason: reason.value,
     endpoint: 'review',
     chainId: targetChain.value
   })
+}
+
+const rejectContentThroughCheCko = () => {
+  const query = gql`
+    mutation rejectContent ($contentCid: String!, $reason: String!) {
+      rejectContent(contentCid: $contentCid, reason: $reason)
+    }`
+
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: reviewApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          contentCid: content.value?.cid,
+          reason: reason.value
+        },
+        operationName: 'rejectContent'
+      }
+    }
+  }).then((result) => {
+    console.log(result)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onRejectClick = () => {
+  if (!content.value || !reason.value.length) {
+    return
+  }
+  if (cheCkoConnect.value) {
+    rejectContentThroughCheCko()
+  } else {
+    void rejectContent()
+  }
   void router.push({
     path: '/dashboard',
     query: {
