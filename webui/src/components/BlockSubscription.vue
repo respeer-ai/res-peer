@@ -5,14 +5,20 @@ import gql from 'graphql-tag'
 import { getClientOptions } from 'src/apollo'
 import { useBlockStore } from 'src/stores/block'
 import { targetChain } from 'src/stores/chain'
-import { onMounted, onUnmounted, watch, ref } from 'vue'
+import { onMounted, onUnmounted, watch, ref, computed } from 'vue'
+import { useSettingStore } from 'src/stores/setting'
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
 
 const block = useBlockStore()
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ready = () => {
+  return cheCkoConnect.value || targetChain.value?.length > 0
+}
+
 const subscribe = () => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useSubscription(gql`
     subscription notifications($chainId: String!) {
@@ -32,9 +38,12 @@ const subscribe = () => {
 }
 
 watch(targetChain, () => {
-  if (!targetChain.value) return
-  // subscribe()
-  subscribeThroughCheCko()
+  if (!ready()) return
+  if (cheCkoConnect.value) {
+    subscribeThroughCheCko()
+  } else {
+    subscribe()
+  }
 })
 
 const subscriptionHandler = (msg: unknown) => {
@@ -67,15 +76,20 @@ const unsubscribeThroughCheCko = () => {
 }
 
 onMounted(() => {
-  setTimeout(() => {
-    subscribeThroughCheCko()
-  }, 500)
-  // if (!targetChain.value) return
-  // subscribe()
+  if (!ready()) return
+  if (cheCkoConnect.value) {
+    setTimeout(() => {
+      subscribeThroughCheCko()
+    }, 500)
+  } else {
+    subscribe()
+  }
 })
 
 onUnmounted(() => {
-  unsubscribeThroughCheCko()
+  if (cheCkoConnect.value) {
+    unsubscribeThroughCheCko()
+  }
 })
 
 </script>
