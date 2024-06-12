@@ -161,7 +161,8 @@ const onApproveClick = () => {
     path: '/',
     query: {
       host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect')
     }
   })
 }
@@ -226,7 +227,8 @@ const onRejectClick = () => {
     query: {
       tab: 'review-contents',
       host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect')
     }
   })
 }
@@ -237,7 +239,8 @@ const onBackClick = () => {
     query: {
       tab: 'review-contents',
       host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect')
     }
   })
 }

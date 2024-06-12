@@ -80,7 +80,8 @@ const onCreateActivityClick = () => {
     path: '/create/activity',
     query: {
       host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect')
     }
   })
 }
@@ -91,6 +92,7 @@ const onActivityClick = (activity: Activity) => {
     query: {
       host: Cookies.get('service-host'),
       port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect'),
       activityId: activity.id
     }
   })

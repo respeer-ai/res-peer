@@ -56,7 +56,8 @@ const onReviewerClick = (reviewer: Reviewer) => {
     query: {
       reviewer: reviewer.reviewer,
       host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect')
     }
   })
 }

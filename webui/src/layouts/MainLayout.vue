@@ -119,7 +119,7 @@
 
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import { onBeforeMount, onMounted, ref, computed } from 'vue'
+import { onBeforeMount, ref, computed } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
@@ -171,7 +171,7 @@ interface Query {
 
 const port = ref((route.query as unknown as Query).port || constants.port)
 const host = ref((route.query as unknown as Query).host || constants.host)
-const cheCkoConnect = ref((route.query as unknown as Query).cheCkoConnect)
+const cheCkoConnect = ref(((route.query as unknown as Query).cheCkoConnect || 'true') === 'true')
 
 const onGithubClick = (uri: string) => {
   window.open(uri)
@@ -230,11 +230,10 @@ const onLoginClick = () => {
 onBeforeMount(() => {
   Cookies.set('service-port', port.value.toString())
   Cookies.set('service-host', host.value.toString())
-})
+  Cookies.set('cheCkoConnect', cheCkoConnect.value === undefined ? 'true' : cheCkoConnect.value ? 'true' : 'false')
 
-onMounted(() => {
   user.account = Cookies.get('account')
-  setting.cheCkoConnect = cheCkoConnect.value === undefined ? true : cheCkoConnect.value
+  setting.cheCkoConnect = Cookies.get('cheCkoConnect') === 'true'
 })
 
 const onNFTMarketClick = () => {

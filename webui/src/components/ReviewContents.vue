@@ -56,7 +56,8 @@ const onContentClick = (content: Content) => {
     query: {
       cid: content.cid,
       host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect')
     }
   })
 }

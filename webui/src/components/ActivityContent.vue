@@ -255,6 +255,7 @@ const onRegisterClick = () => {
     query: {
       host: Cookies.get('service-host'),
       port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect'),
       activityId: activity.value?.id
     }
   })
@@ -266,6 +267,7 @@ const onVoteClick = () => {
     query: {
       host: Cookies.get('service-host'),
       port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect'),
       activityId: activity.value?.id
     }
   })

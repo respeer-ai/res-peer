@@ -58,7 +58,8 @@ const onActivityClick = (activity: Activity) => {
     query: {
       activityId: activity.activityId,
       host: Cookies.get('service-host'),
-      port: Cookies.get('service-port')
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect')
     }
   })
 }
