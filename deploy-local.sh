@@ -95,6 +95,7 @@ echo -e "    Bytecode ID:    $BLUE$activity_bid$NC"
 echo -e "    Application ID: $BLUE$activity_appid$NC"
 
 app_deploy_chain=`linera --with-wallet 1 wallet show | grep "Public Key" | awk '{print $2}'`
+app_deploy_owner=`linera --with-wallet 1 wallet show | grep "Owner" | awk '{print $4}'`
 
 sed -i "s/feedApp =.*/feedApp = '$feed_appid',/g" webui/src/const/index.ts
 sed -i "s/creditApp =.*/creditApp = '$credit_appid',/g" webui/src/const/index.ts
@@ -103,6 +104,7 @@ sed -i "s/reviewApp =.*/reviewApp = '$review_appid',/g" webui/src/const/index.ts
 sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid'/g" webui/src/const/index.ts
 sed -i "s/activityApp =.*/activityApp = '$activity_appid',/g" webui/src/const/index.ts
 sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
+sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts
 
 function run_new_service() {
   BASE_PORT=9080
