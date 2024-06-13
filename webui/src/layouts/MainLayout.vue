@@ -352,6 +352,7 @@ onBeforeMount(() => {
     }
   } else {
     user.account = constants.appDeployOwner
+    user.chainId = constants.appDeployChain
   }
 })
 
