@@ -301,7 +301,6 @@ const getProviderState = () => {
     method: 'metamask_getProviderState'
   }).then((result) => {
     user.chainId = ((result as Record<string, string>).chainId).substring(2)
-    console.log(user.chainId, chainId.value)
   }).catch((e) => {
     console.log('metamask_getProviderState', e)
   })

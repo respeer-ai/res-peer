@@ -9,6 +9,7 @@ import { getClientOptions } from 'src/apollo'
 import { targetChain } from 'src/stores/chain'
 import { graphqlResult } from 'src/utils'
 import { useSettingStore } from 'src/stores/setting'
+import Web3 from 'web3'
 
 const user = useUserStore()
 const block = useBlockStore()
@@ -78,17 +79,25 @@ const getChainAccountBalancesThroughCheCko = () => {
   }).then((result) => {
     const balances = graphqlResult.keyValue(result, 'balances') as Record<string, ChainAccountBalances>
     user.chainBalance = balances[chainId.value]?.chain_balance.toString()
-    user.accountBalance = '0'
-    Object.values(balances).forEach((v) => {
-      user.accountBalance = (Number(user.accountBalance) + Number(v.account_balances[account.value] || 0) + Number(v.chain_balance)).toString()
-    })
   }).catch((e) => {
     console.log(e)
   })
 }
 
+const getAccountBalance = () => {
+  const web3 = new Web3(window.linera)
+  web3.eth.getBalance('0x' + account.value.slice(0, 40) /* Work around for web3.js address format */)
+    .then((result) => {
+      user.accountBalance = result.toString()
+    })
+    .catch((e) => {
+      console.log('eth_getBalance', e)
+    })
+}
+
 watch(blockHeight, () => {
   if (!ready()) return
+  getAccountBalance()
   if (cheCkoConnect.value) {
     getChainAccountBalancesThroughCheCko()
   } else {
@@ -98,6 +107,7 @@ watch(blockHeight, () => {
 
 watch(account, () => {
   if (!ready()) return
+  getAccountBalance()
   if (cheCkoConnect.value) {
     getChainAccountBalancesThroughCheCko()
   } else {
@@ -125,6 +135,7 @@ watch(targetChain, () => {
 
 onMounted(() => {
   if (!ready()) return
+  getAccountBalance()
   if (cheCkoConnect.value) {
     getChainAccountBalancesThroughCheCko()
   } else {
