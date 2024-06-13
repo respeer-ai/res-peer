@@ -344,10 +344,14 @@ onBeforeMount(() => {
   user.account = Cookies.get('account')
   setting.cheCkoConnect = Cookies.get('cheCkoConnect') === 'true'
 
-  if (user.account?.length) {
-    setTimeout(() => {
-      getProviderState()
-    }, 1000)
+  if (setting.cheCkoConnect) {
+    if (user.account?.length) {
+      setTimeout(() => {
+        getProviderState()
+      }, 1000)
+    }
+  } else {
+    user.account = constants.appDeployOwner
   }
 })
 
