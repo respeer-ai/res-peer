@@ -269,7 +269,8 @@ const onDashboardClick = () => {
     path: '/dashboard',
     query: {
       host: host.value,
-      port: port.value
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
     }
   })
 }
@@ -280,7 +281,8 @@ const onActivityClick = () => {
     path: '/activities',
     query: {
       host: host.value,
-      port: port.value
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
     }
   })
 }
@@ -362,7 +364,8 @@ const onNFTMarketClick = () => {
     path: '/market',
     query: {
       host: host.value,
-      port: port.value
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
     }
   })
 }

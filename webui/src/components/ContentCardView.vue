@@ -159,9 +159,12 @@ const _getContentAvatar = () => {
   const account = _content.value?.author
   const { result /*, fetchMore, onResult, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getMarketInfo($account: String!) {
-        avatars(owner: $account)
+      avatars {
+        entry(key: $account) {
+          value
+        }
       }
-    `, {
+    }`, {
     account: `${account}`,
     endpoint: 'market',
     chainId: targetChain.value

@@ -54,7 +54,7 @@
 </template>
 
 <script lang='ts' setup>
-import { useReviewStore } from 'src/stores/review'
+import { Content, useReviewStore } from 'src/stores/review'
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Cookies, date } from 'quasar'
@@ -92,7 +92,7 @@ const cheCkoConnect = computed(() => setting.cheCkoConnect)
 const application = useApplicationStore()
 const reviewApp = computed(() => application.reviewApp)
 
-const approveContent = async () => {
+const approveContent = async (content: Content) => {
   const bytes = json.encode({ reason })
   const hash = await sha256.digest(bytes)
   const cid = CID.create(1, json.code, hash).toString()
@@ -109,7 +109,7 @@ const approveContent = async () => {
     console.log(error)
   })
   await mutate({
-    contentCid: content.value?.cid,
+    contentCid: content.cid,
     reasonCid: cid,
     reason: reason.value,
     endpoint: 'review',
@@ -117,7 +117,7 @@ const approveContent = async () => {
   })
 }
 
-const approveContentThroughCheCko = async () => {
+const approveContentThroughCheCko = async (content: Content) => {
   const bytes = json.encode({ reason })
   const hash = await sha256.digest(bytes)
   const cid = CID.create(1, json.code, hash).toString()
@@ -134,7 +134,7 @@ const approveContentThroughCheCko = async () => {
       query: {
         query: query.loc?.source?.body,
         variables: {
-          contentCid: content.value?.cid,
+          contentCid: content.cid,
           reasonCid: cid,
           reason: reason.value
         },
@@ -153,9 +153,9 @@ const onApproveClick = () => {
     return
   }
   if (cheCkoConnect.value) {
-    void approveContentThroughCheCko()
+    void approveContentThroughCheCko(content.value)
   } else {
-    void approveContent()
+    void approveContent(content.value)
   }
   void router.push({
     path: '/',

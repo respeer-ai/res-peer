@@ -97,8 +97,8 @@ const getAccountBalance = () => {
 
 watch(blockHeight, () => {
   if (!ready()) return
-  getAccountBalance()
   if (cheCkoConnect.value) {
+    getAccountBalance()
     getChainAccountBalancesThroughCheCko()
   } else {
     getChainAccountBalances()
@@ -107,8 +107,8 @@ watch(blockHeight, () => {
 
 watch(account, () => {
   if (!ready()) return
-  getAccountBalance()
   if (cheCkoConnect.value) {
+    getAccountBalance()
     getChainAccountBalancesThroughCheCko()
   } else {
     getChainAccountBalances()
@@ -135,8 +135,8 @@ watch(targetChain, () => {
 
 onMounted(() => {
   if (!ready()) return
-  getAccountBalance()
   if (cheCkoConnect.value) {
+    getAccountBalance()
     getChainAccountBalancesThroughCheCko()
   } else {
     getChainAccountBalances()
