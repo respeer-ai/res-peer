@@ -56,7 +56,7 @@
                       <div class='text-bold'>
                         {{ shortid.shortId(account, 16) }}
                       </div>
-                      <div :style='{marginLeft: "8px"}'>
+                      <div :style='{marginLeft: "8px"}' class='cursor-pointer'>
                         <q-icon name='content_copy' size='16px' class='text-grey-6' />
                       </div>
                     </div>
@@ -78,7 +78,7 @@
                       <div class='text-bold'>
                         {{ shortid.shortId(chainId, 16) }}
                       </div>
-                      <div :style='{marginLeft: "8px"}'>
+                      <div :style='{marginLeft: "8px"}' class='cursor-pointer'>
                         <q-icon name='content_copy' size='16px' class='text-grey-6' />
                       </div>
                     </div>
