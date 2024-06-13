@@ -180,7 +180,11 @@ const getContentAvatarThroughCheCko = () => {
   const account = _content.value?.author
   const query = gql`
     query getMarketInfo($account: String!) {
-      avatars(owner: $account)
+      avatars {
+        entry(key: $account) {
+          value
+        }
+      }
     }`
 
   window.linera.request({
