@@ -21,7 +21,6 @@ use review::{
     Asset, Content, InstantiationArgument, Message, Operation, ReviewError, ReviewParameters,
     ReviewResponse, Reviewer,
 };
-use log::info;
 
 pub struct ReviewContract {
     state: Review,
@@ -308,7 +307,6 @@ impl ReviewContract {
             author,
         };
         let feed_app_id = self.feed_app_id();
-        info!("Publish content {} author {}", cid, author);
         self.runtime.call_application(true, feed_app_id, &call);
         Ok(())
     }
@@ -1169,7 +1167,6 @@ impl ReviewContract {
         reason_cid: Option<String>,
         reason: Option<String>,
     ) -> Result<(), ReviewError> {
-        info!("Approve content {}", content_cid);
         let reviewer = self.require_authenticated_signer()?;
         let creation_chain =
             self.runtime.chain_id() != self.runtime.application_id().creation.chain_id;

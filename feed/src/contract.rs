@@ -15,7 +15,6 @@ use linera_sdk::{
     views::{RootView, View, ViewStorageContext},
     Contract, ContractRuntime,
 };
-use log::info;
 
 pub struct FeedContract {
     state: Feed,
@@ -413,11 +412,9 @@ impl FeedContract {
             creation_chain,
         )
         .await?;
-        info!("Feed publish content {} author {}", cid, author);
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
             return Ok(());
         }
-        info!("Feed broadcast publish content {} author {}", cid, author);
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
             .prepare_message(Message::Publish { cid, title, content, author })
