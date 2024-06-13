@@ -381,14 +381,14 @@ impl FeedContract {
         Ok(())
     }
 
-    async fn on_msg_tip(&mut self, cid: String, _amount: Amount) -> Result<(), FeedError> {
+    async fn on_msg_tip(&mut self, cid: String, amount: Amount) -> Result<(), FeedError> {
         // TODO: transfer amount from signer to author
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
             return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Dislike { cid })
+            .prepare_message(Message::Tip { cid, amount })
             .with_authentication()
             .send_to(dest);
         Ok(())
@@ -417,7 +417,7 @@ impl FeedContract {
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Dislike { cid })
+            .prepare_message(Message::Publish { cid, title, content, author })
             .with_authentication()
             .send_to(dest);
         Ok(())
@@ -449,7 +449,7 @@ impl FeedContract {
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Dislike { cid })
+            .prepare_message(Message::Recommend { cid, reason_cid, reason })
             .with_authentication()
             .send_to(dest);
         Ok(())
@@ -481,7 +481,7 @@ impl FeedContract {
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Dislike { cid })
+            .prepare_message(Message::Comment { cid, comment_cid, comment, commentor })
             .with_authentication()
             .send_to(dest);
         Ok(())
