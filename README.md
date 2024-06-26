@@ -69,7 +69,7 @@ Users can reward content they like with Linera token. They also can use the asse
 ## Compiling and Deployment
 You should install yarn, rust before next steps.
 ```
-git clone https://github.com/linera-project/linera-protocol.git
+git clone https://github.com/linera-io/linera-protocol.git
 cd linera-protocol
 cargo install --path linera-service
 git clone https://github.com/web3eye-io/res-peer.git
