@@ -24,7 +24,6 @@ print $'\U01F4AB' $YELLOW " Running lienra net, log in $NODE_LOG_FILE ..."
 lineradir=`whereis linera | awk '{print $2}'`
 lineradir=`dirname $lineradir`
 cd $lineradir
-# linera net up --extra-wallets $EXTRA_WALLET_NUMBER --shards 3 --validators 3 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
 linera net up --extra-wallets $EXTRA_WALLET_NUMBER 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
 cd -
 
