@@ -85,8 +85,8 @@ yarn start
 ## Todo
 
 - [ ] Store content to blob
- - [ ] Publish content to blob storage
- - [ ] Get content from blob storage
+  - [ ] Publish content to blob storage
+  - [ ] Get content from blob storage
 - [ ] Implement foundation with native token
 - [ ] Implement assets trading with temporary chain
 - [ ] Support author copilot
