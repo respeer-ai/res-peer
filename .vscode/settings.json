@@ -1,6 +1,0 @@
-{
-    "rust-analyzer.linkedProjects": [
-        "./feed/Cargo.toml",
-        "./credit/Cargo.toml"
-    ]
-}
