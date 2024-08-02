@@ -106,4 +106,5 @@ yarn start
   - [ ] Implement resource rental work flow
   - [ ] Implement micro payment
   - [ ] Implement task / resource match
+- [ ] Integrate rich text editor and media resource management
 - [ ] New webui
