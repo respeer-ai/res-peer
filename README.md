@@ -90,3 +90,4 @@ yarn start
 - [ ] Support author copilot
 - [ ] Implement cpregistry application
 - [ ] Implement task/resource match
+- [ ] New webui
