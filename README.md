@@ -88,8 +88,22 @@ yarn start
   - [ ] Publish content to blob storage
   - [ ] Get content from blob storage
 - [ ] Implement foundation with native token
+  - [ ] Implement deposit/withdraw with native token
 - [ ] Implement assets trading with temporary chain
+  - [ ] Implement multi owner creation in frontend
+  - [ ] Implement application of atomic exchange
 - [ ] Support author copilot
+  - [ ] Integrate CoEDiT T5 model
+  - [ ] Integrate stable diffusion model
+  - [ ] Implement tokens buffer
+  - [ ] Implement asynchronize tokens query
+  - [ ] Support task list in frontend
+  - [ ] Support text compare in frontend
 - [ ] Implement cpregistry application
 - [ ] Implement task/resource match
+  - [ ] Implement resource capacity register
+  - [ ] Implement resource state report
+  - [ ] Implement resource rental work flow
+  - [ ] Implement micro payment
+  - [ ] Implement task / resource match
 - [ ] New webui
