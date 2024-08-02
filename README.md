@@ -82,3 +82,11 @@ yarn
 yarn start
 ```
 
+## Todo
+
+- [ ] Store content to blob
+- [ ] Implement foundation with native token
+- [ ] Implement assets trading with temporary chain
+- [ ] Support author copilot
+- [ ] Implement cpregistry application
+- [ ] Implement task/resource match
