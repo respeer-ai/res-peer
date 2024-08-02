@@ -1,4 +1,4 @@
-<div>
+<template>
   <div :style='{width: "720px", margin: "0 auto"}' class='flex justify-center items-center row'>
     <q-img
       src='~assets/ResPeer.png' width='160px' fit='contain' class='cursor-pointer'
@@ -112,4 +112,148 @@
       @click='onDashboardClick'
     />
   </div>
-</div>
+</template>
+
+<script setup lang="ts">
+import { useRouter, useRoute } from 'vue-router'
+import { onBeforeMount, ref, computed } from 'vue'
+import { Cookies } from 'quasar'
+import { useUserStore } from 'src/stores/user'
+import { useSettingStore } from 'src/stores/setting'
+import * as constants from 'src/const'
+import { shortid } from 'src/utils'
+import { Web3 } from 'web3'
+
+const router = useRouter()
+const logining = ref(false)
+const user = useUserStore()
+const route = useRoute()
+const tab = ref('feed')
+const account = computed(() => user.account?.trim())
+const chainId = computed(() => user.chainId?.trim())
+const accountBalance = computed(() => user.accountBalance)
+const chainBalance = computed(() => user.chainBalance)
+const setting = useSettingStore()
+
+interface Query {
+  port: number
+  host: string
+  cheCkoConnect?: boolean
+}
+
+const port = ref((route.query as unknown as Query).port || constants.port)
+const host = ref((route.query as unknown as Query).host || constants.host)
+const cheCkoConnect = ref(((route.query as unknown as Query).cheCkoConnect || 'true') === 'true')
+
+const onDashboardClick = () => {
+  tab.value = 'dashboard'
+  void router.push({
+    path: '/dashboard',
+    query: {
+      host: host.value,
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
+    }
+  })
+}
+
+const onActivityClick = () => {
+  tab.value = 'activity'
+  void router.push({
+    path: '/activities',
+    query: {
+      host: host.value,
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
+    }
+  })
+}
+
+const onLogoClick = () => {
+  tab.value = 'feed'
+  void router.push({
+    path: '/',
+    query: {
+      host: host.value,
+      port: port.value
+    }
+  })
+}
+
+const getProviderState = () => {
+  window.linera.request({
+    method: 'metamask_getProviderState'
+  }).then((result) => {
+    user.chainId = ((result as Record<string, string>).chainId).substring(2)
+  }).catch((e) => {
+    console.log('metamask_getProviderState', e)
+  })
+}
+
+const onLoginClick = () => {
+  if (account.value?.length) {
+    return
+  }
+  if (!window.linera) {
+    return window.open('https://github.com/respeer-ai/linera-wallet.git')
+  }
+
+  logining.value = true
+  const web3 = new Web3(window.linera)
+  web3.eth.requestAccounts()
+    .then((accounts) => {
+      logining.value = false
+      if (accounts.length) {
+        Cookies.set('account', accounts[0])
+        user.account = accounts[0]
+        getProviderState()
+      }
+    })
+    .catch((e) => {
+      logining.value = false
+      console.log('eth_requestAccounts', e)
+    })
+}
+
+const onLogoutClick = () => {
+  Cookies.remove('account')
+  user.$reset()
+}
+
+onBeforeMount(() => {
+  Cookies.set('service-port', port.value.toString())
+  Cookies.set('service-host', host.value.toString())
+  Cookies.set('cheCkoConnect', cheCkoConnect.value === undefined ? 'true' : cheCkoConnect.value ? 'true' : 'false')
+
+  user.account = Cookies.get('account')
+  setting.cheCkoConnect = Cookies.get('cheCkoConnect') === 'true'
+
+  if (setting.cheCkoConnect) {
+    if (user.account?.length) {
+      setTimeout(() => {
+        getProviderState()
+      }, 1000)
+    }
+  } else {
+    user.account = constants.appDeployOwner
+    user.chainId = constants.appDeployChain
+  }
+})
+
+const onNFTMarketClick = () => {
+  tab.value = 'store'
+  void router.push({
+    path: '/market',
+    query: {
+      host: host.value,
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
+    }
+  })
+}
+</script>
+
+<style scoped lang="sass">
+.q-layout__section--marginal
+  background-color: white
+</style>
