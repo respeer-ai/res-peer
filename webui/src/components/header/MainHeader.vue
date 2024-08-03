@@ -148,7 +148,7 @@
 
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import { onBeforeMount, ref, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
@@ -162,12 +162,17 @@ const router = useRouter()
 const logining = ref(false)
 const user = useUserStore()
 const route = useRoute()
-const tab = ref('feed')
 const account = computed(() => user.account?.trim())
 const chainId = computed(() => user.chainId?.trim())
 const accountBalance = computed(() => user.accountBalance)
 const chainBalance = computed(() => user.chainBalance)
 const setting = useSettingStore()
+const tab = computed({
+  get: () => setting.currentTab,
+  set: (v: string) => {
+    setting.currentTab = v
+  }
+})
 
 interface Query {
   port: number
@@ -254,26 +259,6 @@ const onLogoutClick = () => {
   Cookies.remove('account')
   user.$reset()
 }
-
-onBeforeMount(() => {
-  Cookies.set('service-port', port.value.toString())
-  Cookies.set('service-host', host.value.toString())
-  Cookies.set('cheCkoConnect', cheCkoConnect.value === undefined ? 'true' : cheCkoConnect.value ? 'true' : 'false')
-
-  user.account = Cookies.get('account')
-  setting.cheCkoConnect = Cookies.get('cheCkoConnect') === 'true'
-
-  if (setting.cheCkoConnect) {
-    if (user.account?.length) {
-      setTimeout(() => {
-        getProviderState()
-      }, 1000)
-    }
-  } else {
-    user.account = constants.appDeployOwner
-    user.chainId = constants.appDeployChain
-  }
-})
 
 const onNFTMarketClick = () => {
   tab.value = 'store'

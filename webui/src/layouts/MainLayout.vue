@@ -39,32 +39,7 @@
     </q-page-container>
 
     <q-footer elevated :style='{height: "32px", lineHeight: "32px"}'>
-      <div class='row' :style='{width: "720px", margin: "0 auto"}'>
-        <q-img
-          src='~assets/ResPeer.png' width='80px' fit='contain' class='cursor-pointer'
-          @click='onLogoClick'
-        />
-        <q-space />
-        <span class='text-grey-6'>Peer-to-Peer content publishing application on Linera</span>
-        <q-space />
-        <q-img
-          src='https://avatars.githubusercontent.com/u/107513858?s=48&v=4'
-          width='24px'
-          height='24px'
-          :style='{marginLeft: "8px", marginTop: "4px"}'
-          class='cursor-pointer'
-          @click='onGithubClick("https://github.com/linera-io/linera-protocol.git")'
-        />
-        <q-img
-          src='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAPxlNRQziXOi61fD4jtkxAm-v6pPbT_UIF5IL1_PqCQ&s=10'
-          width='24px'
-          height='24px'
-          :style='{marginLeft: "8px", marginTop: "4px"}'
-          class='cursor-pointer'
-
-          @click='onGithubClick("https://github.com/web3eye-io/res-peer.git")'
-        />
-      </div>
+      <MainFooter />
     </q-footer>
     <q-dialog
       v-model='logining'
@@ -88,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { onBeforeMount, ref } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
@@ -96,6 +71,7 @@ import { useSettingStore } from 'src/stores/setting'
 import * as constants from 'src/const'
 
 import MainHeader from 'src/components/header/MainHeader.vue'
+import MainFooter from 'src/components/footer/MainFooter.vue'
 
 import CreditQuery from 'src/components/CreditQuery.vue'
 import BlockSubscription from 'src/components/BlockSubscription.vue'
@@ -126,11 +102,9 @@ import ActivityApplicationsKeysQuery from 'src/components/ActivityApplicationsKe
 import ActivityApplicationsQuery from 'src/components/ActivityApplicationsQuery.vue'
 import NativeBalanceQuery from 'src/components/NativeBalanceQuery.vue'
 
-const router = useRouter()
 const logining = ref(false)
 const user = useUserStore()
 const route = useRoute()
-const tab = ref('feed')
 const setting = useSettingStore()
 
 interface Query {
@@ -142,21 +116,6 @@ interface Query {
 const port = ref((route.query as unknown as Query).port || constants.port)
 const host = ref((route.query as unknown as Query).host || constants.host)
 const cheCkoConnect = ref(((route.query as unknown as Query).cheCkoConnect || 'true') === 'true')
-
-const onGithubClick = (uri: string) => {
-  window.open(uri)
-}
-
-const onLogoClick = () => {
-  tab.value = 'feed'
-  void router.push({
-    path: '/',
-    query: {
-      host: host.value,
-      port: port.value
-    }
-  })
-}
 
 const getProviderState = () => {
   window.linera.request({
