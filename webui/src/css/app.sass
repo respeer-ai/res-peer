@@ -1,1 +1,40 @@
 // app global css in Sass form
+
+/* width */
+::-webkit-scrollbar
+  width: 4px
+
+/* Track */
+::-webkit-scrollbar-track
+  box-shadow: inset 0 0 2px grey
+  border-radius: 2px
+
+/* Handle */
+::-webkit-scrollbar-thumb
+  background: $red-2
+  border-radius: 4px
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover
+  background: $red-2
+
+.q-field__control,
+.q-field__marginal
+  height: 36px !important
+
+.input-background
+  background: $grey-2
+
+.q-field--outlined .q-field__control:before
+  border: 0px solid rgba(0, 0, 0, 0.05) !important
+
+.header-icon
+  height: 36px
+  width: 36px
+  margin: auto 0 auto 8px
+  padding: 6px
+  border-radius: 4px
+  transition: 1s
+
+.header-icon:hover
+  background: $red-2 !important

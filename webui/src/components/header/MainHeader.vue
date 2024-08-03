@@ -1,18 +1,48 @@
 <template>
-  <div :style='{width: "720px", margin: "0 auto"}' class='flex justify-center items-center row'>
+  <div :style='{width: "100%", margin: "0 auto"}' class='flex justify-center items-center row'>
+    <div :style='{borderRadius: "18px"}' class='input-background'>
+      <q-input
+        v-model='setting.searchTextFilter'
+        debounce='500'
+        rounded
+        outlined
+        placeholder='Title / Content / Comment'
+        :style='{width: "320px"}'
+      >
+        <template #prepend>
+          <q-icon name='bi-filter-left' size='24px' />
+        </template>
+      </q-input>
+    </div>
+    <q-space />
     <q-img
-      src='~assets/ResPeer.png' width='160px' fit='contain' class='cursor-pointer'
+      :src='resPeerLogo' width='160px' height='36px' fit='contain'
+      class='cursor-pointer'
       @click='onLogoClick'
     />
     <q-space />
-    <q-icon
-      name='store' size='24px' :color='tab == "store" ? "green" : "black"' class='cursor-pointer'
-      @click='onNFTMarketClick'
-    />
+    <div class='header-icon'>
+      <q-icon
+        name='bi-layout-wtf' size='24px' :color='tab == "store" ? "red-6" : "black"' class='cursor-pointer'
+        @click='onNFTMarketClick'
+      />
+      <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
+        NFT Market Place
+      </q-tooltip>
+    </div>
+    <div class='header-icon'>
+      <q-icon
+        name='bi-columns-gap' size='24px' :color='tab == "activity" ? "red-6" : "black"' class='cursor-pointer'
+        @click='onActivityClick'
+      />
+      <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
+        Activity Center
+      </q-tooltip>
+    </div>
     <q-btn
       flat rounded class='bg-red-2'
       @click='onLoginClick'
-      :style='{marginLeft: "8px"}'
+      :style='{marginLeft: "16px"}'
     >
       <q-menu
         v-if='account?.length'
@@ -100,17 +130,15 @@
         {{ account?.length ? shortid.shortId(account, 4) : 'Login' }}
       </div>
     </q-btn>
-    <q-icon
-      name='local_activity' size='24px' :color='tab == "activity" ? "green" : "black"' class='cursor-pointer'
-      :style='{marginLeft: "8px"}'
-      @click='onActivityClick'
-    />
-    <q-icon
-      v-if='account?.length'
-      name='dashboard' size='24px' :color='tab == "dashboard" ? "green" : "black"' class='cursor-pointer'
-      :style='{marginLeft: "8px"}'
-      @click='onDashboardClick'
-    />
+    <div class='header-icon' v-if='account?.length'>
+      <q-icon
+        name='bi-grid-1x2' size='24px' :color='tab == "dashboard" ? "red-6" : "black"' class='cursor-pointer'
+        @click='onDashboardClick'
+      />
+      <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
+        Dashboard
+      </q-tooltip>
+    </div>
   </div>
 </template>
 
@@ -123,6 +151,8 @@ import { useSettingStore } from 'src/stores/setting'
 import * as constants from 'src/const'
 import { shortid } from 'src/utils'
 import { Web3 } from 'web3'
+
+import resPeerLogo from 'src/assets/ResPeer.png'
 
 const router = useRouter()
 const logining = ref(false)
@@ -175,7 +205,8 @@ const onLogoClick = () => {
     path: '/',
     query: {
       host: host.value,
-      port: port.value
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
     }
   })
 }
