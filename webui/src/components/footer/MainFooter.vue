@@ -5,7 +5,7 @@
       @click='onLogoClick'
     />
     <q-space />
-    <span class='text-grey-6'>Earn Linera token with your Creativity</span>
+    <span class='text-grey-6'>Earn Linera with your Creativity</span>
     <q-space />
     <q-img
       src='https://avatars.githubusercontent.com/u/107513858?s=48&v=4'
@@ -47,18 +47,20 @@ interface Query {
 
 const port = ref((route.query as unknown as Query).port || constants.port)
 const host = ref((route.query as unknown as Query).host || constants.host)
+const cheCkoConnect = ref(((route.query as unknown as Query).cheCkoConnect || 'true') === 'true')
 
 const onGithubClick = (uri: string) => {
   window.open(uri)
 }
 
 const onLogoClick = () => {
-  setting.currentTab = 'feed'
+  setting.currentMainTab = 'feed'
   void router.push({
     path: '/',
     query: {
       host: host.value,
-      port: port.value
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
     }
   })
 }

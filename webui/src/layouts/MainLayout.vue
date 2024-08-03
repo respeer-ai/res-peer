@@ -1,10 +1,21 @@
 <template>
-  <q-layout view='lHh Lpr lFf'>
-    <q-header elevated>
+  <q-layout view='hHh Lpr hFf'>
+    <q-header bordered>
       <q-toolbar>
         <MainHeader />
       </q-toolbar>
     </q-header>
+
+    <q-drawer
+      :width='280'
+      show-if-above
+      :breakpoint='500'
+      bordered
+    >
+      <q-scroll-area class='fit'>
+        <MainDrawer />
+      </q-scroll-area>
+    </q-drawer>
 
     <q-page-container>
       <router-view />
@@ -38,7 +49,7 @@
       <native-balance-query />
     </q-page-container>
 
-    <q-footer elevated :style='{height: "32px", lineHeight: "32px"}'>
+    <q-footer bordered :style='{height: "32px", lineHeight: "32px"}'>
       <MainFooter />
     </q-footer>
     <q-dialog
@@ -72,6 +83,7 @@ import * as constants from 'src/const'
 
 import MainHeader from 'src/components/header/MainHeader.vue'
 import MainFooter from 'src/components/footer/MainFooter.vue'
+import MainDrawer from 'src/components/drawer/MainDrawer.vue'
 
 import CreditQuery from 'src/components/CreditQuery.vue'
 import BlockSubscription from 'src/components/BlockSubscription.vue'

@@ -4,7 +4,8 @@ export const useSettingStore = defineStore('setting', {
   state: () => ({
     cheCkoConnect: true,
     searchTextFilter: '',
-    currentTab: 'feed'
+    currentMainTab: 'feed',
+    currentDashboardTab: 'contents'
   }),
   getters: {},
   actions: {}

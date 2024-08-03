@@ -168,9 +168,9 @@ const accountBalance = computed(() => user.accountBalance)
 const chainBalance = computed(() => user.chainBalance)
 const setting = useSettingStore()
 const tab = computed({
-  get: () => setting.currentTab,
+  get: () => setting.currentMainTab,
   set: (v: string) => {
-    setting.currentTab = v
+    setting.currentMainTab = v
   }
 })
 
