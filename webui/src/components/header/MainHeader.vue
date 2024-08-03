@@ -8,6 +8,7 @@
         outlined
         placeholder='Title / Content / Comment'
         :style='{width: "320px"}'
+        color='transparent'
       >
         <template #prepend>
           <q-icon name='bi-filter-left' size='24px' />
