@@ -42,6 +42,15 @@
           Activity Center
         </q-tooltip>
       </div>
+      <div class='header-icon'>
+        <q-icon
+          name='bi-layout-split' size='24px' :color='tab == "activity" ? "red-6" : "black"' class='cursor-pointer'
+          @click='onActivityClick'
+        />
+        <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
+          Computing Registry
+        </q-tooltip>
+      </div>
       <q-btn
         flat rounded class='bg-red-2'
         @click='onLoginClick'

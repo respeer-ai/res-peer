@@ -12,9 +12,7 @@
       :breakpoint='500'
       bordered
     >
-      <q-scroll-area class='fit'>
-        <MainDrawer />
-      </q-scroll-area>
+      <MainDrawer />
     </q-drawer>
 
     <q-page-container>
