@@ -35,20 +35,20 @@
       </div>
       <div class='header-icon'>
         <q-icon
+          name='bi-layout-split' size='24px' :color='tab == "activity" ? "red-6" : "black"' class='cursor-pointer'
+          @click='onComputingMarketClick'
+        />
+        <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
+          Computing Registry
+        </q-tooltip>
+      </div>
+      <div class='header-icon'>
+        <q-icon
           name='bi-columns-gap' size='24px' :color='tab == "activity" ? "red-6" : "black"' class='cursor-pointer'
           @click='onActivityClick'
         />
         <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
           Activity Center
-        </q-tooltip>
-      </div>
-      <div class='header-icon'>
-        <q-icon
-          name='bi-layout-split' size='24px' :color='tab == "activity" ? "red-6" : "black"' class='cursor-pointer'
-          @click='onActivityClick'
-        />
-        <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
-          Computing Registry
         </q-tooltip>
       </div>
       <q-btn
@@ -142,7 +142,7 @@
           {{ account?.length ? shortid.shortId(account, 4) : 'Login' }}
         </div>
       </q-btn>
-      <div class='header-icon' v-if='account?.length'>
+      <div class='header-icon' v-if='account?.length && false'>
         <q-icon
           name='bi-grid-1x2' size='24px' :color='tab == "dashboard" ? "red-6" : "black"' class='cursor-pointer'
           @click='onDashboardClick'
@@ -197,6 +197,18 @@ const onDashboardClick = () => {
   tab.value = 'dashboard'
   void router.push({
     path: '/dashboard',
+    query: {
+      host: host.value,
+      port: port.value,
+      cheCkoConnect: cheCkoConnect.value ? 'true' : 'false'
+    }
+  })
+}
+
+const onComputingMarketClick = () => {
+  tab.value = 'computing'
+  void router.push({
+    path: '/computing',
     query: {
       host: host.value,
       port: port.value,

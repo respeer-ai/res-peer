@@ -3,11 +3,11 @@
     class='fit'
     :bar-style='{
       borderRadius: "2px",
-      width: "4px"
+      width: "0"
     }'
     :thumb-style='{
       borderRadius: "2px",
-      width: "4px"
+      width: "2px"
     }'
   >
     <q-tabs
@@ -16,83 +16,200 @@
       class='text-black'
       no-caps
       :style='{padding: "16px 32px"}'
+      indicator-color='red-6'
+      narrow-indicator
     >
-      <div :class='[ "row cursor-pointer drawer-item", mainTab === "feed" ? "bg-red-1" : "" ]'>
-        <q-icon name='bi-house' size='24px' :class='[ "item-icon", mainTab === "feed" ? "text-red-6" : "" ]' />
+      <div :class='[ "row cursor-pointer drawer-item drawer-padding hover-bg", mainTab === "feed" ? "bg-red-1" : "" ]'>
+        <inline-svg
+          :src='homeIcon'
+          width='20'
+          height='20'
+          :class='[ "item-icon", mainTab === "feed" || true ? "item-icon-active" : ""]'
+        />
         <div>Home</div>
       </div>
-      <div :class='[ "row cursor-pointer drawer-item", mainTab === "favorite" ? "bg-red-1" : "" ]'>
-        <q-icon name='bi-heart' size='24px' :class='[ "item-icon", mainTab === "favorite" ? "text-red-6" : "" ]' />
+      <div :class='[ "row cursor-pointer drawer-item drawer-padding hover-bg", mainTab === "favorite" ? "bg-red-1" : "" ]'>
+        <inline-svg
+          :src='favoriteIcon'
+          width='20'
+          height='20'
+          :class='[ "item-icon", mainTab === "favorite" ? "item-icon-active" : "" ]'
+        />
         <div>Favorite</div>
       </div>
       <q-separator />
-      <div class='drawer-section'>
-        CREATOR
-      </div>
-      <q-tab name='contents'>
-        <div class='row'>
-          <q-icon class='item-icon' name='bi-body-text' size='24px' />
-          <div>Contents</div>
-        </div>
-      </q-tab>
-      <q-tab name='assets'>
-        <div class='row'>
-          <q-icon class='item-icon' name='bi-wallet' size='24px' />
-          <div>Assets</div>
-        </div>
-      </q-tab>
+      <q-expansion-item label='CREATOR' class='text-grey-8' default-opened>
+        <q-tab name='contents'>
+          <div class='row'>
+            <inline-svg
+              :src='contentsIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "contents" ? "item-icon-active" : "" ]'
+            />
+            <div>Contents</div>
+          </div>
+        </q-tab>
+        <q-tab name='assets'>
+          <div class='row'>
+            <inline-svg
+              :src='assetsIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "assets" ? "item-icon-active" : "" ]'
+            />
+            <div>Assets</div>
+          </div>
+        </q-tab>
+      </q-expansion-item>
       <q-separator />
-      <div class='drawer-section'>
-        EARNINGS
-      </div>
-      <q-tab name='balance'>
-        <div class='row'>
-          <q-icon class='item-icon' name='bi-wallet2' size='24px' />
-          <div>Balance</div>
-        </div>
-      </q-tab>
-      <q-tab name='computing'>
-        <div class='row'>
-          <q-icon class='item-icon' name='bi-motherboard' size='24px' />
-          <div>Computing</div>
-        </div>
-      </q-tab>
-      <q-tab name='credits'>
-        <div class='row'>
-          <q-icon class='item-icon' name='bi-bar-chart-steps' size='24px' />
-          <div>Credits</div>
-        </div>
-      </q-tab>
-      <q-tab name='badges'>
-        <div class='row'>
-          <q-icon class='item-icon' name='bi-suit-diamond' size='24px' />
-          <div>Badges</div>
-        </div>
-      </q-tab>
+      <q-expansion-item label='EARNINGS' class='text-grey-8' default-opened>
+        <q-tab name='balance'>
+          <div class='row'>
+            <inline-svg
+              :src='balanceIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "balance" ? "item-icon-active" : "" ]'
+            />
+            <div>Balance</div>
+          </div>
+        </q-tab>
+        <q-tab name='computing'>
+          <div class='row'>
+            <inline-svg
+              :src='computingIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "computing" ? "item-icon-active" : "" ]'
+            />
+            <div>Computing</div>
+          </div>
+        </q-tab>
+        <q-tab name='credits'>
+          <div class='row'>
+            <inline-svg
+              :src='creditsIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "credits" ? "item-icon-active" : "" ]'
+            />
+            <div>Credits</div>
+          </div>
+        </q-tab>
+        <q-tab name='badges'>
+          <div class='row'>
+            <inline-svg
+              :src='badgesIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "badges" ? "item-icon-active" : "" ]'
+            />
+            <div>Badges</div>
+          </div>
+        </q-tab>
+      </q-expansion-item>
       <q-separator />
-      <div class='drawer-section'>
-        REVIEWER DAO
-      </div>
-      <q-tab v-if='reviewer' name='review-contents' label='Contents' />
-      <q-tab v-if='reviewer' name='review-assets' label='Assets' />
-      <q-tab v-if='reviewer' name='review-reviewers' label='Reviewers' />
-      <q-tab v-if='reviewer' name='review-activities' label='Activities' />
-      <q-tab v-if='!reviewer' name='apply-reviewer' label='Apply Reviewer' />
+      <q-expansion-item label='REVIEWER DAO' class='text-grey-8' :disable='!reviewer'>
+        <q-tab name='review-contents'>
+          <div class='row'>
+            <inline-svg
+              :src='reviewContentIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "review-contents" ? "item-icon-active" : "" ]'
+            />
+            <div>Contents</div>
+          </div>
+        </q-tab>
+        <q-tab name='review-assets'>
+          <div class='row'>
+            <inline-svg
+              :src='reviewAssetIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "review-assets" ? "item-icon-active" : "" ]'
+            />
+            <div>Assets</div>
+          </div>
+        </q-tab>
+        <q-tab name='review-reviewers'>
+          <div class='row'>
+            <inline-svg
+              :src='reviewReviewerIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "review-reviewers" ? "item-icon-active" : "" ]'
+            />
+            <div>Reviewers</div>
+          </div>
+        </q-tab>
+        <q-tab name='review-activities'>
+          <div class='row'>
+            <inline-svg
+              :src='reviewActivityIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "review-activities" ? "item-icon-active" : "" ]'
+            />
+            <div>Activities</div>
+          </div>
+        </q-tab>
+        <q-tab name='apply-reviewer'>
+          <div class='row'>
+            <inline-svg
+              :src='applyReviewerIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "apply-reviewer" ? "item-icon-active" : "" ]'
+            />
+            <div>Apply Reviewer</div>
+          </div>
+        </q-tab>
+      </q-expansion-item>
       <q-separator />
-      <div class='drawer-section'>
-        FOUNDATION
-      </div>
-      <q-tab name='foundation' label='Foundation' />
+      <q-expansion-item label='FOUNDATION' class='text-grey-8'>
+        <q-tab name='foundation'>
+          <div class='row'>
+            <inline-svg
+              :src='foundationIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "foundation" ? "item-icon-active" : "" ]'
+            />
+            <div>Foundation</div>
+          </div>
+        </q-tab>
+      </q-expansion-item>
       <q-separator />
-      <div class='drawer-section'>
-        USERS CLUB
-      </div>
-      <q-tab name='activity' label='Activities' />
+      <q-expansion-item label='USERS CLUB' class='text-grey-8'>
+        <q-tab name='activities'>
+          <div class='row'>
+            <inline-svg
+              :src='activitiesIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "activities" ? "item-icon-active" : "" ]'
+            />
+            <div>Activities</div>
+          </div>
+        </q-tab>
+      </q-expansion-item>
       <q-separator />
-      <div class='drawer-section'>
-        SETTING
-      </div>
-      <q-tab name='settings' label='Settings' />
+      <q-expansion-item label='SETTINGS' class='text-grey-8'>
+        <q-tab name='settings'>
+          <div class='row'>
+            <q-icon class='item-icon' name='bi-body-text' size='24px' />
+            <inline-svg
+              :src='settingsIcon'
+              width='20'
+              height='20'
+              :class='[ "item-icon", tab === "settings" ? "item-icon-active" : "" ]'
+            />
+            <div>Settings</div>
+          </div>
+        </q-tab>
+      </q-expansion-item>
     </q-tabs>
   </q-scroll-area>
 </template>
@@ -101,6 +218,23 @@
 import { computed, ref, watch } from 'vue'
 import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
+
+import homeIcon from 'src/assets/HomeIcon.svg'
+import favoriteIcon from 'src/assets/FavoriteIcon.svg'
+import contentsIcon from 'src/assets/ContentsIcon.svg'
+import assetsIcon from 'src/assets/AssetsIcon.svg'
+import balanceIcon from 'src/assets/BalanceIcon.svg'
+import computingIcon from 'src/assets/ComputingIcon.svg'
+import creditsIcon from 'src/assets/CreditsIcon.svg'
+import badgesIcon from 'src/assets/BadgesIcon.svg'
+import reviewActivityIcon from 'src/assets/ReviewActivityIcon.svg'
+import reviewAssetIcon from 'src/assets/ReviewAssetIcon.svg'
+import reviewReviewerIcon from 'src/assets/ReviewReviewerIcon.svg'
+import reviewContentIcon from 'src/assets/ReviewContentIcon.svg'
+import foundationIcon from 'src/assets/FoundationIcon.svg'
+import activitiesIcon from 'src/assets/ActivitiesIcon.svg'
+import settingsIcon from 'src/assets/SettingIcon.svg'
+import applyReviewerIcon from 'src/assets/ApplyReviewerIcon.svg'
 
 const user = useUserStore()
 const reviewer = computed(() => user.reviewer)

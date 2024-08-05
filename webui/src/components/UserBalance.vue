@@ -18,7 +18,7 @@ import { computed } from 'vue'
 
 const user = useUserStore()
 const spendableCredits = computed(() => user.spendable)
-const creditAmounts = computed(() => Array.from(user.amounts).sort((a, b) => a.expired > b.expired ? 1 : -1))
+const creditAmounts = computed(() => Array.from(user.amounts || []).sort((a, b) => a.expired > b.expired ? 1 : -1))
 
 const columns = computed(() => [
   {

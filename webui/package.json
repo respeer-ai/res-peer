@@ -12,7 +12,8 @@
     "dev": "quasar dev",
     "build": "quasar build",
     "start": "quasar dev",
-    "boot:new": "quasar new boot"
+    "boot:new": "quasar new boot",
+    "svg:fix": "sed -i 's/ fill=\"#[0-9a-fA-F]\\{6\\}\"/ fill=\"currentColor\"/g' ./src/assets/*.svg"
   },
   "dependencies": {
     "@metamask/providers": "^17.0.0",
