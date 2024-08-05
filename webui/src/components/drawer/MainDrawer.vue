@@ -199,7 +199,6 @@
       <q-expansion-item label='SETTINGS' class='text-grey-8'>
         <q-tab name='settings'>
           <div class='row'>
-            <q-icon class='item-icon' name='bi-body-text' size='24px' />
             <inline-svg
               :src='settingsIcon'
               width='20'
