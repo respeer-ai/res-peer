@@ -110,8 +110,8 @@
         </q-tab>
       </q-expansion-item>
       <q-separator />
-      <q-expansion-item label='REVIEWER DAO' class='text-grey-8' :disable='!reviewer'>
-        <q-tab name='review-contents'>
+      <q-expansion-item label='REVIEWER DAO' class='text-grey-8'>
+        <q-tab name='review-contents' v-if='reviewer'>
           <div class='row'>
             <inline-svg
               :src='reviewContentIcon'
@@ -122,7 +122,7 @@
             <div>Contents</div>
           </div>
         </q-tab>
-        <q-tab name='review-assets'>
+        <q-tab name='review-assets' v-if='reviewer'>
           <div class='row'>
             <inline-svg
               :src='reviewAssetIcon'
@@ -133,7 +133,7 @@
             <div>Assets</div>
           </div>
         </q-tab>
-        <q-tab name='review-reviewers'>
+        <q-tab name='review-reviewers' v-if='reviewer'>
           <div class='row'>
             <inline-svg
               :src='reviewReviewerIcon'
@@ -144,7 +144,7 @@
             <div>Reviewers</div>
           </div>
         </q-tab>
-        <q-tab name='review-activities'>
+        <q-tab name='review-activities' v-if='reviewer'>
           <div class='row'>
             <inline-svg
               :src='reviewActivityIcon'
@@ -155,7 +155,7 @@
             <div>Activities</div>
           </div>
         </q-tab>
-        <q-tab name='apply-reviewer'>
+        <q-tab name='apply-reviewer' v-if='!reviewer'>
           <div class='row'>
             <inline-svg
               :src='applyReviewerIcon'

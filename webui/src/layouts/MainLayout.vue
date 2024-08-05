@@ -123,11 +123,15 @@ interface Query {
   port: number
   host: string
   cheCkoConnect?: boolean
+  owner?: string
+  chainId?: string
 }
 
 const port = ref((route.query as unknown as Query).port || constants.port)
 const host = ref((route.query as unknown as Query).host || constants.host)
 const cheCkoConnect = ref(((route.query as unknown as Query).cheCkoConnect || 'true') === 'true')
+const owner = ref((route.query as unknown as Query).owner || constants.appDeployOwner)
+const chainId = ref((route.query as unknown as Query).chainId || constants.appDeployChain)
 
 const getProviderState = () => {
   window.linera.request({
@@ -154,8 +158,8 @@ onBeforeMount(() => {
       }, 1000)
     }
   } else {
-    user.account = constants.appDeployOwner
-    user.chainId = constants.appDeployChain
+    user.account = owner.value
+    user.chainId = chainId.value
   }
 })
 </script>
