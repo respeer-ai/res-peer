@@ -7,6 +7,7 @@
     </q-header>
 
     <q-drawer
+      v-if='drawerOpen'
       :width='280'
       show-if-above
       :breakpoint='500'
@@ -73,7 +74,7 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { onBeforeMount, ref } from 'vue'
+import { computed, onBeforeMount, ref } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
@@ -116,6 +117,7 @@ const logining = ref(false)
 const user = useUserStore()
 const route = useRoute()
 const setting = useSettingStore()
+const drawerOpen = computed(() => setting.showDrawerMenu)
 
 interface Query {
   port: number

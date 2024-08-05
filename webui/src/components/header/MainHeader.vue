@@ -22,7 +22,7 @@
       @click='onLogoClick'
     />
     <q-space />
-    <div class='row' :style='{width: "480px"}'>
+    <div class='row' :style='{width: "400px"}'>
       <q-space />
       <div class='header-icon'>
         <q-icon
@@ -142,7 +142,7 @@
           {{ account?.length ? shortid.shortId(account, 4) : 'Login' }}
         </div>
       </q-btn>
-      <div class='header-icon' v-if='account?.length && false'>
+      <div class='header-icon' v-if='account?.length'>
         <q-icon
           name='bi-grid-1x2' size='24px' :color='tab == "dashboard" ? "red-6" : "black"' class='cursor-pointer'
           @click='onDashboardClick'

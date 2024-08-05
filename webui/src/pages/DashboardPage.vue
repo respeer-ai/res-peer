@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang='ts'>
-import { computed } from 'vue'
+import { computed, onBeforeMount, onBeforeUnmount } from 'vue'
 import { useUserStore } from 'src/stores/user'
 import { useCollectionStore } from 'src/stores/collection'
 import { useFoundationStore } from 'src/stores/foundation'
@@ -128,6 +128,14 @@ const spendableCredits = computed(() => user.spendable)
 const lineraBalance = computed(() => foundation.userLineraBalance)
 const avatarIds = computed(() => collection.avatars.get(account.value))
 const avatar = computed(() => avatarIds.value ? collection.nftBannerByID(avatarIds.value[0], avatarIds.value[1]) : collection.nftBannerByID(1001, 1000))
+
+onBeforeMount(() => {
+  setting.showDrawerMenu = true
+})
+
+onBeforeUnmount(() => {
+  setting.showDrawerMenu = false
+})
 
 </script>
 

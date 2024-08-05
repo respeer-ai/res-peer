@@ -19,25 +19,25 @@
       indicator-color='red-6'
       narrow-indicator
     >
-      <div :class='[ "row cursor-pointer drawer-item drawer-padding hover-bg", mainTab === "feed" ? "bg-red-1" : "" ]'>
+      <div class='row cursor-pointer drawer-item drawer-padding hover-bg' v-if='false'>
         <inline-svg
           :src='homeIcon'
           width='20'
           height='20'
-          :class='[ "item-icon", mainTab === "feed" || true ? "item-icon-active" : ""]'
+          class='item-icon'
         />
         <div>Home</div>
       </div>
-      <div :class='[ "row cursor-pointer drawer-item drawer-padding hover-bg", mainTab === "favorite" ? "bg-red-1" : "" ]'>
+      <div class='row cursor-pointer drawer-item drawer-padding hover-bg' v-if='false'>
         <inline-svg
           :src='favoriteIcon'
           width='20'
           height='20'
-          :class='[ "item-icon", mainTab === "favorite" ? "item-icon-active" : "" ]'
+          class='item-icon'
         />
         <div>Favorite</div>
       </div>
-      <q-separator />
+      <q-separator v-if='false' />
       <q-expansion-item label='CREATOR' class='text-grey-8' default-opened>
         <q-tab name='contents'>
           <div class='row'>
@@ -240,7 +240,6 @@ const user = useUserStore()
 const reviewer = computed(() => user.reviewer)
 const setting = useSettingStore()
 const tab = ref(setting.currentDashboardTab)
-const mainTab = computed(() => setting.currentMainTab)
 
 watch(tab, () => {
   setting.currentDashboardTab = tab.value
