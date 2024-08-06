@@ -3,6 +3,7 @@
     <q-input
       outlined label-slot
       v-model='title'
+      :suffix='title.length + "/64"'
     >
       <template #label>
         <div class='row text-grey-8'>
@@ -39,6 +40,72 @@
         @selection-change='ev => onSelectedTextChange(ev)'
       />
     </div>
+    <div class='row content-operation' :style='{marginTop: "24px"}'>
+      <div
+        :style='{
+          height: "128px",
+          width: "220px"
+        }'
+        class='cursor-pointer'
+      >
+        <FileUpload
+          name='demo[]' @upload='onAdvancedUpload($event)' :multiple='false'
+          accept='image/*' :max-file-size='1000000'
+        >
+          <template #header>
+            <div />
+          </template>
+          <template #content='{ files }'>
+            <div class='flex justify-center items-center' :style='{height: "106px"}' v-if='files.length'>
+              <div class='flex flex-wrap gap-4'>
+                <div v-for='file of files' :key='file.name + file.type + file.size' class='p-8 rounded-border flex flex-col border border-surface items-center gap-4'>
+                  <div>
+                    <img
+                      role='presentation' :alt='file.name' :src='file.objectURL' width='100'
+                      height='50'
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+          <template #empty>
+            <div class='flex justify-center items-center text-center' :style='{height: "106px", padding: "24px 0"}'>
+              <div>
+                <q-icon name='bi-plus-lg' size='36px' color='grey-6' />
+                <div class='text-grey-6'>
+                  Drag and drop cover or<br>Create with Copilot
+                </div>
+              </div>
+            </div>
+          </template>
+        </FileUpload>
+        <div
+          :style='{marginLeft: "192px", marginTop: "-28px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
+        >
+          <q-img :src='copilotIcon' width='16px' height='16px' fit='contain' />
+        </div>
+      </div>
+      <div
+        :style='{
+          height: "128px",
+          width: "calc(100% - 220px)"
+        }'
+      >
+        <q-input
+          outlined
+          v-model='abbreviation'
+          type='textarea'
+          placeholder='User part of the first paragraph as abbreviation or create with copilot.'
+        />
+        <div
+          :style='{marginLeft: "calc(100% - 28px)", marginTop: "-28px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
+          class='cursor-pointer'
+        >
+          <q-img :src='copilotIcon' width='16px' height='16px' fit='contain' />
+        </div>
+      </div>
+    </div>
     <div class='row' :style='{marginTop: "24px"}'>
       <q-space />
       <q-btn
@@ -71,11 +138,13 @@ import { useSettingStore } from 'src/stores/setting'
 import { useApplicationStore } from 'src/stores/application'
 
 import Editor, { EditorSelectionChangeEvent } from 'primevue/editor'
+import FileUpload from 'primevue/fileupload'
 
 import { copilotIcon } from 'src/assets'
 
 const title = ref('')
 const content = ref('')
+const abbreviation = ref('')
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
@@ -191,9 +260,19 @@ const onSelectedTextChange = (ev: EditorSelectionChangeEvent) => {
   showCopilot.value = true
 }
 
+const onAdvancedUpload = (ev: unknown) => {
+  console.log(ev)
+}
+
 </script>
 
 <style scoped lang='sass'>
 .p-editor
   border-radius: 64px !important
+
+::v-deep .p-fileupload-header
+  display: none !important
+
+::v-deep .p-progressbar
+  display: none !important
 </style>
