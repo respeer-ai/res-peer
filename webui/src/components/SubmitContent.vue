@@ -1,23 +1,59 @@
 <template>
-  <q-input dense label='Title' v-model='title' />
-  <q-input
-    v-model='content' type='textarea' filled
-    :style='{marginTop: "16px"}'
-  />
-  <div class='row' :style='{marginTop: "24px"}'>
-    <q-space />
-    <q-btn
-      dense flat rounded label='Submit'
-      @click='onPublishClick'
-      class='bg-red-5 text-white'
-      :style='{width: "80px"}'
-    />
-    <q-btn
-      dense flat rounded label='Cancel'
-      color='grey-8'
-      @click='onCancelClick'
-      :style='{width: "80px"}'
-    />
+  <div class='submit-content'>
+    <q-input
+      outlined label-slot
+      v-model='title'
+    >
+      <template #label>
+        <div class='row text-grey-8'>
+          <div>Title</div>
+          <div class='text-red-6'>
+            *
+          </div>
+        </div>
+      </template>
+    </q-input>
+    <div :style='{marginTop: "24px"}' />
+    <div class='submit-action cursor-pointer' :style='{width: "128px", marginLeft: "648px"}'>
+      <div class='row'>
+        <div :style='{marginRight: "8px", marginTop: "4px"}'>
+          <inline-svg
+            :src='copilotIcon'
+            width='18'
+            height='18'
+          />
+        </div>
+        <q-icon name='bi-chevron-down' size='12px' :style='{marginTop: "15px"}' color='grey-10' />
+      </div>
+      <q-menu anchor='bottom right' self='top end' class='submit-action-menu' auto-close>
+        <div v-for='(_taskType, i) in TaskTypes' :key='i' @click='taskType = _taskType[1]' class='cursor-pointer submit-action-menu-item'>
+          {{ _taskType[1] }}
+        </div>
+      </q-menu>
+    </div>
+    <div :style='{marginTop: "-42px"}'>
+      <Editor
+        v-model='content'
+        editor-style='height: 320px; font-size: 16px'
+        placeholder='Body'
+        @selection-change='ev => onSelectedTextChange(ev)'
+      />
+    </div>
+    <div class='row' :style='{marginTop: "24px"}'>
+      <q-space />
+      <q-btn
+        dense flat rounded label='Submit'
+        @click='onPublishClick'
+        class='bg-red-5 text-white'
+        :style='{width: "80px"}'
+      />
+      <q-btn
+        dense flat rounded label='Cancel'
+        color='grey-8'
+        @click='onCancelClick'
+        :style='{width: "80px"}'
+      />
+    </div>
   </div>
 </template>
 
@@ -33,6 +69,10 @@ import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
 import { useSettingStore } from 'src/stores/setting'
 import { useApplicationStore } from 'src/stores/application'
+
+import Editor, { EditorSelectionChangeEvent } from 'primevue/editor'
+
+import { copilotIcon } from 'src/assets'
 
 const title = ref('')
 const content = ref('')
@@ -125,4 +165,35 @@ const onCancelClick = () => {
   emit('canceled')
 }
 
+interface Range {
+  index: number
+  length: number
+}
+
+const showCopilot = ref(false)
+
+enum TaskType {
+  FixGrammar = 'Fix the grammar',
+  RewriteEasierUnderstand = 'Rewrite to make this easier to understand',
+  Paraphrase = 'Paraphrase this',
+  WriteFormally = 'Write this more formally',
+  WriteMoreNeutral = 'Write in a more neutral way'
+}
+const TaskTypes = Object.entries(TaskType)
+const taskType = ref(TaskType.FixGrammar)
+
+const onSelectedTextChange = (ev: EditorSelectionChangeEvent) => {
+  const range = ev.range as Range
+  if (!range || range.length === 0) {
+    showCopilot.value = false
+    return
+  }
+  showCopilot.value = true
+}
+
 </script>
+
+<style scoped lang='sass'>
+.p-editor
+  border-radius: 64px !important
+</style>

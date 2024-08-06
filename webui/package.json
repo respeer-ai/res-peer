@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@metamask/providers": "^17.0.0",
+    "@primevue/themes": "^4.0.4",
     "@quasar/app": "^3.3.3",
     "@quasar/extras": "^1.16.4",
     "@types/uuid": "^9.0.7",
@@ -34,7 +35,9 @@
     "hash-wasm": "^4.11.0",
     "multiformats": "^12.0.1",
     "pinia": "^2.0.11",
+    "primevue": "^4.0.4",
     "quasar": "^2.6.0",
+    "quill": "^2.0.2",
     "uuid": "^9.0.1",
     "vue": "^3.0.0",
     "vue-demi": "^0.14.5",

@@ -67,12 +67,16 @@
     </q-tab-panel>
   </q-tab-panels>
 
-  <submit-content
-    v-if='editing'
-    @canceled='onSubmitContentCancel'
-    @error='onSubmitContentError'
-    @submitted='onSubmitContentSubmitted'
-  />
+  <div class='row' :style='{width: "100%"}'>
+    <div :style='{width: "800px", marginLeft: "calc(50% - 540px)"}'>
+      <submit-content
+        v-if='editing'
+        @canceled='onSubmitContentCancel'
+        @error='onSubmitContentError'
+        @submitted='onSubmitContentSubmitted'
+      />
+    </div>
+  </div>
 </template>
 
 <script setup lang='ts'>

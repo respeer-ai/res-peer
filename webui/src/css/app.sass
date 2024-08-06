@@ -31,7 +31,34 @@
   transition: 1s
 
 .q-field--outlined .q-field__control:before
-  border: 0px solid rgba(0, 0, 0, 0.05) !important
+  border: 0 solid rgba(0, 0, 0, 0.05) !important
+
+.submit-action-menu
+  padding: 8px 0
+  line-height: 32px
+  .submit-action-menu-item
+    padding: 0 16px
+  .submit-action-menu-item:hover
+    background: $red-1
+    transition: 1s
+
+.submit-content
+  .q-field--outlined .q-field__control:before
+    border: 1px solid rgba(0, 0, 0, 0.1) !important
+  .q-field__control,
+  .q-field__marginal
+    height: 56px !important
+  .submit-action:hover
+    color: $grey-10
+  .submit-action
+    line-height: 42px
+    height: 42px
+    color: $grey-7
+    .q-field__control,
+    .q-field__marginal
+      height: 36px !important
+    .q-field--outlined .q-field__control:before
+      border: 0 solid rgba(0, 0, 0, 0.1) !important
 
 .header-icon
   height: 36px
