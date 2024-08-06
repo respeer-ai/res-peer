@@ -140,6 +140,9 @@
         <div :style='{margin: "2px 0 0 8px"}' class='text-brown-8 text-bold'>
           {{ account?.length ? shortid.shortId(account, 4) : 'Login' }}
         </div>
+        <q-tooltip v-if='account.length' :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
+          {{ account }}
+        </q-tooltip>
       </q-btn>
       <q-avatar
         v-if='account?.length' class='cursor-pointer avatar'
