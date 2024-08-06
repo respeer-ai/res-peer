@@ -93,7 +93,7 @@
                 </div>
                 <div class='row'>
                   <div class='text-bold'>
-                    {{ shortid.shortId(account, 10) }}
+                    {{ shortid.shortId(account, 14) }}
                   </div>
                   <div :style='{marginLeft: "8px"}' class='cursor-pointer'>
                     <q-img :src='copyIcon' width='16px' height='16px' />
@@ -114,7 +114,7 @@
                 </div>
                 <div class='row'>
                   <div class='text-bold'>
-                    {{ shortid.shortId(chainId, 10) }}
+                    {{ shortid.shortId(chainId, 14) }}
                   </div>
                   <div :style='{marginLeft: "8px"}' class='cursor-pointer'>
                     <q-img :src='copyIcon' width='16px' height='16px' />
@@ -142,28 +142,57 @@
         </div>
       </q-btn>
       <q-avatar
-        v-if='account?.length' size='24px' class='cursor-pointer'
+        v-if='account?.length' class='cursor-pointer avatar'
         @click='onDashboardClick'
       >
-        <q-img width='100%' height='100%' :src='marketPlaceIcon' />
+        <q-img width='100%' height='100%' :src='avatar' />
         <q-menu
           v-if='account?.length'
-          :style='{padding: "24px"}'
+          :style='{padding: "24px", width: "280px"}'
           anchor='bottom right'
           self='top right'
         >
           <q-card flat>
-            <div>DashboardDashboardDashboardDashboardDashboardDashboardDashboardDashboardDashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
-            <div>Dashboard</div>
+            <div class='text-center'>
+              <q-avatar size='64px' class='cursor-pointer avatar'>
+                <q-img :src='avatar' width='80px' height='80px' />
+              </q-avatar>
+              <div :style='{fontWeight: 600, fontSize: "16px", lineHeight: "20px", margin: "16px 0 0 0"}'>
+                {{ username }}
+              </div>
+              <div :style='{fontSize: "10px", color: "rgba(26, 26, 26, 0.6)"}'>
+                0 CREDITS, 0 TLINERA
+              </div>
+            </div>
+            <q-separator :style='{margin: "16px 0"}' />
+            <div class='header-dashboard-menu cursor-pointer'>
+              Profile
+            </div>
+            <div class='header-dashboard-menu cursor-pointer'>
+              Contents
+            </div>
+            <div class='header-dashboard-menu cursor-pointer'>
+              Assets
+            </div>
+            <div class='header-dashboard-menu cursor-pointer'>
+              Earnings
+            </div>
+            <div class='header-dashboard-menu cursor-pointer'>
+              Reviewer DAO
+            </div>
+            <div class='header-dashboard-menu cursor-pointer'>
+              Foundation
+            </div>
+            <div class='header-dashboard-menu cursor-pointer'>
+              Users Club
+            </div>
+            <div class='header-dashboard-menu cursor-pointer'>
+              Settings
+            </div>
+            <q-separator :style='{margin: "16px 0"}' />
+            <div class='header-dashboard-menu cursor-pointer'>
+              Logout
+            </div>
           </q-card>
         </q-menu>
       </q-avatar>
@@ -177,6 +206,7 @@ import { ref, computed } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
+import { useCollectionStore } from 'src/stores/collection'
 import * as constants from 'src/const'
 import { shortid } from 'src/utils'
 import { Web3 } from 'web3'
@@ -186,6 +216,7 @@ import resPeerLogo from 'src/assets/ResPeer.png'
 import marketPlaceIcon from 'src/assets/MarketPlaceIcon.svg'
 import computingRegistryIcon from 'src/assets/ComputingRegistryIcon.svg'
 import activityCenterIcon from 'src/assets/ActivityCenterIcon.svg'
+import resPeerFavoriteIcon from 'src/assets/ResPeerFavoriteIcon.png'
 
 const router = useRouter()
 const logining = ref(false)
@@ -193,6 +224,9 @@ const user = useUserStore()
 const route = useRoute()
 const account = computed(() => user.account?.trim())
 const chainId = computed(() => user.chainId?.trim())
+const username = computed(() => user.username || 'ResPeer User')
+const collection = useCollectionStore()
+const avatar = computed(() => userAvatar(user.account))
 const accountBalance = computed(() => user.accountBalance)
 const chainBalance = computed(() => user.chainBalance)
 const setting = useSettingStore()
@@ -212,6 +246,14 @@ interface Query {
 const port = ref((route.query as unknown as Query).port || constants.port)
 const host = ref((route.query as unknown as Query).host || constants.host)
 const cheCkoConnect = ref(((route.query as unknown as Query).cheCkoConnect || 'true') === 'true')
+
+const userAvatar = (account: string) => {
+  const ids = collection.avatars.get(account)
+  if (!ids) {
+    return collection.nftBannerByID(1001, 1000) || resPeerFavoriteIcon
+  }
+  return collection.nftBannerByID(ids[0], ids[1]) || resPeerFavoriteIcon
+}
 
 const onDashboardClick = () => {
   tab.value = 'dashboard'
