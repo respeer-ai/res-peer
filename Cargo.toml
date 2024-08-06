@@ -33,6 +33,7 @@ getrandom = { version = "0.2.12", default-features = false, features = ["custom"
 sha3 = "0.10.8"
 tokenizers = { git = "https://github.com/christos-h/tokenizers", default-features = false, features = ["unstable_wasm"] }
 rand = "0.8.5"
+anyhow = { version = "1", features = ["backtrace"] }
 
 credit = { path = "./credit" }
 feed = { path = "./feed" }
