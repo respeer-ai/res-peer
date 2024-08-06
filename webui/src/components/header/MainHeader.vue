@@ -24,9 +24,12 @@
     <q-space />
     <div class='row' :style='{width: "400px"}'>
       <q-space />
-      <div class='header-icon'>
-        <q-icon
-          name='bi-layout-wtf' size='24px' :color='tab == "store" ? "red-6" : "black"' class='cursor-pointer'
+      <div class='header-icon row'>
+        <inline-svg
+          :src='marketPlaceIcon'
+          width='24'
+          height='24'
+          :class='[ "item-icon cursor-pointer", tab === "market-place" ? "item-icon-active" : "" ]'
           @click='onNFTMarketClick'
         />
         <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
@@ -34,8 +37,11 @@
         </q-tooltip>
       </div>
       <div class='header-icon'>
-        <q-icon
-          name='bi-layout-split' size='24px' :color='tab == "activity" ? "red-6" : "black"' class='cursor-pointer'
+        <inline-svg
+          :src='computingRegistryIcon'
+          width='24'
+          height='24'
+          :class='[ "item-icon cursor-pointer", tab === "computing-registry" ? "item-icon-active" : "" ]'
           @click='onComputingMarketClick'
         />
         <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
@@ -43,8 +49,11 @@
         </q-tooltip>
       </div>
       <div class='header-icon'>
-        <q-icon
-          name='bi-columns-gap' size='24px' :color='tab == "activity" ? "red-6" : "black"' class='cursor-pointer'
+        <inline-svg
+          :src='activityCenterIcon'
+          width='24'
+          height='24'
+          :class='[ "item-icon cursor-pointer", tab === "activity" ? "item-icon-active" : "" ]'
           @click='onActivityClick'
         />
         <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
@@ -52,9 +61,9 @@
         </q-tooltip>
       </div>
       <q-btn
-        flat rounded class='bg-red-2'
+        flat rounded class='bg-red-1'
         @click='onLoginClick'
-        :style='{marginLeft: "16px"}'
+        :style='{marginLeft: "8px"}'
       >
         <q-menu
           v-if='account?.length'
@@ -63,29 +72,20 @@
           self='top right'
         >
           <q-card flat>
-            <div class='text-brown-10 row flex justify-center items-center' :style='{margin: "24px 0 0 0", lineHeight: "48px"}'>
+            <div class='row flex justify-center items-center' :style='{margin: "12px 0 36px 0", fontSize: "28px"}'>
               <q-space />
-              <div class='text-bold' :style='{fontSize: "36px", marginLeft: "8px"}'>
+              <div :style='{marginLeft: "8px"}'>
                 {{ Number(accountBalance).toFixed(4) }}
               </div>
-              <q-space />
-            </div>
-            <div class='row' :style='{margin: "8px 0 48px 0", lineHeight: "24px"}'>
-              <q-space />
-              <q-img
-                src='https://avatars.githubusercontent.com/u/107513858?s=48&v=4'
-                width='24px'
-                height='24px'
-              />
-              <div class='text-brown-6' :style='{fontSize: "24px", marginLeft: "8px"}'>
+              <div :style='{margin: "8px 0 0 8px", fontSize: "12px"}'>
                 TLINERA
               </div>
               <q-space />
             </div>
-            <q-separator :style='{margin: "8px 0"}' />
-            <div class='row flex justify-center items-center'>
-              <div :style='{width: "48px"}'>
-                <q-icon name='person' size='24px' class='text-red-6' />
+            <q-separator :style='{margin: "0 0 16px 0"}' />
+            <div class='row'>
+              <div :style='{width: "24px"}'>
+                <q-img :src='addressIcon' width='16px' height='16px' />
               </div>
               <div>
                 <div class='text-grey-6'>
@@ -93,10 +93,10 @@
                 </div>
                 <div class='row'>
                   <div class='text-bold'>
-                    {{ shortid.shortId(account, 16) }}
+                    {{ shortid.shortId(account, 10) }}
                   </div>
                   <div :style='{marginLeft: "8px"}' class='cursor-pointer'>
-                    <q-icon name='content_copy' size='16px' class='text-grey-6' />
+                    <q-img :src='copyIcon' width='16px' height='16px' />
                   </div>
                 </div>
                 <div class='text-grey-6'>
@@ -104,10 +104,9 @@
                 </div>
               </div>
             </div>
-            <q-separator :style='{margin: "8px 0"}' />
-            <div class='row flex justify-center items-center'>
-              <div :style='{width: "48px"}'>
-                <q-icon name='link' size='24px' class='text-red-6' />
+            <div class='row' :style='{margin: "12px 0 0 0"}'>
+              <div :style='{width: "24px"}'>
+                <q-img :src='microchainIcon' width='16px' height='16px' />
               </div>
               <div>
                 <div class='text-grey-6'>
@@ -115,10 +114,10 @@
                 </div>
                 <div class='row'>
                   <div class='text-bold'>
-                    {{ shortid.shortId(chainId, 16) }}
+                    {{ shortid.shortId(chainId, 10) }}
                   </div>
                   <div :style='{marginLeft: "8px"}' class='cursor-pointer'>
-                    <q-icon name='content_copy' size='16px' class='text-grey-6' />
+                    <q-img :src='copyIcon' width='16px' height='16px' />
                   </div>
                 </div>
                 <div class='text-grey-6'>
@@ -127,30 +126,47 @@
               </div>
             </div>
             <q-btn
-              flat rounded class='bg-red-2 full-width'
+              flat rounded class='bg-red-6 full-width text-white'
               @click='onLogoutClick'
               label='Logout'
               :style='{margin: "24px 0 0 0"}'
             />
-            <div class='text-grey-6 text-center' :style='{margin: "8px 0 16px 0"}'>
+            <div class='text-grey-6 text-center' :style='{margin: "8px 0 16px 0", fontSize: "12px"}'>
               Powered by CheCko
             </div>
           </q-card>
         </q-menu>
-        <q-img src='~assets/CheCko.png' width='24px' />
+        <q-img src='https://avatars.githubusercontent.com/u/107513858?s=48&v=4' width='24px' height='24px' />
         <div :style='{margin: "2px 0 0 8px"}' class='text-brown-8 text-bold'>
           {{ account?.length ? shortid.shortId(account, 4) : 'Login' }}
         </div>
       </q-btn>
-      <div class='header-icon' v-if='account?.length'>
-        <q-icon
-          name='bi-grid-1x2' size='24px' :color='tab == "dashboard" ? "red-6" : "black"' class='cursor-pointer'
-          @click='onDashboardClick'
-        />
-        <q-tooltip :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
-          Dashboard
-        </q-tooltip>
-      </div>
+      <q-avatar
+        v-if='account?.length' size='24px' class='cursor-pointer'
+        @click='onDashboardClick'
+      >
+        <q-img width='100%' height='100%' :src='marketPlaceIcon' />
+        <q-menu
+          v-if='account?.length'
+          :style='{padding: "24px"}'
+          anchor='bottom right'
+          self='top right'
+        >
+          <q-card flat>
+            <div>DashboardDashboardDashboardDashboardDashboardDashboardDashboardDashboardDashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+            <div>Dashboard</div>
+          </q-card>
+        </q-menu>
+      </q-avatar>
     </div>
   </div>
 </template>
@@ -164,8 +180,12 @@ import { useSettingStore } from 'src/stores/setting'
 import * as constants from 'src/const'
 import { shortid } from 'src/utils'
 import { Web3 } from 'web3'
+import { addressIcon, microchainIcon, copyIcon } from 'src/assets'
 
 import resPeerLogo from 'src/assets/ResPeer.png'
+import marketPlaceIcon from 'src/assets/MarketPlaceIcon.svg'
+import computingRegistryIcon from 'src/assets/ComputingRegistryIcon.svg'
+import activityCenterIcon from 'src/assets/ActivityCenterIcon.svg'
 
 const router = useRouter()
 const logining = ref(false)
@@ -282,7 +302,7 @@ const onLogoutClick = () => {
 }
 
 const onNFTMarketClick = () => {
-  tab.value = 'store'
+  tab.value = 'market-place'
   void router.push({
     path: '/market',
     query: {
