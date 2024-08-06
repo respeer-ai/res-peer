@@ -154,14 +154,14 @@
         >
           <q-card flat>
             <div class='text-center'>
-              <q-avatar size='64px' class='cursor-pointer avatar'>
-                <q-img :src='avatar' width='80px' height='80px' />
+              <q-avatar size='80px' class='cursor-pointer avatar'>
+                <q-img :src='avatar' width='100%' height='100%' fit='contain' />
               </q-avatar>
               <div :style='{fontWeight: 600, fontSize: "16px", lineHeight: "20px", margin: "16px 0 0 0"}'>
                 {{ username }}
               </div>
               <div :style='{fontSize: "10px", color: "rgba(26, 26, 26, 0.6)"}'>
-                0 CREDITS, 0 TLINERA
+                {{ spendableCredits?.length ? spendableCredits : 0 }} CREDITS, {{ lineraBalance?.length ? lineraBalance : 0 }} TLINERA
               </div>
             </div>
             <q-separator :style='{margin: "16px 0"}' />
@@ -207,6 +207,7 @@ import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
 import { useCollectionStore } from 'src/stores/collection'
+import { useFoundationStore } from 'src/stores/foundation'
 import * as constants from 'src/const'
 import { shortid } from 'src/utils'
 import { Web3 } from 'web3'
@@ -225,6 +226,9 @@ const route = useRoute()
 const account = computed(() => user.account?.trim())
 const chainId = computed(() => user.chainId?.trim())
 const username = computed(() => user.username || 'ResPeer User')
+const spendableCredits = computed(() => user.spendable)
+const foundation = useFoundationStore()
+const lineraBalance = computed(() => foundation.userLineraBalance)
 const collection = useCollectionStore()
 const avatar = computed(() => userAvatar(user.account))
 const accountBalance = computed(() => user.accountBalance)
