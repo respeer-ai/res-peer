@@ -2,14 +2,7 @@
   <q-table
     :rows='contents'
     :columns='(columns as never)'
-  >
-    <template #top-left>
-      <div class='text-h4'>
-        {{ account?.length ? tableLabel : 'Not Login' }}
-      </div>
-      <br>
-    </template>
-  </q-table>
+  />
 </template>
 
 <script setup lang='ts'>
@@ -55,17 +48,6 @@ const contents = computed(() => {
       })
   }
   return Array.from(content._contents(account.value)).sort((a, b) => a.createdAt > b.createdAt ? 1 : -1).filter((el) => el.author === account.value)
-})
-const tableLabel = computed(() => {
-  switch (articleType.value) {
-    case 'MY_ARTICLE':
-      return 'My Posts'
-    case 'MY_LIKE':
-      return 'My Like Posts'
-    case 'MY_DISLIKE':
-      return 'My Dislike Posts'
-  }
-  return 'My Posts'
 })
 
 const columns = computed(() => [

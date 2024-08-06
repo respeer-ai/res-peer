@@ -1,4 +1,7 @@
 <template>
+  <div>
+    <span> 1 TLINERA = {{ creditsPerLinera }} CREDITS</span>
+  </div>
   <q-table
     :rows='creditAmounts'
     :columns='(columns as never)'
@@ -14,11 +17,14 @@
 
 <script setup lang='ts'>
 import { AgeAmount, useUserStore } from 'src/stores/user'
+import { useCollectionStore } from 'src/stores/collection'
 import { computed } from 'vue'
 
 const user = useUserStore()
 const spendableCredits = computed(() => user.spendable)
 const creditAmounts = computed(() => Array.from(user.amounts || []).sort((a, b) => a.expired > b.expired ? 1 : -1))
+const collection = useCollectionStore()
+const creditsPerLinera = computed(() => collection.creditsPerLinera)
 
 const columns = computed(() => [
   {

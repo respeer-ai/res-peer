@@ -1,26 +1,24 @@
 <template>
-  <div class='row'>
-    <span class='text-h5'>Create Post</span>
-    <q-space />
-    <q-btn
-      dense flat v-if='!editing' label='Create'
-      color='blue'
-      @click='editing = !editing'
-    />
-  </div>
-  <div class='row'>
-    <q-space />
-    <q-btn
-      dense flat v-if='editing' label='Publish'
-      color='blue'
-      @click='onPublishClick'
-    />
-  </div>
-  <q-input v-if='editing' dense label='Title' v-model='title' />
+  <q-input dense label='Title' v-model='title' />
   <q-input
-    v-if='editing' v-model='content' type='textarea' filled
+    v-model='content' type='textarea' filled
     :style='{marginTop: "16px"}'
   />
+  <div class='row' :style='{marginTop: "24px"}'>
+    <q-space />
+    <q-btn
+      dense flat rounded label='Submit'
+      @click='onPublishClick'
+      class='bg-red-5 text-white'
+      :style='{width: "80px"}'
+    />
+    <q-btn
+      dense flat rounded label='Cancel'
+      color='grey-8'
+      @click='onCancelClick'
+      :style='{width: "80px"}'
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -38,7 +36,6 @@ import { useApplicationStore } from 'src/stores/application'
 
 const title = ref('')
 const content = ref('')
-const editing = ref(false)
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
@@ -47,6 +44,11 @@ const setting = useSettingStore()
 const cheCkoConnect = computed(() => setting.cheCkoConnect)
 const application = useApplicationStore()
 const reviewApp = computed(() => application.reviewApp)
+
+const emit = defineEmits<{(ev: 'canceled'): void,
+  (ev: 'submitted'): void,
+  (ev: 'error'): void
+}>()
 
 const submitContent = async () => {
   const bytes = json.encode({ content })
@@ -59,10 +61,11 @@ const submitContent = async () => {
     }
   `))
   onDone(() => {
-    editing.value = !editing.value
+    emit('submitted')
   })
   onError((error) => {
     console.log(error)
+    emit('error')
   })
   await mutate({
     cid,
@@ -100,8 +103,10 @@ const submitContentThroughCheCko = async () => {
     }
   }).then((result) => {
     console.log(result)
+    emit('submitted')
   }).catch((e) => {
     console.log(e)
+    emit('error')
   })
 }
 
@@ -114,6 +119,10 @@ const onPublishClick = () => {
   } else {
     void submitContent()
   }
+}
+
+const onCancelClick = () => {
+  emit('canceled')
 }
 
 </script>

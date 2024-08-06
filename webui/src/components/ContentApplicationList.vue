@@ -2,14 +2,7 @@
   <q-table
     :rows='contents'
     :columns='(columns as never)'
-  >
-    <template #top-left>
-      <div class='text-h4'>
-        Content Applications
-      </div>
-      <br>
-    </template>
-  </q-table>
+  />
 </template>
 
 <script setup lang='ts'>

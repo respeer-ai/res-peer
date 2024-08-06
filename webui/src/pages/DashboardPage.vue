@@ -1,31 +1,5 @@
 <template>
-  <div :style='{width: "1440px", margin: "32px auto"}'>
-    <div class='row'>
-      <q-space />
-      <div class='row' :style='{textAlign: "end"}'>
-        <div :style='{marginTop: "4px"}' class='text-green-7'>
-          <span class='text-bold'>{{ account }}</span>
-          <div>
-            <span>{{ spendableCredits?.length ? spendableCredits + ' Credits' : '0 Credits' }}</span>
-            <span>{{ lineraBalance?.length ? ', ' + lineraBalance + ' Linera' : ', 0 Linera' }}</span>
-            <span> (1 Linera = {{ creditsPerLinera }} Credits)</span>
-          </div>
-        </div>
-        <q-avatar :style='{marginLeft: "8px"}' size='48px'>
-          <q-img
-            :src='avatar?.length ? avatar : "~assets/ResPeer.png"'
-            width='48px'
-            height='48px'
-            fit='contain'
-            :style='{borderRadius: "50%"}'
-          >
-            <template #error>
-              <div class='absolute-full flex flex-center error' />
-            </template>
-          </q-img>
-        </q-avatar>
-      </div>
-    </div>
+  <div :style='{maxWidth: "1440px", margin: "32px auto"}'>
     <q-tab-panels
       v-model='tab'
       animated
@@ -39,12 +13,7 @@
         <avatar-setting />
       </q-tab-panel>
       <q-tab-panel name='contents'>
-        <submit-content />
-        <q-separator :style='{margin: "32px 0"}' />
-        <content-application-list :style='{margin: "32px 0"}' />
-        <article-list article-type='MY_ARTICLE' :style='{margin: "32px 0"}' />
-        <article-list article-type='MY_LIKE' :style='{margin: "32px 0"}' />
-        <article-list article-type='MY_DISLIKE' :style='{margin: "32px 0"}' />
+        <contents-page />
       </q-tab-panel>
       <q-tab-panel name='review-contents'>
         <review-contents />
@@ -92,14 +61,9 @@
 
 <script setup lang='ts'>
 import { computed, onBeforeMount, onBeforeUnmount } from 'vue'
-import { useUserStore } from 'src/stores/user'
-import { useCollectionStore } from 'src/stores/collection'
-import { useFoundationStore } from 'src/stores/foundation'
 import { useSettingStore } from 'src/stores/setting'
 
-import SubmitContent from 'src/components/SubmitContent.vue'
 import UserBalance from 'src/components/UserBalance.vue'
-import ArticleList from 'src/components/ArticleList.vue'
 import SubmitAsset from 'src/components/SubmitAsset.vue'
 import MintNft from 'src/components/MintNFT.vue'
 import CollectionList from 'src/components/CollectionList.vue'
@@ -110,24 +74,15 @@ import ReviewContents from 'src/components/ReviewContents.vue'
 import ReviewAssets from 'src/components/ReviewAssets.vue'
 import ReviewReviewers from 'src/components/ReviewReviewers.vue'
 import ApplyReviewer from 'src/components/ApplyReviewer.vue'
-import ContentApplicationList from 'src/components/ContentApplicationList.vue'
 import AssetApplicationList from 'src/components/AssetApplicationList.vue'
 import FoundationPage from 'src/components/FoundationPage.vue'
 import ActivityPage from 'src/components/ActivityPage.vue'
 import ReviewActivities from 'src/components/ReviewActivities.vue'
 
+import ContentsPage from 'src/components/dashboard/ContentsPage.vue'
+
 const setting = useSettingStore()
 const tab = computed(() => setting.currentDashboardTab)
-
-const user = useUserStore()
-const account = computed(() => user.account)
-const collection = useCollectionStore()
-const foundation = useFoundationStore()
-const creditsPerLinera = computed(() => collection.creditsPerLinera)
-const spendableCredits = computed(() => user.spendable)
-const lineraBalance = computed(() => foundation.userLineraBalance)
-const avatarIds = computed(() => collection.avatars.get(account.value))
-const avatar = computed(() => avatarIds.value ? collection.nftBannerByID(avatarIds.value[0], avatarIds.value[1]) : collection.nftBannerByID(1001, 1000))
 
 onBeforeMount(() => {
   setting.showDrawerMenu = true

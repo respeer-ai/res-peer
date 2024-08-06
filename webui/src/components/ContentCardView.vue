@@ -268,7 +268,7 @@ const onDislikeClick = async (cid: string) => {
   })
 }
 
-const emit = defineEmits<{(evet: 'comment'): void}>()
+const emit = defineEmits<{(ev: 'comment'): void}>()
 
 const onCommentClick = (cid: string) => {
   if (list.value) {

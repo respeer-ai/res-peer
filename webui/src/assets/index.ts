@@ -1,9 +1,11 @@
 import addressIcon from './AddressIcon.svg'
-import microchainIcon from 'src/assets/MicrochainIcon.svg'
-import copyIcon from 'src/assets/CopyIcon.svg'
+import microchainIcon from './MicrochainIcon.svg'
+import copyIcon from './CopyIcon.svg'
+import writeIcon from './WriteIcon.svg'
 
 export {
   addressIcon,
   microchainIcon,
-  copyIcon
+  copyIcon,
+  writeIcon
 }
