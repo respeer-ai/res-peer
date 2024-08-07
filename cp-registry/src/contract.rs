@@ -5,7 +5,7 @@
 
 mod state;
 
-use cp_registry::{Message, Operation};
+use cp_registry::{CPRegistryError, Message, Operation, RegisterParameters};
 use linera_sdk::{base::WithContractAbi, Contract, ContractRuntime, views::{View, ViewStorageContext}};
 use self::state::CPRegistry;
 
@@ -44,9 +44,20 @@ impl Contract for CPRegistryContract {
         }
     }
 
-    async fn execute_message(&mut self, _message: Message) {
-        panic!("CPRegistry application doesn't support any cross-chain messages");
+    async fn execute_message(&mut self, message: Message) {
+        match message {
+            Message::Register { params } => self.on_msg_register(params).await?,
+            Message::Update { params } => self.on_msg_update(params).await?,
+            Message::Deregister { node_id } => self.on_msg_deregister(params).await?,
+            Message::RequestSubscribe => self.on_msg_request_subscribe().await?,
+        }
     }
 
     async fn store(self) {}
+}
+
+impl CPRegistryContract {
+    async fn on_op_register(&mut self, params: RegisterParameters) -> Result<Self::Response, CPRegistryError> {
+
+    }
 }
