@@ -140,7 +140,7 @@
         <div :style='{margin: "2px 0 0 8px"}' class='text-brown-8 text-bold'>
           {{ account?.length ? shortid.shortId(account, 4) : 'Login' }}
         </div>
-        <q-tooltip v-if='account.length' :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
+        <q-tooltip v-if='account?.length' :offset='[0, 4]' class='bg-grey-2 text-grey-8 shadow-4'>
           {{ account }}
         </q-tooltip>
       </q-btn>
@@ -333,7 +333,7 @@ const onLoginClick = () => {
   web3.eth.requestAccounts()
     .then((accounts) => {
       logining.value = false
-      if (accounts.length) {
+      if (accounts?.length) {
         Cookies.set('account', accounts[0])
         user.account = accounts[0]
         getProviderState()
