@@ -5,6 +5,7 @@
 
 mod state;
 
+use cp_registry::{Message, Operation};
 use linera_sdk::{base::WithContractAbi, Contract, ContractRuntime};
 
 pub struct CPRegistryContract;
@@ -16,7 +17,7 @@ impl WithContractAbi for CPRegistryContract {
 }
 
 impl Contract for CPRegistryContract {
-    type Message = ();
+    type Message = Message;
     type InstantiationArgument = ();
     type Parameters = ();
 
@@ -26,9 +27,11 @@ impl Contract for CPRegistryContract {
 
     async fn instantiate(&mut self, _value: ()) {}
 
-    async fn execute_operation(&mut self, _operation: ()) -> Self::Response {}
+    async fn execute_operation(&mut self, _operation: Operation) -> Self::Response {
+        Self::Response::default()
+    }
 
-    async fn execute_message(&mut self, _message: ()) {
+    async fn execute_message(&mut self, _message: Message) {
         panic!("CPRegistry application doesn't support any cross-chain messages");
     }
 
