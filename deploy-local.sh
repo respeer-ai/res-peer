@@ -100,6 +100,13 @@ print $'\U01f499' $LIGHTGREEN " Copilot application deployed"
 echo -e "    Bytecode ID:    $BLUE$copilot_bid$NC"
 echo -e "    Application ID: $BLUE$copilot_appid$NC"
 
+print $'\U01F4AB' $YELLOW " Deploying BlobGateway application ..."
+blob_gateway_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/blob_gateway_{contract,service}.wasm`
+blob_gateway_appid=`linera --with-wallet 1 create-application $blob_gateway_bid`
+print $'\U01f499' $LIGHTGREEN " BlobGateway application deployed"
+echo -e "    Bytecode ID:    $BLUE$blob_gateway_bid$NC"
+echo -e "    Application ID: $BLUE$blob_gateway_appid$NC"
+
 app_deploy_chain=`linera --with-wallet 1 wallet show | grep "Public Key" | awk '{print $2}'`
 app_deploy_owner=`linera --with-wallet 1 wallet show | grep "Owner" | awk '{print $4}'`
 
@@ -110,6 +117,7 @@ sed -i "s/reviewApp =.*/reviewApp = '$review_appid',/g" webui/src/const/index.ts
 sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid',/g" webui/src/const/index.ts
 sed -i "s/activityApp =.*/activityApp = '$activity_appid',/g" webui/src/const/index.ts
 sed -i "s/copilotApp =.*/copilotApp = '$copilot_appid'/g" webui/src/const/index.ts
+sed -i "s/blobGatewayApp =.*/blobGatewayApp = '$blobGateway_appid'/g" webui/src/const/index.ts
 sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
 sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts
 
