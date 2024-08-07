@@ -56,8 +56,9 @@ import { Cookies } from 'quasar'
 
 const apiURL = ref('')
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const uploadMedia = (resolve: (value: string) => void, reject: (value: string) => void, filename: string, base64: string) => {
-  console.log('Upload media', resolve, reject, filename, base64)
+  // TODO
 }
 
 const initApiURL = () => {
