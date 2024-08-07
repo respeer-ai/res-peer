@@ -109,7 +109,7 @@ enum TaskType {
   Paraphrase = 'Paraphrase this',
   WriteFormally = 'Write this more formally',
   WriteMoreNeutral = 'Write in a more neutral way',
-  GenerateIllustrate = 'Generate a illustrate'
+  GenerateIllustrate = 'Generate illustrate'
 }
 
 const editorInit = ref({
