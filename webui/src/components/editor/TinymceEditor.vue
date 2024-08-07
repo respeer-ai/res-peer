@@ -12,7 +12,7 @@
 /* eslint-disable  @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
 import { ref, watch, defineProps, withDefaults, defineEmits, onMounted } from 'vue'
 import Editor from '@tinymce/tinymce-vue'
-import { copilotIcon } from 'src/assets'
+// import { copilotIcon } from 'src/assets'
 import 'tinymce/tinymce.min.js'
 import 'tinymce/plugins/accordion/plugin.min.js'
 import 'tinymce/plugins/advlist/plugin.min.js'
@@ -119,6 +119,9 @@ const editorInit = ref({
   protect: [/<a.*?@click=.*?>/g],
   images_upload_handler: exampleImageUploadHandler,
   setup: (editor: any) => {
+    // Register the custom icon
+    editor.ui.registry.addIcon('copilotIcon', '') // TODO: Need SVG String
+
     /* adding a menu button */
     editor.ui.registry.addMenuItem('basicitem', {
       text: 'My basic menu item',
@@ -129,7 +132,7 @@ const editorInit = ref({
     /* adding a toolbar menu button */
     editor.ui.registry.addMenuButton('customToolBar', {
       text: '',
-      icon: copilotIcon,
+      icon: 'copilotIcon', // use custom icon
       fetch: function (callback) {
         const items = [
           {
