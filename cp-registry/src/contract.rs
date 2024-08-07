@@ -58,6 +58,6 @@ impl Contract for CPRegistryContract {
 
 impl CPRegistryContract {
     async fn on_op_register(&mut self, params: RegisterParameters) -> Result<Self::Response, CPRegistryError> {
-
+        Ok(Self::Response::NodeId(self.state.register_cp_node(params).await?))
     }
 }
