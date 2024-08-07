@@ -7,7 +7,8 @@ mod random;
 mod state;
 mod token;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
 use candle_core::{
@@ -24,6 +25,9 @@ use tokenizers::Tokenizer;
 use anyhow::Result as AnyResult;
 
 use crate::token::TokenOutputStream;
+use uuid::Uuid;
+
+use tokio::runtime::Runtime;
 
 pub struct CopilotService {
     t5_model_builder: Arc<T5ModelBuilder>,
@@ -41,15 +45,72 @@ struct QueryRoot {}
 impl QueryRoot {
     async fn prompt(&self, ctx: &Context<'_>, prompt: String) -> String {
         let t5_model_builder = ctx.data::<Arc<T5ModelBuilder>>().unwrap();
-        t5_model_builder.run_model(&prompt).unwrap()
+        let id = Uuid::new_v4().to_string();
+        let buffer_manager = &t5_model_builder.buffer_manager;
+        buffer_manager.init_data(id.clone());
+        t5_model_builder.run_model(id.clone(), &prompt).await.expect("invalid run model");
+        let test_str = "test msg";
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            tokio::spawn(async move {
+                info!("test result: {}", test_str);
+            });
+        });
+        id
+    }
+    async fn id(&self, ctx: &Context<'_>, id: String) -> String {
+        info!("----- prompt");
+        let t5_model_builder = ctx.data::<Arc<T5ModelBuilder>>().unwrap();
+        let buffer_manager = &t5_model_builder.buffer_manager;
+        let mut str = String::new();
+        if let Some(output) = buffer_manager.read_data(&id, 5) {
+            str = output.clone();
+            println!("Read data: {}", output);
+        }
+        str
     }
 }
+
+struct BufferManager {
+    buffers: Arc<Mutex<HashMap<String, String>>>,
+}
+
+impl BufferManager {
+    fn new() -> Self {
+        BufferManager {
+            buffers: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    fn init_data(&self, id: String) -> () {
+        let mut buffers = self.buffers.lock().unwrap();
+        buffers.insert(id, String::new());
+    }
+
+    fn store_data(&self, id: String, data: String) -> () {
+        let mut buffers = self.buffers.lock().unwrap();
+        buffers.get_mut(&id).unwrap().push_str(&data);
+    }
+
+    fn read_data(&self, id: &str, amount: usize) -> Option<String> {
+        let mut buffers = self.buffers.lock().unwrap();
+        if let Some(data) = buffers.get_mut(id) {
+            let amount = amount.min(data.len());
+            let result = data.drain(..amount).collect();
+            Some(result)
+        } else {
+            None
+        }
+    }
+}
+
 
 struct T5ModelBuilder {
     device: Device,
     config: t5::Config,
     raw_weights: Vec<u8>,
     tokenizer: Vec<u8>,
+    buffer_manager: BufferManager,
 }
 
 impl Service for CopilotService {
@@ -81,11 +142,14 @@ impl Service for CopilotService {
         let mut config: t5::Config = serde_json::from_str(config_str.as_str()).expect("invalid load config");
         config.use_cache = true;
 
+        let buffer_manager = BufferManager::new();
+
         let t5_model_builder = Arc::new(T5ModelBuilder {
-            device: device,
-            config: config,
-            raw_weights: raw_weights,
+            device,
+            config,
+            raw_weights,
             tokenizer: tokenizer_bytes,
+            buffer_manager,
         });
 
         CopilotService { t5_model_builder }
@@ -103,13 +167,13 @@ impl Service for CopilotService {
 }
 
 impl T5ModelBuilder {
-    pub fn build_model(&self) -> AnyResult<t5::T5ForConditionalGeneration> {
+    pub async fn build_model(&self) -> AnyResult<t5::T5ForConditionalGeneration> {
         let device = Device::Cpu;
         let vb = t5::VarBuilder::from_gguf_buffer(&self.raw_weights, &device)?;
         Ok(t5::T5ForConditionalGeneration::load(vb, &self.config)?)
     }
 
-    fn run_model(&self, prompt_string: &str) -> Result<String, candle_core::Error> {
+    async fn run_model(&self, id: String, prompt_string: &str) -> Result<String, candle_core::Error> {
         let device = &self.device;
         let tokenizer_bytes = &self.tokenizer;
         let tokenizer = Tokenizer::from_bytes(tokenizer_bytes).expect("failed to create tokenizer");
@@ -126,7 +190,7 @@ impl T5ModelBuilder {
         let mut tokenizer_stream = TokenOutputStream::new(tokenizer);
 
         let input_token_ids = Tensor::new(&tokens[..], device)?.unsqueeze(0)?;
-        let mut model = self.build_model().expect("error to load model");
+        let mut model = self.build_model().await.expect("error to load model");
         let mut output_token_ids = [self
             .config
             .decoder_start_token_id
@@ -136,6 +200,7 @@ impl T5ModelBuilder {
         let mut logits_processor = LogitsProcessor::new(299792458, None, None);
         let encoder_output = model.encode(&input_token_ids).expect("invalid to load encode");
         let index_pos = 0;
+        let buffer_manager = &self.buffer_manager;
 
         for index in 0.. {
             if output_token_ids.len() > 512 {
@@ -177,7 +242,8 @@ impl T5ModelBuilder {
           
             if let Some(t) = tokenizer_stream.next_token(next_token_id)? {
                 let text = t.replace('▁', " ").replace("<0x0A>", "\n");
-                print!("{text}");
+                info!("{text}");
+                buffer_manager.store_data(id.clone(), text);
                 output.push_str(&t);
             }
         }
