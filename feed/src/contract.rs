@@ -417,7 +417,12 @@ impl FeedContract {
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Publish { cid, title, content, author })
+            .prepare_message(Message::Publish {
+                cid,
+                title,
+                content,
+                author,
+            })
             .with_authentication()
             .send_to(dest);
         Ok(())
@@ -449,7 +454,11 @@ impl FeedContract {
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Recommend { cid, reason_cid, reason })
+            .prepare_message(Message::Recommend {
+                cid,
+                reason_cid,
+                reason,
+            })
             .with_authentication()
             .send_to(dest);
         Ok(())
@@ -481,7 +490,12 @@ impl FeedContract {
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
         self.runtime
-            .prepare_message(Message::Comment { cid, comment_cid, comment, commentor })
+            .prepare_message(Message::Comment {
+                cid,
+                comment_cid,
+                comment,
+                commentor,
+            })
             .with_authentication()
             .send_to(dest);
         Ok(())

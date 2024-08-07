@@ -10,13 +10,8 @@ mod token;
 use std::sync::Arc;
 
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
-use candle_core::{
-    Device, Tensor,
-};
-use candle_transformers::{
-    generation::LogitsProcessor,
-    models::quantized_t5 as t5,
-};
+use candle_core::{Device, Tensor};
+use candle_transformers::{generation::LogitsProcessor, models::quantized_t5 as t5};
 use linera_sdk::{base::WithServiceAbi, Service, ServiceRuntime};
 use log::info;
 use tokenizers::Tokenizer;
@@ -58,27 +53,25 @@ impl Service for CopilotService {
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
         let device = Device::Cpu;
         info!("Downloading t5 model");
-        let raw_weights = runtime
-            .fetch_url("http://localhost:10001/t5_small/model.gguf");
-       
+        let raw_weights = runtime.fetch_url("http://localhost:10001/t5_small/model.gguf");
+
         info!("Downloading tokenizer");
-        let tokenizer_bytes = runtime
-            .fetch_url("http://localhost:10001/t5_small/tokenizer.json",);
-      
+        let tokenizer_bytes = runtime.fetch_url("http://localhost:10001/t5_small/tokenizer.json");
+
         info!("Downloading config");
-        let config = runtime
-            .fetch_url("http://localhost:10001/t5_small/config.json",);
-      
+        let config = runtime.fetch_url("http://localhost:10001/t5_small/config.json");
+
         let config_format: Result<String, std::string::FromUtf8Error> = String::from_utf8(config);
         let mut config_str = String::new();
         match config_format {
             Ok(valid_string) => {
                 config_str = valid_string;
-            },
+            }
             Err(e) => info!("Error converting string: {:?}", e),
         }
 
-        let mut config: t5::Config = serde_json::from_str(config_str.as_str()).expect("invalid load config");
+        let mut config: t5::Config =
+            serde_json::from_str(config_str.as_str()).expect("invalid load config");
         config.use_cache = true;
 
         let t5_model_builder = Arc::new(T5ModelBuilder {
@@ -94,7 +87,7 @@ impl Service for CopilotService {
     async fn handle_query(&self, request: Request) -> Response {
         let query_string = &request.query;
         info!("query: {}", query_string);
-        
+
         let schema = Schema::build(QueryRoot {}, EmptyMutation, EmptySubscription)
             .data(self.t5_model_builder.clone())
             .finish();
@@ -113,7 +106,7 @@ impl T5ModelBuilder {
         let device = &self.device;
         let tokenizer_bytes = &self.tokenizer;
         let tokenizer = Tokenizer::from_bytes(tokenizer_bytes).expect("failed to create tokenizer");
-        let repeat_penalty =  1.1f32;
+        let repeat_penalty = 1.1f32;
         let repeat_last_n = 64;
         let mut output = String::new();
 
@@ -132,9 +125,11 @@ impl T5ModelBuilder {
             .decoder_start_token_id
             .unwrap_or(self.config.pad_token_id) as u32]
         .to_vec();
-       
+
         let mut logits_processor = LogitsProcessor::new(299792458, None, None);
-        let encoder_output = model.encode(&input_token_ids).expect("invalid to load encode");
+        let encoder_output = model
+            .encode(&input_token_ids)
+            .expect("invalid to load encode");
         let index_pos = 0;
 
         for index in 0.. {
@@ -166,7 +161,8 @@ impl T5ModelBuilder {
                     &logits,
                     repeat_penalty,
                     &output_token_ids[start_at..],
-                ).expect("invalid code")
+                )
+                .expect("invalid code")
             };
 
             let next_token_id = logits_processor.sample(&logits)?;
@@ -174,7 +170,7 @@ impl T5ModelBuilder {
                 break;
             }
             output_token_ids.push(next_token_id);
-          
+
             if let Some(t) = tokenizer_stream.next_token(next_token_id)? {
                 let text = t.replace('▁', " ").replace("<0x0A>", "\n");
                 print!("{text}");
@@ -184,10 +180,7 @@ impl T5ModelBuilder {
         if let Some(rest) = tokenizer_stream.decode_rest().unwrap() {
             output.push_str(&rest);
         }
-        info!(
-            "{} tokens generated",
-            output_token_ids.len(),
-        );
+        info!("{} tokens generated", output_token_ids.len(),);
         Ok(output)
     }
 }
