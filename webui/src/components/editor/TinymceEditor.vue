@@ -9,11 +9,11 @@
 </template>
 
 <script setup lang='ts'>
-import { ref, watch, defineProps, withDefaults, defineEmits, onMounted, onUnmounted } from 'vue'
+import { ref, watch, defineProps, withDefaults, defineEmits, onMounted } from 'vue'
 import Editor from '@tinymce/tinymce-vue'
 import { copilotIcon } from 'src/assets'
 
-import tinymce from 'tinymce/tinymce'
+import 'tinymce/tinymce.min.js'
 import 'tinymce/plugins/accordion/plugin.min.js'
 import 'tinymce/plugins/advlist/plugin.min.js'
 import 'tinymce/plugins/anchor/plugin.min.js'
@@ -143,10 +143,5 @@ const handleEditorInput = (content: string) => {
 
 onMounted(() => {
   initApiURL()
-  void tinymce.init({})
-})
-
-onUnmounted(() => {
-  void tinymce.remove()
 })
 </script>
