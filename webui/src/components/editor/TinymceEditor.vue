@@ -4,12 +4,13 @@
       :init='editorInit'
       @input='handleEditorInput'
       v-model='internalValue'
+      @selection-change='handleSelectionChange'
     />
   </div>
 </template>
 
 <script setup lang='ts'>
-/* eslint-disable  @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+/* eslint-disable  @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
 import { ref, watch, defineProps, withDefaults, defineEmits, onMounted } from 'vue'
 import Editor from '@tinymce/tinymce-vue'
 // import { copilotIcon } from 'src/assets'
@@ -175,6 +176,11 @@ const editorInit = ref({
 })
 
 const internalValue = ref(props.modelValue)
+
+const selectedText = ref('')
+const handleSelectionChange = (event: any, editor: any) => {
+  selectedText.value = editor.selection.getContent({ format: 'text' })
+}
 
 watch(internalValue, (newValue) => {
   emit('update:modelValue', newValue)
