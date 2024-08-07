@@ -1,0 +1,23 @@
+[package]
+name = "cp-registry"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-graphql = { workspace = true, default-features = false }
+linera-sdk.workspace = true
+log.workspace = true
+serde.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+linera-sdk = { workspace = true, features = ["test"] }
+
+[[bin]]
+name = "cp_registry_contract"
+path = "src/contract.rs"
+
+[[bin]]
+name = "cp_registry_service"
+path = "src/service.rs"
+

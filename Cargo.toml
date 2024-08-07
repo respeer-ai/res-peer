@@ -7,7 +7,8 @@ members = [
     "review",
     "activity",
     "copilot",
-    "blob-gateway"
+    "blob-gateway",
+    "cp-registry"
 ]
 resolver = "2"
 
@@ -43,6 +44,7 @@ foundation = { path = "./foundation" }
 market = { path = "./market" }
 copilot = { path = "./copilot" }
 blob-gateway = { path = "./blob-gateway" }
+cp-registry = { path = "./cp-registry" }
 
 [profile.release]
 debug = true
