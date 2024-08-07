@@ -15,34 +15,15 @@
       </template>
     </q-input>
     <div :style='{marginTop: "24px"}' />
-    <div :style='{height: "500px"}' class='row'>
-      <div :style='{width: "100%"}'>
-        <Editor
-          v-if='false'
-          v-model='content'
-          editor-style='height: 320px; font-size: 16px'
-          placeholder='Body'
-          @selection-change='ev => onSelectedTextChange(ev)'
-        />
-        <TinymceEditor v-model='content' />
-      </div>
-      <div class='submit-action cursor-pointer' :style='{width: "128px", marginLeft: "-48px", marginTop: "-500px", zIndex: 0}'>
-        <div class='row'>
-          <div :style='{marginRight: "8px", marginTop: "4px"}' class='copilot-icon shadow-6 helper-icon'>
-            <inline-svg
-              :src='copilotIcon'
-              width='18'
-              height='18'
-            />
-          </div>
-          <q-icon name='bi-chevron-down' size='12px' :style='{marginTop: "15px"}' color='grey-10' />
-        </div>
-        <q-menu anchor='bottom right' self='top end' class='submit-action-menu' auto-close>
-          <div v-for='(_taskType, i) in TaskTypes' :key='i' @click='taskType = _taskType[1]' class='cursor-pointer submit-action-menu-item'>
-            {{ _taskType[1] }}
-          </div>
-        </q-menu>
-      </div>
+    <div :style='{width: "100%", height: "500px"}'>
+      <Editor
+        v-if='false'
+        v-model='content'
+        editor-style='height: 320px; font-size: 16px'
+        placeholder='Body'
+        @selection-change='ev => onSelectedTextChange(ev)'
+      />
+      <TinymceEditor v-model='content' />
     </div>
     <div class='row content-operation' :style='{marginTop: "24px"}'>
       <div
@@ -249,16 +230,6 @@ interface Range {
 }
 
 const showCopilot = ref(false)
-
-enum TaskType {
-  FixGrammar = 'Fix the grammar',
-  RewriteEasierUnderstand = 'Rewrite to make this easier to understand',
-  Paraphrase = 'Paraphrase this',
-  WriteFormally = 'Write this more formally',
-  WriteMoreNeutral = 'Write in a more neutral way'
-}
-const TaskTypes = Object.entries(TaskType)
-const taskType = ref(TaskType.FixGrammar)
 
 const onSelectedTextChange = (ev: EditorSelectionChangeEvent) => {
   const range = ev.range as Range

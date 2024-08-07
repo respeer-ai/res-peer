@@ -103,13 +103,25 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{(ev: 'update:modelValue', modelValue: string): void}>()
 
+enum TaskType {
+  FixGrammar = 'Fix the grammar',
+  RewriteEasierUnderstand = 'Rewrite to make this easier to understand',
+  Paraphrase = 'Paraphrase this',
+  WriteFormally = 'Write this more formally',
+  WriteMoreNeutral = 'Write in a more neutral way',
+  GenerateIllustrate = 'Generate a illustrate'
+}
+
 const editorInit = ref({
   height: 500,
   min_height: 500,
   max_height: 500,
   menubar: 'edit view insert format tools table custom',
   menu: {
-    custom: { title: 'CustomMenu', items: 'basicitem' }
+    custom: {
+      title: 'Copilot',
+      items: 'fixGrammar RewriteEasierUnderstand Paraphrase WriteFormally WriteMoreNeutral GenerateIllustrate'
+    }
   },
   plugins: props.plugins,
   toolbar: props.toolbar,
@@ -142,8 +154,38 @@ const editorInit = ref({
     editor.ui.registry.addIcon('copilotIcon', svgContent)
 
     /* adding a menu button */
-    editor.ui.registry.addMenuItem('basicitem', {
-      text: 'My basic menu item',
+    editor.ui.registry.addMenuItem('fixGrammar', {
+      text: TaskType.FixGrammar,
+      onAction: function () {
+        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+      }
+    })
+    editor.ui.registry.addMenuItem('RewriteEasierUnderstand', {
+      text: TaskType.RewriteEasierUnderstand,
+      onAction: function () {
+        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+      }
+    })
+    editor.ui.registry.addMenuItem('Paraphrase', {
+      text: TaskType.Paraphrase,
+      onAction: function () {
+        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+      }
+    })
+    editor.ui.registry.addMenuItem('WriteFormally', {
+      text: TaskType.WriteFormally,
+      onAction: function () {
+        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+      }
+    })
+    editor.ui.registry.addMenuItem('WriteMoreNeutral', {
+      text: TaskType.WriteMoreNeutral,
+      onAction: function () {
+        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+      }
+    })
+    editor.ui.registry.addMenuItem('GenerateIllustrate', {
+      text: TaskType.GenerateIllustrate,
       onAction: function () {
         editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
       }
@@ -152,18 +194,46 @@ const editorInit = ref({
     editor.ui.registry.addMenuButton('customToolBar', {
       text: '',
       icon: 'copilotIcon', // use custom icon
-      fetch: function (callback) {
+      fetch: function (callback: (arg0: { type: string; text: string; onAction: () => void }[]) => void) {
         const items = [
           {
             type: 'menuitem',
-            text: 'Tool Menu item 1',
+            text: TaskType.FixGrammar,
             onAction: function () {
               editor.insertContent('&nbsp<em>You clicked tool menu item 1!</em>')
             }
           },
           {
             type: 'menuitem',
-            text: 'Tool Menu item 2',
+            text: TaskType.RewriteEasierUnderstand,
+            onAction: function () {
+              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+            }
+          },
+          {
+            type: 'menuitem',
+            text: TaskType.Paraphrase,
+            onAction: function () {
+              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+            }
+          },
+          {
+            type: 'menuitem',
+            text: TaskType.WriteFormally,
+            onAction: function () {
+              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+            }
+          },
+          {
+            type: 'menuitem',
+            text: TaskType.WriteMoreNeutral,
+            onAction: function () {
+              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+            }
+          },
+          {
+            type: 'menuitem',
+            text: TaskType.GenerateIllustrate,
             onAction: function () {
               editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
             }
