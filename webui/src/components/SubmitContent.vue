@@ -15,30 +15,34 @@
       </template>
     </q-input>
     <div :style='{marginTop: "24px"}' />
-    <div class='submit-action cursor-pointer' :style='{width: "128px", marginLeft: "648px"}'>
-      <div class='row'>
-        <div :style='{marginRight: "8px", marginTop: "4px"}'>
-          <inline-svg
-            :src='copilotIcon'
-            width='18'
-            height='18'
-          />
-        </div>
-        <q-icon name='bi-chevron-down' size='12px' :style='{marginTop: "15px"}' color='grey-10' />
+    <div :style='{height: "500px"}' class='row'>
+      <div :style='{width: "100%"}'>
+        <Editor
+          v-if='false'
+          v-model='content'
+          editor-style='height: 320px; font-size: 16px'
+          placeholder='Body'
+          @selection-change='ev => onSelectedTextChange(ev)'
+        />
+        <TinymceEditor v-model='content' />
       </div>
-      <q-menu anchor='bottom right' self='top end' class='submit-action-menu' auto-close>
-        <div v-for='(_taskType, i) in TaskTypes' :key='i' @click='taskType = _taskType[1]' class='cursor-pointer submit-action-menu-item'>
-          {{ _taskType[1] }}
+      <div class='submit-action cursor-pointer' :style='{width: "128px", marginLeft: "-48px", marginTop: "-500px", zIndex: 0}'>
+        <div class='row'>
+          <div :style='{marginRight: "8px", marginTop: "4px"}' class='copilot-icon shadow-6 helper-icon'>
+            <inline-svg
+              :src='copilotIcon'
+              width='18'
+              height='18'
+            />
+          </div>
+          <q-icon name='bi-chevron-down' size='12px' :style='{marginTop: "15px"}' color='grey-10' />
         </div>
-      </q-menu>
-    </div>
-    <div :style='{marginTop: "-42px"}'>
-      <Editor
-        v-model='content'
-        editor-style='height: 320px; font-size: 16px'
-        placeholder='Body'
-        @selection-change='ev => onSelectedTextChange(ev)'
-      />
+        <q-menu anchor='bottom right' self='top end' class='submit-action-menu' auto-close>
+          <div v-for='(_taskType, i) in TaskTypes' :key='i' @click='taskType = _taskType[1]' class='cursor-pointer submit-action-menu-item'>
+            {{ _taskType[1] }}
+          </div>
+        </q-menu>
+      </div>
     </div>
     <div class='row content-operation' :style='{marginTop: "24px"}'>
       <div
@@ -143,6 +147,7 @@ import { useApplicationStore } from 'src/stores/application'
 
 import Editor, { EditorSelectionChangeEvent } from 'primevue/editor'
 import FileUpload from 'primevue/fileupload'
+import TinymceEditor from './editor/TinymceEditor.vue'
 
 import { copilotIcon } from 'src/assets'
 
