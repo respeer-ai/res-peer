@@ -46,7 +46,7 @@
           height: "128px",
           width: "220px"
         }'
-        class='cursor-pointer'
+        class='cursor-pointer cover-uploader'
       >
         <FileUpload
           name='demo[]' @upload='onAdvancedUpload($event)' :multiple='false'
@@ -82,6 +82,7 @@
         </FileUpload>
         <div
           :style='{marginLeft: "192px", marginTop: "-28px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
+          class='cursor-pointer shadow-6 helper-icon'
         >
           <q-img :src='copilotIcon' width='16px' height='16px' fit='contain' />
         </div>
@@ -91,6 +92,7 @@
           height: "128px",
           width: "calc(100% - 220px)"
         }'
+        class='abbreviation'
       >
         <q-input
           outlined
@@ -100,9 +102,11 @@
         />
         <div
           :style='{marginLeft: "calc(100% - 28px)", marginTop: "-28px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
-          class='cursor-pointer'
+          class='cursor-pointer shadow-6 helper-icon'
         >
-          <q-img :src='copilotIcon' width='16px' height='16px' fit='contain' />
+          <q-img
+            :src='copilotIcon' width='16px' height='16px' fit='contain'
+          />
         </div>
       </div>
     </div>
