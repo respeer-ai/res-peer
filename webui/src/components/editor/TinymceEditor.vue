@@ -249,8 +249,14 @@ const editorInit = ref({
 const internalValue = ref(props.modelValue)
 
 const selectedText = ref('')
+const startOffset = ref(0)
+const endOffset = ref(0)
+
 const handleSelectionChange = (event: any, editor: any) => {
   selectedText.value = editor.selection.getContent({ format: 'text' })
+  const range = editor.selection.getRng()
+  startOffset.value = range.startOffset
+  endOffset.value = range.endOffset
 }
 
 watch(internalValue, (newValue) => {
