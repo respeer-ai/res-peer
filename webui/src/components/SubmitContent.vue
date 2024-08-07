@@ -83,7 +83,7 @@
           outlined
           v-model='abbreviation'
           type='textarea'
-          placeholder='User part of the first paragraph as abbreviation or create with copilot.'
+          placeholder='Use part of the first paragraph as abbreviation or create with Copilot.'
         />
         <div
           :style='{marginLeft: "calc(100% - 28px)", marginTop: "-28px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
