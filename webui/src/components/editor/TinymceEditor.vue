@@ -9,10 +9,10 @@
 </template>
 
 <script setup lang='ts'>
+/* eslint-disable  @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
 import { ref, watch, defineProps, withDefaults, defineEmits, onMounted } from 'vue'
 import Editor from '@tinymce/tinymce-vue'
 import { copilotIcon } from 'src/assets'
-
 import 'tinymce/tinymce.min.js'
 import 'tinymce/plugins/accordion/plugin.min.js'
 import 'tinymce/plugins/advlist/plugin.min.js'
@@ -91,7 +91,8 @@ const props = withDefaults(defineProps<Props>(), {
           'fullscreen image link media code codesample table charmap pagebreak nonbreaking ' +
           'anchor insertdatetime advlist lists wordcount help emoticons autosave autoresize',
   toolbar: 'code undo redo restoredraft | fullscreen | cut copy | ' +
-          'forecolor backcolor bold italic underline strikethrough link anchor | ' +
+          'forecolor backcolor bold italic underline strikethrough link anchor |' +
+          'customToolBar |' +
           'alignleft aligncenter alignright alignjustify outdent indent | ' +
           'styleselect formatselect fontselect fontsizeselect | bullist numlist | ' +
           'blockquote subscript superscript removeformat | ' +
@@ -105,7 +106,10 @@ const editorInit = ref({
   height: 500,
   min_height: 500,
   max_height: 500,
-  menubar: 'edit view insert format tools table',
+  menubar: 'edit view insert format tools table custom',
+  menu: {
+    custom: { title: 'CustomMenu', items: 'basicitem' }
+  },
   plugins: props.plugins,
   toolbar: props.toolbar,
   skin_url: '/tinymce/skins/ui/oxide',
@@ -114,14 +118,36 @@ const editorInit = ref({
   branding: false,
   protect: [/<a.*?@click=.*?>/g],
   images_upload_handler: exampleImageUploadHandler,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setup: (editor: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    editor.ui.registry.addButton('copilot', {
-      tooltip: 'Author copilot',
+    /* adding a menu button */
+    editor.ui.registry.addMenuItem('basicitem', {
+      text: 'My basic menu item',
+      onAction: function () {
+        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+      }
+    })
+    /* adding a toolbar menu button */
+    editor.ui.registry.addMenuButton('customToolBar', {
+      text: '',
       icon: copilotIcon,
-      onAction: () => {
-        console.log('Copilot')
+      fetch: function (callback) {
+        const items = [
+          {
+            type: 'menuitem',
+            text: 'Tool Menu item 1',
+            onAction: function () {
+              editor.insertContent('&nbsp<em>You clicked tool menu item 1!</em>')
+            }
+          },
+          {
+            type: 'menuitem',
+            text: 'Tool Menu item 2',
+            onAction: function () {
+              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+            }
+          }
+        ]
+        callback(items)
       }
     })
   }
