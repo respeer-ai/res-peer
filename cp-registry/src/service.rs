@@ -5,19 +5,20 @@
 
 mod state;
 
-use std::{
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
+use std::sync::Arc;
 
-use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
+use async_graphql::{EmptySubscription, Request, Response, Schema};
+use cp_registry::Operation;
 use linera_sdk::{
-    base::{Blob, BlobId, WithServiceAbi},
+    base::WithServiceAbi,
+    graphql::GraphQLMutationRoot,
+    views::{View, ViewStorageContext},
     Service, ServiceRuntime,
 };
+use state::CPRegistry;
 
 pub struct CPRegistryService {
-    runtime: Arc<Mutex<ServiceRuntime<CPRegistryService>>>,
+    state: Arc<CPRegistry>,
 }
 
 linera_sdk::service!(CPRegistryService);
@@ -26,38 +27,25 @@ impl WithServiceAbi for CPRegistryService {
     type Abi = cp_registry::CPRegistryAbi;
 }
 
-struct FetchContext {
-    runtime: Arc<Mutex<ServiceRuntime<CPRegistryService>>>,
-}
-
-struct QueryRoot {}
-
-#[Object]
-impl QueryRoot {
-    async fn fetch(&self, ctx: &Context<'_>, blob_id: String) -> Result<Blob, anyhow::Error> {
-        let blob_id = BlobId::from_str(&blob_id)?;
-        let ctx = ctx.data::<FetchContext>().unwrap();
-        Ok(ctx.runtime.lock().unwrap().read_blob(blob_id).into_inner())
-    }
-}
-
 impl Service for CPRegistryService {
     type Parameters = ();
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
+        let state = CPRegistry::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
         CPRegistryService {
-            runtime: Arc::new(Mutex::new(runtime)),
+            state: Arc::new(state),
         }
     }
 
     async fn handle_query(&self, request: Request) -> Response {
-        let fetch_context = FetchContext {
-            runtime: self.runtime.clone(),
-        };
-
-        let schema = Schema::build(QueryRoot {}, EmptyMutation, EmptySubscription)
-            .data(fetch_context)
-            .finish();
+        let schema = Schema::build(
+            self.state.clone(),
+            Operation::mutation_root(),
+            EmptySubscription,
+        )
+        .finish();
         schema.execute(request).await
     }
 }
