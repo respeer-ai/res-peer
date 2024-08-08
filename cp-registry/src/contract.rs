@@ -12,7 +12,7 @@ use cp_registry::{
 };
 use linera_sdk::{
     base::{ChannelName, CryptoHash, Destination, MessageId, WithContractAbi},
-    views::{View, ViewStorageContext},
+    views::{RootView, View, ViewStorageContext},
     Contract, ContractRuntime,
 };
 
@@ -82,7 +82,9 @@ impl Contract for CPRegistryContract {
         }
     }
 
-    async fn store(self) {}
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
+    }
 }
 
 impl CPRegistryContract {
@@ -141,7 +143,8 @@ impl CPRegistryContract {
     }
 
     async fn on_msg_register(&mut self, params: RegisterParameters) -> Result<(), CPRegistryError> {
-        self.state
+        let node_id = self
+            .state
             .register_cp_node(params.clone(), self.runtime.system_time())
             .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {

@@ -7,6 +7,7 @@ mod state;
 
 use std::sync::Arc;
 
+use self::state::CPRegistry;
 use async_graphql::{EmptySubscription, Request, Response, Schema};
 use cp_registry::Operation;
 use linera_sdk::{
@@ -15,7 +16,6 @@ use linera_sdk::{
     views::{View, ViewStorageContext},
     Service, ServiceRuntime,
 };
-use state::CPRegistry;
 
 pub struct CPRegistryService {
     state: Arc<CPRegistry>,
