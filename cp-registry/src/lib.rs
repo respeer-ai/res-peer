@@ -89,7 +89,7 @@ impl BcsHashable for RegisterParameters {}
 impl Into<CPNode> for RegisterParameters {
     fn into(self) -> CPNode {
         CPNode {
-            node_id: CryptoHash::new(&self),
+            node_id: self.node_id.unwrap_or(CryptoHash::new(&self)),
             brand_logo: self.brand_logo,
             brand_name: self.brand_name,
             link: self.link,

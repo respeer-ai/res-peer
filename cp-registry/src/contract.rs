@@ -143,8 +143,7 @@ impl CPRegistryContract {
     }
 
     async fn on_msg_register(&mut self, params: RegisterParameters) -> Result<(), CPRegistryError> {
-        let node_id = self
-            .state
+        self.state
             .register_cp_node(params.clone(), self.runtime.system_time())
             .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
