@@ -73,10 +73,22 @@ pub struct DepositQuota {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
-    Deposit { amount: Amount },
+    Deposit {
+        query_id: CryptoHash,
+        amount: Amount,
+    },
+    Finish {
+        query_id: CryptoHash,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {
-    Deposit { amount: Amount },
+    Deposit {
+        query_id: CryptoHash,
+        amount: Amount,
+    },
+    Finish {
+        query_id: CryptoHash,
+    },
 }

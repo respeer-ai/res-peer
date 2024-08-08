@@ -7,13 +7,24 @@ mod random;
 mod state;
 mod token;
 
-use std::{io::Read, sync::Arc};
+use std::{
+    io::Read,
+    sync::{Arc, Mutex},
+};
 
-use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
+use async_graphql::{
+    Context, Description, EmptyMutation, EmptySubscription, Object, Request, Response, Schema,
+};
 use candle_core::{Device, Tensor};
 use candle_transformers::{generation::LogitsProcessor, models::quantized_t5 as t5};
-use linera_sdk::{base::WithServiceAbi, Service, ServiceRuntime};
+use copilot::Operation;
+use linera_sdk::{
+    base::{BcsHashable, CryptoHash, Timestamp, WithServiceAbi},
+    graphql::GraphQLMutationRoot,
+    Service, ServiceRuntime,
+};
 use log::info;
+use serde::{Deserialize, Serialize};
 use tokenizers::Tokenizer;
 
 use anyhow::Result as AnyResult;
@@ -21,7 +32,7 @@ use anyhow::Result as AnyResult;
 use crate::token::TokenOutputStream;
 
 pub struct CopilotService {
-    t5_model_builder: Arc<T5ModelBuilder>,
+    model_context: Arc<ModelContext>,
 }
 
 linera_sdk::service!(CopilotService);
@@ -32,11 +43,24 @@ impl WithServiceAbi for CopilotService {
 
 struct QueryRoot {}
 
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+struct HashInput {
+    buf: [u8; 32],
+}
+
+impl BcsHashable for HashInput {}
+
 #[Object]
 impl QueryRoot {
+    async fn prepare_query_id(&self) -> CryptoHash {
+        let mut hash_input = HashInput { buf: [0u8; 32] };
+        getrandom::getrandom(&mut hash_input.buf).unwrap();
+        CryptoHash::new(&hash_input)
+    }
+
     async fn prompt(&self, ctx: &Context<'_>, prompt: String) -> String {
-        let t5_model_builder = ctx.data::<Arc<T5ModelBuilder>>().unwrap();
-        t5_model_builder.run_model(&prompt).unwrap()
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        model_context.t5_model_builder.run_model(&prompt).unwrap()
     }
 }
 
@@ -45,6 +69,11 @@ struct T5ModelBuilder {
     config: t5::Config,
     raw_weights: Vec<u8>,
     tokenizer: Vec<u8>,
+}
+
+struct ModelContext {
+    t5_model_builder: T5ModelBuilder,
+    runtime: Mutex<ServiceRuntime<CopilotService>>,
 }
 
 impl Service for CopilotService {
@@ -74,22 +103,27 @@ impl Service for CopilotService {
             serde_json::from_str(config_str.as_str()).expect("invalid load config");
         config.use_cache = true;
 
-        let t5_model_builder = Arc::new(T5ModelBuilder {
+        let t5_model_builder = T5ModelBuilder {
             device: device,
             config: config,
             raw_weights: raw_weights,
             tokenizer: tokenizer_bytes,
-        });
+        };
 
-        CopilotService { t5_model_builder }
+        CopilotService {
+            model_context: Arc::new(ModelContext {
+                t5_model_builder,
+                runtime: Mutex::new(runtime),
+            }),
+        }
     }
 
     async fn handle_query(&self, request: Request) -> Response {
         let query_string = &request.query;
         info!("query: {}", query_string);
 
-        let schema = Schema::build(QueryRoot {}, EmptyMutation, EmptySubscription)
-            .data(self.t5_model_builder.clone())
+        let schema = Schema::build(QueryRoot {}, Operation::mutation_root(), EmptySubscription)
+            .data(self.model_context.clone())
             .finish();
         schema.execute(request).await
     }
