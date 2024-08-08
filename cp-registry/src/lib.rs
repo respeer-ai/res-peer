@@ -144,6 +144,7 @@ pub enum Message {
     Update { params: UpdateParameters },
     Deregister { node_id: CryptoHash },
     RequestSubscribe,
+    ExistNode { node: CPNode },
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]

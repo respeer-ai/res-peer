@@ -18,6 +18,17 @@ pub struct CPRegistry {
 
 #[allow(dead_code)]
 impl CPRegistry {
+    pub(crate) async fn _nodes(&self) -> Result<Vec<CPNode>, CPRegistryError> {
+        let mut nodes = Vec::new();
+        self.nodes
+            .for_each_index_value(|_, v| {
+                nodes.push(v);
+                Ok(())
+            })
+            .await?;
+        Ok(nodes)
+    }
+
     pub(crate) async fn exist_node_with_link(&self, link: String) -> Result<bool, CPRegistryError> {
         Ok(self.links.contains(&link).await?)
     }
@@ -42,6 +53,12 @@ impl CPRegistry {
         self.nodes.insert(&node.node_id, node.clone())?;
         self.links.insert(&node.link)?;
         Ok(node.node_id)
+    }
+
+    pub(crate) async fn insert_cp_node(&mut self, node: CPNode) -> Result<(), CPRegistryError> {
+        self.nodes.insert(&node.node_id, node.clone())?;
+        self.links.insert(&node.link)?;
+        Ok(())
     }
 
     pub(crate) async fn update_cp_node(

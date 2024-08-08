@@ -78,7 +78,12 @@ impl Contract for CPRegistryContract {
                 .expect("Failed MSG: deregister"),
             Message::RequestSubscribe => self
                 .on_msg_request_subscribe()
+                .await
                 .expect("Failed MSG: request subscribe"),
+            Message::ExistNode { node } => self
+                .on_msg_exist_node(node)
+                .await
+                .expect("Failed MSG: exist node"),
         }
     }
 
@@ -190,7 +195,7 @@ impl CPRegistryContract {
         }
     }
 
-    fn on_msg_request_subscribe(&mut self) -> Result<(), CPRegistryError> {
+    async fn on_msg_request_subscribe(&mut self) -> Result<(), CPRegistryError> {
         let message_id = self.require_message_id()?;
         // The subscribe message must be from another chain
         if message_id.chain_id == self.runtime.application_id().creation.chain_id {
@@ -200,6 +205,16 @@ impl CPRegistryContract {
             message_id.chain_id,
             ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
         );
+        for node in self.state._nodes().await? {
+            self.runtime
+                .prepare_message(Message::ExistNode { node })
+                .with_authentication()
+                .send_to(self.require_message_id()?.chain_id);
+        }
         Ok(())
+    }
+
+    async fn on_msg_exist_node(&mut self, node: CPNode) -> Result<(), CPRegistryError> {
+        self.state.insert_cp_node(node).await
     }
 }
