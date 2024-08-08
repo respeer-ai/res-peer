@@ -4,7 +4,7 @@
 use async_graphql::SimpleObject;
 use cp_registry::{CPNode, CPRegistryError, RegisterParameters, UpdateParameters};
 use linera_sdk::{
-    base::CryptoHash,
+    base::{CryptoHash, Timestamp},
     views::{linera_views, MapView, RootView, SetView, ViewStorageContext},
 };
 
@@ -32,11 +32,13 @@ impl CPRegistry {
     pub(crate) async fn register_cp_node(
         &mut self,
         params: RegisterParameters,
+        now: Timestamp,
     ) -> Result<CryptoHash, CPRegistryError> {
         if self.links.contains(&params.link).await? {
             return Err(CPRegistryError::AlreadyRegistered);
         }
-        let node: CPNode = params.into();
+        let mut node: CPNode = params.into();
+        node.created_at = now;
         self.nodes.insert(&node.node_id, node.clone())?;
         self.links.insert(&node.link)?;
         Ok(node.node_id)

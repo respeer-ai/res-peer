@@ -105,7 +105,7 @@ impl Into<CPNode> for RegisterParameters {
             supported_task_types: self.supported_task_types,
             payment_chain_id: self.payment_chain_id,
             available: true,
-            created_at: Timestamp::now(),
+            created_at: 0,
         }
     }
 }
