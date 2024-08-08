@@ -21,20 +21,20 @@ impl ServiceAbi for CPRegistryAbi {
     type QueryResponse = Response;
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy, Ord, PartialOrd)]
 pub enum ResourceType {
     CPU,
     GPU,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy, Ord, PartialOrd)]
 pub enum StorageType {
     NVME,
     SSD,
     HDD,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy, Ord, PartialOrd)]
 pub enum TaskType {
     FixGrammar,
     RewriteEasierUnderstand,
