@@ -36,21 +36,7 @@ struct QueryRoot {}
 impl QueryRoot {
     async fn prompt(&self, ctx: &Context<'_>, prompt: String) -> String {
         let t5_model_builder = ctx.data::<Arc<T5ModelBuilder>>().unwrap();
-        let tokens = t5_model_builder.run_model(&prompt).unwrap();
-
-        let client = oxhttp::Client::new();
-        let response = client
-            .request(
-                oxhttp::model::Request::builder(
-                    oxhttp::model::Method::GET,
-                    "https://www.rust-lang.org".parse().unwrap(),
-                )
-                .build(),
-            )
-            .unwrap();
-        log::info!("Body {}", response.into_body().to_string().unwrap());
-
-        tokens
+        t5_model_builder.run_model(&prompt).unwrap()
     }
 }
 
