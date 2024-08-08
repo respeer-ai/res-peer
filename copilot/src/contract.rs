@@ -17,14 +17,16 @@ impl WithContractAbi for CopilotContract {
 
 impl Contract for CopilotContract {
     type Message = ();
-    type InstantiationArgument = ();
+    type InstantiationArgument = cp_registry::RegisterParameters;
     type Parameters = ();
 
     async fn load(_runtime: ContractRuntime<Self>) -> Self {
         CopilotContract
     }
 
-    async fn instantiate(&mut self, _value: ()) {}
+    async fn instantiate(&mut self, argument: InstantiationArgument) {
+        log::info!("InstantiateArgument {:?}", argument);
+    }
 
     async fn execute_operation(&mut self, _operation: ()) -> Self::Response {}
 
