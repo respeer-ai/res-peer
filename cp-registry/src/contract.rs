@@ -5,13 +5,20 @@
 
 mod state;
 
-use cp_registry::{CPRegistryError, Message, Operation, RegisterParameters};
-use linera_sdk::{base::WithContractAbi, Contract, ContractRuntime, views::{View, ViewStorageContext}};
 use self::state::CPRegistry;
+use cp_registry::{
+    CPNode, CPRegistryError, CPRegistryResponse, Message, Operation, RegisterParameters,
+    UpdateParameters,
+};
+use linera_sdk::{
+    base::{ChannelName, CryptoHash, Destination, MessageId, WithContractAbi},
+    views::{View, ViewStorageContext},
+    Contract, ContractRuntime,
+};
 
 pub struct CPRegistryContract {
     state: CPRegistry,
-    runtime: ContractRuntime<Self>
+    runtime: ContractRuntime<Self>,
 }
 
 linera_sdk::contract!(CPRegistryContract);
@@ -19,6 +26,8 @@ linera_sdk::contract!(CPRegistryContract);
 impl WithContractAbi for CPRegistryContract {
     type Abi = cp_registry::CPRegistryAbi;
 }
+
+const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
 impl Contract for CPRegistryContract {
     type Message = Message;
@@ -32,24 +41,44 @@ impl Contract for CPRegistryContract {
         CPRegistryContract { state, runtime }
     }
 
-    async fn instantiate(&mut self, _value: ()) {
-    }
+    async fn instantiate(&mut self, _value: ()) {}
 
     async fn execute_operation(&mut self, operation: Operation) -> Self::Response {
         match operation {
-            Operation::Register { params } => self.on_op_register(params).await?,
-            Operation::Update { params } => self.on_op_update(params).await?,
-            Operation::Deregister { node_id } => self.on_op_deregister(node_id).await?,
-            Operation::RequestSubscribe => self.on_op_request_subscribe().await?,
+            Operation::Register { params } => self
+                .on_op_register(params)
+                .await
+                .expect("Failed OP: register"),
+            Operation::Update { params } => {
+                self.on_op_update(params).await.expect("Failed OP: update")
+            }
+            Operation::Deregister { node_id } => self
+                .on_op_deregister(node_id)
+                .await
+                .expect("Failed OP: deregister"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: request subscribe"),
         }
     }
 
     async fn execute_message(&mut self, message: Message) {
         match message {
-            Message::Register { params } => self.on_msg_register(params).await?,
-            Message::Update { params } => self.on_msg_update(params).await?,
-            Message::Deregister { node_id } => self.on_msg_deregister(params).await?,
-            Message::RequestSubscribe => self.on_msg_request_subscribe().await?,
+            Message::Register { params } => self
+                .on_msg_register(params)
+                .await
+                .expect("Failed MSG: register"),
+            Message::Update { params } => self
+                .on_msg_update(params)
+                .await
+                .expect("Failed MSG: update"),
+            Message::Deregister { node_id } => self
+                .on_msg_deregister(node_id)
+                .await
+                .expect("Failed MSG: deregister"),
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .expect("Failed MSG: request subscribe"),
         }
     }
 
@@ -57,7 +86,116 @@ impl Contract for CPRegistryContract {
 }
 
 impl CPRegistryContract {
-    async fn on_op_register(&mut self, params: RegisterParameters) -> Result<Self::Response, CPRegistryError> {
-        Ok(Self::Response::NodeId(self.state.register_cp_node(params).await?))
+    async fn on_op_register(
+        &mut self,
+        params: RegisterParameters,
+    ) -> Result<CPRegistryResponse, CPRegistryError> {
+        if self.state.exist_node_with_link(params.clone().link).await? {
+            return Err(CPRegistryError::AlreadyRegistered);
+        }
+        let node: CPNode = params.clone().into();
+        if self.state.exist_node_with_id(node.node_id).await? {
+            return Err(CPRegistryError::AlreadyRegistered);
+        }
+        self.runtime
+            .prepare_message(Message::Register { params })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(CPRegistryResponse::NodeId(node.node_id))
+    }
+
+    async fn on_op_update(
+        &mut self,
+        params: UpdateParameters,
+    ) -> Result<CPRegistryResponse, CPRegistryError> {
+        if !self.state.exist_node_with_id(params.node_id).await? {
+            return Err(CPRegistryError::InvalidNode);
+        }
+        self.runtime
+            .prepare_message(Message::Update { params })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(CPRegistryResponse::Ok)
+    }
+
+    async fn on_op_deregister(
+        &mut self,
+        node_id: CryptoHash,
+    ) -> Result<CPRegistryResponse, CPRegistryError> {
+        if !self.state.exist_node_with_id(node_id).await? {
+            return Err(CPRegistryError::InvalidNode);
+        }
+        self.runtime
+            .prepare_message(Message::Deregister { node_id })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(CPRegistryResponse::Ok)
+    }
+
+    fn on_op_request_subscribe(&mut self) -> Result<CPRegistryResponse, CPRegistryError> {
+        self.runtime
+            .prepare_message(Message::RequestSubscribe)
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(CPRegistryResponse::Ok)
+    }
+
+    async fn on_msg_register(&mut self, params: RegisterParameters) -> Result<(), CPRegistryError> {
+        self.state.register_cp_node(params.clone()).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Register { params })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_update(&mut self, params: UpdateParameters) -> Result<(), CPRegistryError> {
+        self.state.update_cp_node(params.clone()).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Update { params })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    async fn on_msg_deregister(&mut self, node_id: CryptoHash) -> Result<(), CPRegistryError> {
+        self.state.deregister_cp_node(node_id).await?;
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        self.runtime
+            .prepare_message(Message::Deregister { node_id })
+            .with_authentication()
+            .send_to(dest);
+        Ok(())
+    }
+
+    fn require_message_id(&mut self) -> Result<MessageId, CPRegistryError> {
+        match self.runtime.message_id() {
+            Some(message_id) => Ok(message_id),
+            None => Err(CPRegistryError::InvalidMessageId),
+        }
+    }
+
+    fn on_msg_request_subscribe(&mut self) -> Result<(), CPRegistryError> {
+        let message_id = self.require_message_id()?;
+        // The subscribe message must be from another chain
+        if message_id.chain_id == self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        self.runtime.subscribe(
+            message_id.chain_id,
+            ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
+        );
+        Ok(())
     }
 }

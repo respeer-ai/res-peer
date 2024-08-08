@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_graphql::{Enum, InputObject, Request, Response, SimpleObject};
-use linera_sdk::{base::{Amount, BcsHashable, ChainId, ContractAbi, CryptoHash, ServiceAbi, Timestamp}, graphql::GraphQLMutationRoot};
+use linera_sdk::{
+    base::{Amount, BcsHashable, ChainId, ContractAbi, CryptoHash, ServiceAbi, Timestamp},
+    graphql::GraphQLMutationRoot,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -21,14 +24,14 @@ impl ServiceAbi for CPRegistryAbi {
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
 pub enum ResourceType {
     CPU,
-    GPU
+    GPU,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
 pub enum StorageType {
     NVME,
     SSD,
-    HDD
+    HDD,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
@@ -38,7 +41,7 @@ pub enum TaskType {
     Paraphrase,
     WriteFormally,
     WriteMoreNeutral,
-    GenerateIllustrate
+    GenerateIllustrate,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq)]
@@ -59,11 +62,12 @@ pub struct CPNode {
     pub supported_task_types: Vec<TaskType>,
     pub payment_chain_id: ChainId,
     pub available: bool,
-    pub created_at: Timestamp
+    pub created_at: Timestamp,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, InputObject)]
 pub struct RegisterParameters {
+    pub node_id: Option<CryptoHash>,
     pub brand_logo: String,
     pub brand_name: String,
     pub link: String,
@@ -77,7 +81,7 @@ pub struct RegisterParameters {
     pub price_quota: u32,
     pub quota_price: Amount,
     pub supported_task_types: Vec<TaskType>,
-    pub payment_chain_id: ChainId
+    pub payment_chain_id: ChainId,
 }
 
 impl BcsHashable for RegisterParameters {}
@@ -123,14 +127,14 @@ pub struct UpdateParameters {
     pub quota_price: Option<Amount>,
     pub supported_task_types: Option<Vec<TaskType>>,
     pub payment_chain_id: Option<ChainId>,
-    pub available: Option<bool>
+    pub available: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     Register { params: RegisterParameters },
     Update { params: UpdateParameters },
-    Deregister { node_id: u64 },
+    Deregister { node_id: CryptoHash },
     RequestSubscribe,
 }
 
@@ -138,7 +142,7 @@ pub enum Operation {
 pub enum Message {
     Register { params: RegisterParameters },
     Update { params: UpdateParameters },
-    Deregister { node_id: u64 },
+    Deregister { node_id: CryptoHash },
     RequestSubscribe,
 }
 
@@ -146,7 +150,7 @@ pub enum Message {
 pub enum CPRegistryResponse {
     #[default]
     Ok,
-    NodeId(u64)
+    NodeId(CryptoHash),
 }
 
 #[derive(Debug, Error)]
@@ -155,9 +159,15 @@ pub enum CPRegistryError {
     #[error("Link is already registered")]
     AlreadyRegistered,
 
+    #[error("Invalid node")]
+    InvalidNode,
+
+    #[error("Invalid message id")]
+    InvalidMessageId,
+
     #[error(transparent)]
     LowLevelError(#[from] anyhow::Error),
 
     #[error(transparent)]
-    ViewError(#[from] linera_views::views::ViewError)
+    ViewError(#[from] linera_views::views::ViewError),
 }

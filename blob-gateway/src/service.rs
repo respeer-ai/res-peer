@@ -12,7 +12,7 @@ use std::{
 
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
 use linera_sdk::{
-    base::{BlobId, Blob, WithServiceAbi},
+    base::{Blob, BlobId, WithServiceAbi},
     Service, ServiceRuntime,
 };
 
