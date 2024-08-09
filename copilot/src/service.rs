@@ -199,9 +199,6 @@ impl Service for CopilotService {
     }
 
     async fn handle_query(&self, request: Request) -> Response {
-        let query_string = &request.query;
-        info!("query: {}", query_string);
-
         let schema = Schema::build(QueryRoot {}, Operation::mutation_root(), EmptySubscription)
             .data(self.model_context.clone())
             .finish();
