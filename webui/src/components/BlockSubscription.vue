@@ -55,10 +55,21 @@ const subscriptionHandler = (msg: unknown) => {
   }
 }
 
-const subscriptionId = ref('')
+const subscriptionId = ref(undefined as unknown as string)
+
+watch(() => window.linera, () => {
+  if (cheCkoConnect.value) {
+    setTimeout(() => {
+      subscribeThroughCheCko()
+    }, 500)
+  } else {
+    subscribe()
+  }
+})
 
 const subscribeThroughCheCko = () => {
-  window.linera.request({
+  if (subscriptionId.value) return
+  window.linera?.request({
     method: 'linera_subscribe'
   }).then((_subscriptionId) => {
     subscriptionId.value = _subscriptionId as string
@@ -69,7 +80,7 @@ const subscribeThroughCheCko = () => {
 }
 
 const unsubscribeThroughCheCko = () => {
-  void window.linera.request({
+  void window.linera?.request({
     method: 'linera_unsubscribe',
     params: [subscriptionId.value]
   })

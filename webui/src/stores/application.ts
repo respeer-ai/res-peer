@@ -7,7 +7,10 @@ export const useApplicationStore = defineStore('application', {
     marketApp: undefined as unknown as string,
     reviewApp: undefined as unknown as string,
     foundationApp: undefined as unknown as string,
-    activityApp: undefined as unknown as string
+    activityApp: undefined as unknown as string,
+    blobGatewayApp: undefined as unknown as string,
+    copilotApp: undefined as unknown as string,
+    cpRegistryApp: undefined as unknown as string
   }),
   getters: {},
   actions: {}

@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { computed, onBeforeMount, ref } from 'vue'
+import { computed, onBeforeMount, ref, watch } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
 import { useSettingStore } from 'src/stores/setting'
@@ -134,7 +134,7 @@ const owner = ref((route.query as unknown as Query).owner || constants.appDeploy
 const chainId = ref((route.query as unknown as Query).chainId || constants.appDeployChain)
 
 const getProviderState = () => {
-  window.linera.request({
+  window.linera?.request({
     method: 'metamask_getProviderState'
   }).then((result) => {
     user.chainId = ((result as Record<string, string>).chainId).substring(2)
@@ -142,6 +142,16 @@ const getProviderState = () => {
     console.log('metamask_getProviderState', e)
   })
 }
+
+watch(() => window.linera, () => {
+  if (setting.cheCkoConnect) {
+    if (user.account?.length) {
+      setTimeout(() => {
+        getProviderState()
+      }, 1000)
+    }
+  }
+})
 
 onBeforeMount(() => {
   Cookies.set('service-port', port.value.toString())

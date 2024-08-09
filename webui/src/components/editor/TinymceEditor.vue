@@ -11,9 +11,8 @@
 
 <script setup lang='ts'>
 /* eslint-disable  @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
-import { ref, watch, defineProps, withDefaults, defineEmits, onMounted } from 'vue'
+import { ref, watch, defineProps, withDefaults, defineEmits, onMounted, computed } from 'vue'
 import Editor from '@tinymce/tinymce-vue'
-// import { copilotIcon } from 'src/assets'
 import 'tinymce/tinymce.min.js'
 import 'tinymce/plugins/accordion/plugin.min.js'
 import 'tinymce/plugins/advlist/plugin.min.js'
@@ -53,6 +52,22 @@ import 'tinymce/models/dom/model.js'
 import 'tinymce/icons/default/icons.js'
 
 import { Cookies } from 'quasar'
+import Web3 from 'web3'
+import { useUserStore } from 'src/stores/user'
+import { provideApolloClient, useQuery } from '@vue/apollo-composable'
+import { ApolloClient } from '@apollo/client/core'
+import gql from 'graphql-tag'
+import { useSettingStore } from 'src/stores/setting'
+import { getClientOptions } from 'src/apollo'
+import { graphqlResult } from 'src/utils'
+import { useApplicationStore } from 'src/stores/application'
+
+const setting = useSettingStore()
+const cheCkoConnect = computed(() => setting.cheCkoConnect)
+const options = /* await */ getClientOptions(/* {app, router ...} */)
+const apolloClient = new ApolloClient(options)
+const application = useApplicationStore()
+const copilotApp = computed(() => application.copilotApp)
 
 const apiURL = ref('')
 
@@ -159,6 +174,7 @@ const editorInit = ref({
       text: TaskType.FixGrammar,
       onAction: function () {
         editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+        onParagraphCopilot(TaskType.FixGrammar)
       }
     })
     editor.ui.registry.addMenuItem('RewriteEasierUnderstand', {
@@ -274,4 +290,79 @@ const handleEditorInput = (content: string) => {
 onMounted(() => {
   initApiURL()
 })
+
+const user = useUserStore()
+const loginAccount = computed(() => user.account)
+
+const getQueryId = (prompt: string, publicKey: string, signature: string) => {
+  const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
+    query getQueryId($prompt: String!, $publicKey: String!, $signature: String!) {
+      getQueryId(prompt: $prompt, publicKey: $publicKey, signature: $signature) {
+        queryId
+        nonce
+        timestamp
+      }
+    }
+  `, {
+    endpoint: 'copilot',
+    prompt,
+    publicKey,
+    signature
+  }, {
+    fetchPolicy: 'network-only'
+  }))
+
+  onResult((res) => {
+    if (res.loading) return
+    const queryId = graphqlResult.data(res, 'getQueryId')
+    console.log(queryId)
+  })
+}
+
+const getQueryIdThroughCheCko = (prompt: string, publicKey: string, signature: string) => {
+  const query = gql`
+    query getQueryIdThroughCheCko($prompt: String!, $publicKey: String!, $signature: String!) {
+      getQueryId(prompt: $prompt, publicKey: $publicKey, signature: $signature) {
+        queryId
+        nonce
+        timestamp
+      }
+    }`
+  window.linera.request({
+    method: 'linera_graphqlQuery',
+    params: {
+      applicationId: copilotApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          prompt,
+          publicKey,
+          signature
+        },
+        operationName: 'getQueryIdThroughCheCko'
+      }
+    }
+  }).then((result) => {
+    const queryId = graphqlResult.data(result, 'getQueryId')
+    console.log(queryId)
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onParagraphCopilot = (taskType: TaskType) => {
+  if (!selectedText.value.length) return
+  const web3 = new Web3(window.linera)
+  const prompt = taskType + ':' + selectedText.value
+  const hexPrompt = web3.utils.utf8ToHex(prompt)
+  web3.eth.sign(hexPrompt, '0x' + loginAccount.value.slice(0, 40)).then((v) => {
+    if (cheCkoConnect.value) {
+      getQueryIdThroughCheCko(prompt, loginAccount.value, (v as string).substring(2))
+    } else {
+      getQueryId(prompt, loginAccount.value, v as string)
+    }
+  }).catch((e) => {
+    console.log('Sign', prompt, hexPrompt, loginAccount.value, e)
+  })
+}
 </script>

@@ -55,10 +55,19 @@ const requestApplication = async (index: number, retry: boolean) => {
           application.reviewApp = constants.Apps.reviewApp
           break
         case 4:
-          application.foundationApp = constants.Apps.foundationApp
+          application.activityApp = constants.Apps.activityApp
           break
         case 5:
-          application.activityApp = constants.Apps.activityApp
+          application.foundationApp = constants.Apps.foundationApp
+          break
+        case 6:
+          application.blobGatewayApp = constants.Apps.blobGatewayApp
+          break
+        case 7:
+          application.cpRegistryApp = constants.Apps.cpRegistryApp
+          break
+        case 8:
+          application.copilotApp = constants.Apps.copilotApp
           break
       }
     }, 1000)
@@ -91,7 +100,7 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
     mutation requestApplicationWithoutBlockProposal ($chainId: String!, $applicationId: String!, $targetChainId: String!) {
       requestApplicationWithoutBlockProposal(chainId: $chainId, applicationId: $applicationId, targetChainId: $targetChainId)
     }`
-  window.linera.request({
+  window.linera?.request({
     method: 'linera_graphqlMutation',
     params: {
       query: {
@@ -124,6 +133,15 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
         case 5:
           application.activityApp = constants.Apps.activityApp
           break
+        case 6:
+          application.blobGatewayApp = constants.Apps.blobGatewayApp
+          break
+        case 7:
+          application.cpRegistryApp = constants.Apps.cpRegistryApp
+          break
+        case 8:
+          application.copilotApp = constants.Apps.copilotApp
+          break
       }
     }, 1000)
     void requestApplicationThroughCheCko(index + 1, false)
@@ -133,35 +151,35 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
   })
 }
 
-watch(account, () => {
-  if (!ready()) return
+const requestApplications = () => {
   if (cheCkoConnect.value) {
-    setTimeout(() => {
-      void requestApplicationThroughCheCko(0, false)
-    }, 500)
+    if (window.linera) {
+      setTimeout(() => {
+        void requestApplicationThroughCheCko(0, false)
+      }, 500)
+    } else {
+      setTimeout(() => {
+        requestApplications()
+      }, 500)
+    }
   } else {
     void requestApplication(0, false)
   }
+}
+
+watch(account, () => {
+  if (!ready()) return
+  requestApplications()
 })
 
 watch(targetChain, () => {
   if (!ready()) return
-  if (cheCkoConnect.value) {
-    void requestApplicationThroughCheCko(0, false)
-  } else {
-    void requestApplication(0, false)
-  }
+  requestApplications()
 })
 
 onMounted(() => {
   if (!ready()) return
-  if (cheCkoConnect.value) {
-    setTimeout(() => {
-      void requestApplicationThroughCheCko(0, false)
-    }, 500)
-  } else {
-    void requestApplication(0, false)
-  }
+  requestApplications()
 })
 
 </script>
