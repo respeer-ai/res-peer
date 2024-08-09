@@ -17,6 +17,7 @@ tokenizers.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 cp-registry.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 linera-sdk = { workspace = true, features = ["test"] }

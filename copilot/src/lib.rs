@@ -5,20 +5,30 @@ use std::str::FromStr;
 
 use async_graphql::{Request, Response, SimpleObject};
 use linera_sdk::{
-    base::{Amount, BcsHashable, ChainId, ContractAbi, CryptoHash, ServiceAbi},
+    base::{
+        Amount, ApplicationId, BcsHashable, ChainId, ContractAbi, CryptoError, CryptoHash,
+        ServiceAbi,
+    },
     graphql::GraphQLMutationRoot,
 };
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
 pub struct CopilotAbi;
 
 impl ContractAbi for CopilotAbi {
-    type Operation = ();
+    type Operation = Operation;
     type Response = ();
 }
 
 impl ServiceAbi for CopilotAbi {
     type Query = Request;
     type QueryResponse = Response;
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CopilotParameters {
+    pub cp_registry_app_id: ApplicationId<cp_registry::CPRegistryAbi>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -33,7 +43,7 @@ pub struct InstantiationArgument {
     pub storage_bytes: u64,
     pub memory_bytes: u64,
     pub free_quota: u32,
-    pub price_quota: u32,
+    pub price_quota: u16,
     pub quota_price: Amount,
     pub supported_task_types: Vec<cp_registry::TaskType>,
 }
@@ -73,22 +83,27 @@ pub struct DepositQuota {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
-    Deposit {
-        query_id: CryptoHash,
-        amount: Amount,
-    },
-    Finish {
-        query_id: CryptoHash,
-    },
+    Deposit { query_id: CryptoHash },
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub enum Message {
-    Deposit {
-        query_id: CryptoHash,
-        amount: Amount,
-    },
-    Finish {
-        query_id: CryptoHash,
-    },
+#[derive(Debug, Error)]
+#[allow(dead_code)]
+pub enum CopilotError {
+    #[error("Invalid query")]
+    InvalidQuery,
+
+    #[error("Stale query")]
+    StaleQuery,
+
+    #[error("Unpaid query")]
+    UnpaidQuery,
+
+    #[error(transparent)]
+    CryptoError(#[from] CryptoError),
+
+    #[error(transparent)]
+    CandleError(#[from] candle_core::Error),
+
+    #[error(transparent)]
+    ViewError(#[from] linera_sdk::views::ViewError),
 }

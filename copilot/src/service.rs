@@ -7,24 +7,21 @@ mod random;
 mod state;
 mod token;
 
-use std::{
-    io::Read,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
-use async_graphql::{
-    Context, Description, EmptyMutation, EmptySubscription, Object, Request, Response, Schema,
-};
+use async_graphql::{Context, EmptySubscription, Object, Request, Response, Schema, SimpleObject};
 use candle_core::{Device, Tensor};
 use candle_transformers::{generation::LogitsProcessor, models::quantized_t5 as t5};
-use copilot::Operation;
+use copilot::{CopilotError, Operation};
 use linera_sdk::{
-    base::{BcsHashable, CryptoHash, Timestamp, WithServiceAbi},
+    base::{BcsHashable, BcsSignable, CryptoHash, PublicKey, Signature, Timestamp, WithServiceAbi},
     graphql::GraphQLMutationRoot,
+    views::{View, ViewStorageContext},
     Service, ServiceRuntime,
 };
 use log::info;
 use serde::{Deserialize, Serialize};
+use state::Copilot;
 use tokenizers::Tokenizer;
 
 use anyhow::Result as AnyResult;
@@ -43,24 +40,101 @@ impl WithServiceAbi for CopilotService {
 
 struct QueryRoot {}
 
-#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct HashInput {
-    buf: [u8; 32],
+    prompt: String,
+    public_key: PublicKey,
+    signature: Signature,
+    timestamp: Timestamp,
+    nonce: [u8; 32],
 }
 
 impl BcsHashable for HashInput {}
 
+#[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq)]
+struct QueryId {
+    /// sha256(prompt, nonce, signature, public_key, timestamp)
+    query_id: CryptoHash,
+    timestamp: Timestamp,
+    nonce: [u8; 32],
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Prompt(String);
+impl BcsSignable for Prompt {}
+
 #[Object]
 impl QueryRoot {
-    async fn prepare_query_id(&self) -> CryptoHash {
-        let mut hash_input = HashInput { buf: [0u8; 32] };
-        getrandom::getrandom(&mut hash_input.buf).unwrap();
-        CryptoHash::new(&hash_input)
+    async fn get_query_id(
+        &self,
+        ctx: &Context<'_>,
+        prompt: String,
+        public_key: PublicKey,
+        signature: Signature,
+    ) -> Result<QueryId, CopilotError> {
+        let _prompt = Prompt(prompt.clone());
+        signature.check(&_prompt, public_key)?;
+
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        let timestamp = model_context.runtime.lock().unwrap().system_time();
+
+        let mut hash_input = HashInput {
+            prompt,
+            public_key,
+            signature,
+            timestamp,
+            nonce: [0u8; 32],
+        };
+        getrandom::getrandom(&mut hash_input.nonce).unwrap();
+        Ok(QueryId {
+            query_id: CryptoHash::new(&hash_input),
+            timestamp,
+            nonce: hash_input.nonce,
+        })
     }
 
-    async fn prompt(&self, ctx: &Context<'_>, prompt: String) -> String {
+    async fn prompt(
+        &self,
+        ctx: &Context<'_>,
+        query_id: CryptoHash,
+        prompt: String,
+        public_key: PublicKey,
+        signature: Signature,
+        timestamp: Timestamp,
+        nonce: [u8; 32],
+    ) -> Result<String, CopilotError> {
         let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
-        model_context.t5_model_builder.run_model(&prompt).unwrap()
+        if model_context
+            .runtime
+            .lock()
+            .unwrap()
+            .system_time()
+            .duration_since(timestamp)
+            .as_millis()
+            > 60 * 60 * 1000
+        {
+            return Err(CopilotError::StaleQuery);
+        }
+
+        let _prompt = Prompt(prompt.clone());
+        signature.check(&_prompt, public_key)?;
+
+        let hash_input = HashInput {
+            prompt: prompt.clone(),
+            public_key,
+            signature,
+            timestamp,
+            nonce,
+        };
+        if query_id != CryptoHash::new(&hash_input) {
+            return Err(CopilotError::InvalidQuery);
+        }
+
+        if !model_context.state.query_deposited(query_id).await? {
+            return Err(CopilotError::UnpaidQuery);
+        }
+
+        Ok(model_context.t5_model_builder.run_model(&prompt)?)
     }
 }
 
@@ -74,6 +148,7 @@ struct T5ModelBuilder {
 struct ModelContext {
     t5_model_builder: T5ModelBuilder,
     runtime: Mutex<ServiceRuntime<CopilotService>>,
+    state: Arc<Copilot>,
 }
 
 impl Service for CopilotService {
@@ -104,16 +179,21 @@ impl Service for CopilotService {
         config.use_cache = true;
 
         let t5_model_builder = T5ModelBuilder {
-            device: device,
-            config: config,
-            raw_weights: raw_weights,
+            device,
+            config,
+            raw_weights,
             tokenizer: tokenizer_bytes,
         };
+
+        let state = Copilot::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
 
         CopilotService {
             model_context: Arc::new(ModelContext {
                 t5_model_builder,
                 runtime: Mutex::new(runtime),
+                state: Arc::new(state),
             }),
         }
     }
