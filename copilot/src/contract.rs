@@ -10,7 +10,7 @@ use copilot::{CopilotError, CopilotParameters, InstantiationArgument, Operation}
 use cp_registry::{CPRegistryAbi, RegisterParameters};
 use linera_sdk::{
     base::{Account, ApplicationId, CryptoHash, WithContractAbi},
-    views::{View, ViewStorageContext},
+    views::{RootView, View, ViewStorageContext},
     Contract, ContractRuntime,
 };
 
@@ -67,7 +67,9 @@ impl Contract for CopilotContract {
         panic!("Copilot contract always must be run with its node service");
     }
 
-    async fn store(self) {}
+    async fn store(mut self) {
+        self.state.save().await.expect("Failed to save state");
+    }
 }
 
 impl CopilotContract {
@@ -89,10 +91,15 @@ impl CopilotContract {
             owner: None,
         };
         let owner = self.runtime.authenticated_signer();
-        self.runtime
-            .transfer(owner, destination, self.state._quota_price().await);
+        if !self.state.free_query(owner.expect("Invalid owner")).await? {
+            self.runtime
+                .transfer(owner, destination, self.state._quota_price().await);
+        }
 
-        Ok(self.state.deposit_query(query_id).await?)
+        Ok(self
+            .state
+            .deposit_query(owner.expect("Invalid owner"), query_id)
+            .await?)
     }
 
     async fn on_op_deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {

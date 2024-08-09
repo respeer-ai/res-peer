@@ -14,7 +14,10 @@ use candle_core::{Device, Tensor};
 use candle_transformers::{generation::LogitsProcessor, models::quantized_t5 as t5};
 use copilot::{CopilotError, Operation};
 use linera_sdk::{
-    base::{BcsHashable, BcsSignable, CryptoHash, PublicKey, Signature, Timestamp, WithServiceAbi},
+    base::{
+        BcsHashable, BcsSignable, CryptoHash, Owner, PublicKey, Signature, Timestamp,
+        WithServiceAbi,
+    },
     graphql::GraphQLMutationRoot,
     views::{View, ViewStorageContext},
     Service, ServiceRuntime,
@@ -130,7 +133,8 @@ impl QueryRoot {
             return Err(CopilotError::InvalidQuery);
         }
 
-        if !model_context.state.query_deposited(query_id).await? {
+        let owner: Owner = Owner::from(public_key);
+        if !model_context.state.query_deposited(owner, query_id).await? {
             return Err(CopilotError::UnpaidQuery);
         }
 
