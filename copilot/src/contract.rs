@@ -6,7 +6,7 @@
 mod state;
 
 use self::state::Copilot;
-use copilot::{CopilotError, CopilotParameters, InstantiationArgument, Operation};
+use copilot::{CopilotError, CopilotParameters, InstantiationArgument, Message, Operation};
 use cp_registry::{CPRegistryAbi, RegisterParameters};
 use linera_sdk::{
     base::{Account, ApplicationId, CryptoHash, WithContractAbi},
@@ -26,7 +26,7 @@ impl WithContractAbi for CopilotContract {
 }
 
 impl Contract for CopilotContract {
-    type Message = ();
+    type Message = Message;
     type InstantiationArgument = InstantiationArgument;
     type Parameters = CopilotParameters;
 
@@ -63,8 +63,13 @@ impl Contract for CopilotContract {
         }
     }
 
-    async fn execute_message(&mut self, _message: ()) {
-        panic!("Copilot contract always must be run with its node service");
+    async fn execute_message(&mut self, message: Message) {
+        match message {
+            Message::Deposit { query_id } => self
+                .on_msg_deposit_query(query_id)
+                .await
+                .expect("Failed MSG: deposit query"),
+        }
     }
 
     async fn store(mut self) {
@@ -90,6 +95,12 @@ impl CopilotContract {
             chain_id: self.runtime.application_id().creation.chain_id,
             owner: None,
         };
+        log::info!(
+            "Deposit query at chain {} to chain {} by owner {}",
+            self.runtime.chain_id(),
+            self.runtime.application_id().creation.chain_id,
+            self.runtime.authenticated_signer().unwrap()
+        );
         let owner = self.runtime.authenticated_signer();
         if !self.state.free_query(owner.expect("Invalid owner")).await? {
             self.runtime
@@ -103,6 +114,15 @@ impl CopilotContract {
     }
 
     async fn on_op_deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
+        self.runtime
+            .prepare_message(Message::Deposit { query_id })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    // Only in creation chain
+    async fn on_msg_deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
         self.deposit_query(query_id).await
     }
 }

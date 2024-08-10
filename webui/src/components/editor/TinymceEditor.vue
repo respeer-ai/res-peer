@@ -54,13 +54,14 @@ import 'tinymce/icons/default/icons.js'
 import { Cookies } from 'quasar'
 import Web3 from 'web3'
 import { useUserStore } from 'src/stores/user'
-import { provideApolloClient, useQuery } from '@vue/apollo-composable'
+import { provideApolloClient, useMutation, useQuery } from '@vue/apollo-composable'
 import { ApolloClient } from '@apollo/client/core'
 import gql from 'graphql-tag'
 import { useSettingStore } from 'src/stores/setting'
 import { getClientOptions } from 'src/apollo'
 import { graphqlResult } from 'src/utils'
 import { useApplicationStore } from 'src/stores/application'
+import { targetChain } from 'src/stores/chain'
 
 const setting = useSettingStore()
 const cheCkoConnect = computed(() => setting.cheCkoConnect)
@@ -294,7 +295,7 @@ onMounted(() => {
 const user = useUserStore()
 const loginAccount = computed(() => user.account)
 
-const getQueryId = (prompt: string, publicKey: string, signature: string) => {
+const getQueryId = (prompt: string, publicKey: string, signature: string, done?: (queryId: any) => void) => {
   const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
     query getQueryId($prompt: String!, $publicKey: String!, $signature: String!) {
       getQueryId(prompt: $prompt, publicKey: $publicKey, signature: $signature) {
@@ -307,7 +308,8 @@ const getQueryId = (prompt: string, publicKey: string, signature: string) => {
     endpoint: 'copilot',
     prompt,
     publicKey,
-    signature
+    signature,
+    chainId: targetChain.value
   }, {
     fetchPolicy: 'network-only'
   }))
@@ -315,11 +317,11 @@ const getQueryId = (prompt: string, publicKey: string, signature: string) => {
   onResult((res) => {
     if (res.loading) return
     const queryId = graphqlResult.data(res, 'getQueryId')
-    console.log(queryId)
+    done?.(queryId)
   })
 }
 
-const getQueryIdThroughCheCko = (prompt: string, publicKey: string, signature: string) => {
+const getQueryIdThroughCheCko = (prompt: string, publicKey: string, signature: string, done?: (queryId: any) => void) => {
   const query = gql`
     query getQueryIdThroughCheCko($prompt: String!, $publicKey: String!, $signature: String!) {
       getQueryId(prompt: $prompt, publicKey: $publicKey, signature: $signature) {
@@ -343,23 +345,84 @@ const getQueryIdThroughCheCko = (prompt: string, publicKey: string, signature: s
       }
     }
   }).then((result) => {
-    const queryId = graphqlResult.data(result, 'getQueryId')
-    console.log(queryId)
+    const queryId = graphqlResult.keyValue(result, 'getQueryId')
+    done?.(queryId)
   }).catch((e) => {
     console.log(e)
   })
 }
 
+const depositQuery = async (queryId: string, done?: () => void) => {
+  const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
+    mutation depositQuery($queryId: String!) {
+      deposit(queryId: $queryId)
+    }
+  `))
+
+  onDone(() => {
+    done?.()
+  })
+  onError((error) => {
+    console.log(error)
+  })
+  await mutate({
+    queryId,
+    endpoint: 'copilot',
+    chainId: targetChain.value
+  })
+}
+
+const depositQueryThroughCheCko = (queryId: string, done?: () => void) => {
+  const query = gql`
+    mutation depositQueryThroughCheCko($queryId: String!) {
+      deposit(queryId: $queryId)
+    }`
+  window.linera.request({
+    method: 'linera_graphqlMutation',
+    params: {
+      applicationId: copilotApp.value,
+      query: {
+        query: query.loc?.source?.body,
+        variables: {
+          queryId
+        },
+        operationName: 'depositQueryThroughCheCko'
+      }
+    }
+  }).then(() => {
+    done?.()
+  }).catch((e) => {
+    console.log(e)
+  })
+}
+
+const onExecTask = (queryId: any) => {
+  // We should wait a moment for payment ready
+  console.log(queryId)
+}
+
+const onDepositQuery = (queryId: any) => {
+  if (cheCkoConnect.value) {
+    depositQueryThroughCheCko((queryId as Record<string, string>).queryId, () => {
+      onExecTask(queryId)
+    })
+  } else {
+    void depositQuery((queryId as Record<string, string>).queryId, () => {
+      onExecTask(queryId)
+    })
+  }
+}
+
 const onParagraphCopilot = (taskType: TaskType) => {
   if (!selectedText.value.length) return
   const web3 = new Web3(window.linera)
-  const prompt = taskType + ':' + selectedText.value
+  const prompt = taskType + ': ' + selectedText.value
   const hexPrompt = web3.utils.utf8ToHex(prompt)
   web3.eth.sign(hexPrompt, '0x' + loginAccount.value.slice(0, 40)).then((v) => {
     if (cheCkoConnect.value) {
-      getQueryIdThroughCheCko(prompt, loginAccount.value, (v as string).substring(2))
+      getQueryIdThroughCheCko(prompt, loginAccount.value, (v as string).substring(2), onDepositQuery)
     } else {
-      getQueryId(prompt, loginAccount.value, v as string)
+      getQueryId(prompt, loginAccount.value, v as string, onDepositQuery)
     }
   }).catch((e) => {
     console.log('Sign', prompt, hexPrompt, loginAccount.value, e)

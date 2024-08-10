@@ -86,6 +86,11 @@ pub enum Operation {
     Deposit { query_id: CryptoHash },
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Message {
+    Deposit { query_id: CryptoHash },
+}
+
 #[derive(Debug, Error)]
 #[allow(dead_code)]
 pub enum CopilotError {
