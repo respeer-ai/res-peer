@@ -109,6 +109,9 @@ pub enum CopilotError {
     #[error("Unpaid query")]
     UnpaidQuery,
 
+    #[error("Invalid pay chain")]
+    InvalidPayChain,
+
     #[error(transparent)]
     CryptoError(#[from] CryptoError),
 

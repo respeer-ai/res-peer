@@ -102,14 +102,15 @@ impl CopilotContract {
             self.runtime.application_id().creation.chain_id,
             self.runtime.authenticated_signer().unwrap()
         );
-        let destination = Account {
-            chain_id: self.runtime.application_id().creation.chain_id,
-            owner: None,
-        };
         let owner = self.runtime.authenticated_signer();
         if !self.state.free_query(owner.expect("Invalid owner")).await? {
             self.runtime
-                .transfer(owner, destination, self.state._quota_price().await);
+                .prepare_message(Message::Pay {
+                    query_id,
+                    amount: self.state._quota_price().await,
+                })
+                .with_authentication()
+                .send_to(self.runtime.message_id().unwrap().chain_id);
         }
         Ok(self
             .state
@@ -118,8 +119,18 @@ impl CopilotContract {
     }
 
     async fn on_op_deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
+        if self
+            .state
+            .query_deposited(self.runtime.authenticated_signer().unwrap(), query_id)
+            .await?
+        {
+            return Err(CopilotError::InvalidQuery);
+        }
         self.state
-            .deposit_query(self.runtime.authenticated_signer().expect("Invalid owner"), query_id)
+            .deposit_query(
+                self.runtime.authenticated_signer().expect("Invalid owner"),
+                query_id,
+            )
             .await?;
         self.runtime
             .prepare_message(Message::Deposit { query_id })
@@ -146,6 +157,25 @@ impl CopilotContract {
             self.runtime.application_id().creation.chain_id,
             self.runtime.authenticated_signer().unwrap()
         );
+        if !self
+            .state
+            .query_deposited(self.runtime.authenticated_signer().unwrap(), query_id)
+            .await?
+        {
+            return Err(CopilotError::InvalidQuery);
+        }
+        if self.runtime.message_id().unwrap().chain_id
+            != self.runtime.application_id().creation.chain_id
+        {
+            return Err(CopilotError::InvalidPayChain);
+        }
+        let destination = Account {
+            chain_id: self.runtime.application_id().creation.chain_id,
+            owner: None,
+        };
+        let owner = self.runtime.authenticated_signer();
+        self.runtime
+            .transfer(owner, destination, amount);
         Ok(())
     }
 }
