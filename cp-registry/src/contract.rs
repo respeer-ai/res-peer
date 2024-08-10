@@ -144,6 +144,7 @@ impl CPRegistryContract {
     }
 
     fn on_op_request_subscribe(&mut self) -> Result<CPRegistryResponse, CPRegistryError> {
+        log::info!("Request subscribe op from chain {}", self.runtime.chain_id());
         self.runtime
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
@@ -200,6 +201,7 @@ impl CPRegistryContract {
     }
 
     async fn on_msg_request_subscribe(&mut self) -> Result<(), CPRegistryError> {
+        log::info!("Request subscribe msg from chain {}", self.runtime.chain_id());
         let message_id = self.require_message_id()?;
         // The subscribe message must be from another chain
         if message_id.chain_id == self.runtime.application_id().creation.chain_id {
@@ -209,7 +211,9 @@ impl CPRegistryContract {
             message_id.chain_id,
             ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
         );
+        log::info!("Request subscribe from chain {} nodes {}", message_id.chain_id, self.state._nodes().await?.len());
         for node in self.state._nodes().await? {
+            log::info!("Notify node {} to chain {}", node.node_id, message_id.chain_id);
             self.runtime
                 .prepare_message(Message::ExistNode { node })
                 .with_authentication()
