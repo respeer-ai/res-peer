@@ -96,8 +96,9 @@ impl CopilotContract {
             owner: None,
         };
         log::info!(
-            "Deposit query at chain {} to chain {} by owner {}",
+            "Deposit query at runtime chain {} message chain {} to chain {} by owner {}",
             self.runtime.chain_id(),
+            self.runtime.message_id().unwrap().chain_id,
             self.runtime.application_id().creation.chain_id,
             self.runtime.authenticated_signer().unwrap()
         );
