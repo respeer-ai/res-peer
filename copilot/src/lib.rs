@@ -88,7 +88,13 @@ pub enum Operation {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {
-    Deposit { query_id: CryptoHash },
+    Deposit {
+        query_id: CryptoHash,
+    },
+    Pay {
+        query_id: CryptoHash,
+        amount: Amount,
+    },
 }
 
 #[derive(Debug, Error)]

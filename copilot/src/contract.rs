@@ -9,7 +9,7 @@ use self::state::Copilot;
 use copilot::{CopilotError, CopilotParameters, InstantiationArgument, Message, Operation};
 use cp_registry::{CPRegistryAbi, RegisterParameters};
 use linera_sdk::{
-    base::{Account, ApplicationId, CryptoHash, WithContractAbi},
+    base::{Account, Amount, ApplicationId, CryptoHash, WithContractAbi},
     views::{RootView, View, ViewStorageContext},
     Contract, ContractRuntime,
 };
@@ -69,6 +69,10 @@ impl Contract for CopilotContract {
                 .on_msg_deposit_query(query_id)
                 .await
                 .expect("Failed MSG: deposit query"),
+            Message::Pay { query_id, amount } => self
+                .on_msg_pay(query_id, amount)
+                .await
+                .expect("Failed MSG: pay"),
         }
     }
 
@@ -91,10 +95,6 @@ impl CopilotContract {
     }
 
     async fn deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
-        let destination = Account {
-            chain_id: self.runtime.application_id().creation.chain_id,
-            owner: None,
-        };
         log::info!(
             "Deposit query at runtime chain {} message chain {} to chain {} by owner {}",
             self.runtime.chain_id(),
@@ -102,12 +102,15 @@ impl CopilotContract {
             self.runtime.application_id().creation.chain_id,
             self.runtime.authenticated_signer().unwrap()
         );
+        let destination = Account {
+            chain_id: self.runtime.application_id().creation.chain_id,
+            owner: None,
+        };
         let owner = self.runtime.authenticated_signer();
         if !self.state.free_query(owner.expect("Invalid owner")).await? {
             self.runtime
                 .transfer(owner, destination, self.state._quota_price().await);
         }
-
         Ok(self
             .state
             .deposit_query(owner.expect("Invalid owner"), query_id)
@@ -115,6 +118,9 @@ impl CopilotContract {
     }
 
     async fn on_op_deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
+        self.state
+            .deposit_query(self.runtime.authenticated_signer().expect("Invalid owner"), query_id)
+            .await?;
         self.runtime
             .prepare_message(Message::Deposit { query_id })
             .with_authentication()
@@ -125,5 +131,21 @@ impl CopilotContract {
     // Only in creation chain
     async fn on_msg_deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
         self.deposit_query(query_id).await
+    }
+
+    // Only from creation chain
+    async fn on_msg_pay(
+        &mut self,
+        query_id: CryptoHash,
+        amount: Amount,
+    ) -> Result<(), CopilotError> {
+        log::info!(
+            "Pay query at runtime chain {} message chain {} to chain {} by owner {}",
+            self.runtime.chain_id(),
+            self.runtime.message_id().unwrap().chain_id,
+            self.runtime.application_id().creation.chain_id,
+            self.runtime.authenticated_signer().unwrap()
+        );
+        Ok(())
     }
 }
