@@ -20,12 +20,9 @@ pub struct CPRegistry {
 impl CPRegistry {
     pub(crate) async fn _nodes(&self) -> Result<Vec<CPNode>, CPRegistryError> {
         let mut nodes = Vec::new();
-        self.nodes
-            .for_each_index_value(|_, v| {
-                nodes.push(v);
-                Ok(())
-            })
-            .await?;
+        for node_id in self.nodes.indices().await? {
+            nodes.push(self.nodes.get(&node_id).await?.unwrap());
+        }
         Ok(nodes)
     }
 

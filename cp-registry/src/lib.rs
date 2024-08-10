@@ -3,7 +3,9 @@
 
 use async_graphql::{Enum, InputObject, Request, Response, SimpleObject};
 use linera_sdk::{
-    base::{Amount, BcsHashable, ChainId, ContractAbi, CryptoHash, ServiceAbi, Timestamp},
+    base::{
+        Amount, ApplicationId, BcsHashable, ChainId, ContractAbi, CryptoHash, ServiceAbi, Timestamp,
+    },
     graphql::GraphQLMutationRoot,
 };
 use serde::{Deserialize, Serialize};
@@ -50,6 +52,7 @@ pub struct CPNode {
     pub brand_logo: String,
     pub brand_name: String,
     pub link: String,
+    pub application_id: ApplicationId,
     pub resource_type: ResourceType,
     pub device_model: String,
     pub cpu_model: String,
@@ -71,6 +74,7 @@ pub struct RegisterParameters {
     pub brand_logo: String,
     pub brand_name: String,
     pub link: String,
+    pub application_id: ApplicationId,
     pub resource_type: ResourceType,
     pub device_model: String,
     pub cpu_model: String,
@@ -93,6 +97,7 @@ impl Into<CPNode> for RegisterParameters {
             brand_logo: self.brand_logo,
             brand_name: self.brand_name,
             link: self.link,
+            application_id: self.application_id,
             resource_type: self.resource_type,
             device_model: self.device_model,
             cpu_model: self.cpu_model,

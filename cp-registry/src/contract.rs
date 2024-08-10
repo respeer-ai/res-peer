@@ -100,7 +100,11 @@ impl CPRegistryContract {
         if self.state.exist_node_with_link(params.clone().link).await? {
             return Err(CPRegistryError::AlreadyRegistered);
         }
-        let node: CPNode = params.clone().into();
+        let mut node: CPNode = params.clone().into();
+        node.application_id = self
+            .runtime
+            .authenticated_caller_id()
+            .expect("Invalid applicationId");
         if self.state.exist_node_with_id(node.node_id).await? {
             return Err(CPRegistryError::AlreadyRegistered);
         }

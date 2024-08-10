@@ -32,6 +32,12 @@ export /* async */ function getClientOptions (/* {app, router, ...}, options?: P
           return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.foundationApp
         case 'activity':
           return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.activityApp
+        case 'copilot':
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.copilotApp
+        case 'cp-registry':
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.cpRegistryApp
+        case 'blob-gateway':
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.blobGatewayApp
         case 'main':
           return 'http://' + host + ':' + port
         default:
