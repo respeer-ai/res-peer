@@ -36,6 +36,8 @@ sha3 = "0.10.8"
 tokenizers = { git = "https://github.com/christos-h/tokenizers", default-features = false, features = ["unstable_wasm"] }
 rand = "0.8.5"
 anyhow = { version = "1", features = ["backtrace"] }
+hex = "0.4.3"
+ed25519-dalek = { version = "2.1.1", features = ["batch", "serde"] }
 
 credit = { path = "./credit" }
 feed = { path = "./feed" }

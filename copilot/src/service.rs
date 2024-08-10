@@ -9,13 +9,15 @@ mod token;
 
 use std::sync::{Arc, Mutex};
 
+use ed25519_dalek::Verifier;
+
 use async_graphql::{Context, EmptySubscription, Object, Request, Response, Schema, SimpleObject};
 use candle_core::{Device, Tensor};
 use candle_transformers::{generation::LogitsProcessor, models::quantized_t5 as t5};
 use copilot::{CopilotError, Operation};
 use linera_sdk::{
     base::{
-        BcsHashable, BcsSignable, CryptoHash, Owner, PublicKey, Signature, Timestamp,
+        BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp,
         WithServiceAbi,
     },
     graphql::GraphQLMutationRoot,
@@ -62,10 +64,6 @@ struct QueryId {
     nonce: [u8; 32],
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Prompt(String);
-impl BcsSignable for Prompt {}
-
 #[Object]
 impl QueryRoot {
     async fn get_query_id(
@@ -75,8 +73,9 @@ impl QueryRoot {
         public_key: PublicKey,
         signature: Signature,
     ) -> Result<QueryId, CopilotError> {
-        let _prompt = Prompt(prompt.clone());
-        signature.check(&_prompt, public_key)?;
+        let hex_prompt = format!("{}", hex::encode(prompt.clone()));
+        let bytes = hex::decode(hex_prompt)?;
+        public_key.to_verifying_key()?.verify(&bytes, &signature.0)?;
 
         let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
         let timestamp = model_context.runtime.lock().unwrap().system_time();
@@ -119,8 +118,9 @@ impl QueryRoot {
             return Err(CopilotError::StaleQuery);
         }
 
-        let _prompt = Prompt(prompt.clone());
-        signature.check(&_prompt, public_key)?;
+        let hex_prompt = format!("{}", hex::encode(prompt.clone()));
+        let bytes = hex::decode(hex_prompt)?;
+        public_key.to_verifying_key()?.verify(&bytes, &signature.0)?;
 
         let hash_input = HashInput {
             prompt: prompt.clone(),

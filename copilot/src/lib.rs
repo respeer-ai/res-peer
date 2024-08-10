@@ -106,4 +106,10 @@ pub enum CopilotError {
 
     #[error(transparent)]
     ViewError(#[from] linera_sdk::views::ViewError),
+
+    #[error(transparent)]
+    SignatureError(#[from] ed25519_dalek::SignatureError),
+
+    #[error(transparent)]
+    HexError(#[from] hex::FromHexError),
 }
