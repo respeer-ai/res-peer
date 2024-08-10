@@ -73,6 +73,9 @@ impl Contract for CopilotContract {
                 .on_msg_pay(query_id, amount)
                 .await
                 .expect("Failed MSG: pay"),
+            Message::Paid { query_id } => {
+                self.on_msg_paid(query_id).await.expect("Failed MSG: paid")
+            }
         }
     }
 
@@ -111,6 +114,7 @@ impl CopilotContract {
                 })
                 .with_authentication()
                 .send_to(self.runtime.message_id().unwrap().chain_id);
+            return Ok(());
         }
         Ok(self
             .state
@@ -174,8 +178,19 @@ impl CopilotContract {
             owner: None,
         };
         let owner = self.runtime.authenticated_signer();
+        self.runtime.transfer(owner, destination, amount);
         self.runtime
-            .transfer(owner, destination, amount);
+            .prepare_message(Message::Paid { query_id })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
         Ok(())
+    }
+
+    async fn on_msg_paid(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
+        let owner = self.runtime.authenticated_signer();
+        Ok(self
+            .state
+            .deposit_query(owner.expect("Invalid owner"), query_id)
+            .await?)
     }
 }

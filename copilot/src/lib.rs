@@ -95,6 +95,9 @@ pub enum Message {
         query_id: CryptoHash,
         amount: Amount,
     },
+    Paid {
+        query_id: CryptoHash,
+    },
 }
 
 #[derive(Debug, Error)]
