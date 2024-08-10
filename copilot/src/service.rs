@@ -16,10 +16,7 @@ use candle_core::{Device, Tensor};
 use candle_transformers::{generation::LogitsProcessor, models::quantized_t5 as t5};
 use copilot::{CopilotError, Operation};
 use linera_sdk::{
-    base::{
-        BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp,
-        WithServiceAbi,
-    },
+    base::{BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi},
     graphql::GraphQLMutationRoot,
     views::{View, ViewStorageContext},
     Service, ServiceRuntime,
@@ -75,7 +72,9 @@ impl QueryRoot {
     ) -> Result<QueryId, CopilotError> {
         let hex_prompt = format!("{}", hex::encode(prompt.clone()));
         let bytes = hex::decode(hex_prompt)?;
-        public_key.to_verifying_key()?.verify(&bytes, &signature.0)?;
+        public_key
+            .to_verifying_key()?
+            .verify(&bytes, &signature.0)?;
 
         let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
         let timestamp = model_context.runtime.lock().unwrap().system_time();
@@ -120,7 +119,9 @@ impl QueryRoot {
 
         let hex_prompt = format!("{}", hex::encode(prompt.clone()));
         let bytes = hex::decode(hex_prompt)?;
-        public_key.to_verifying_key()?.verify(&bytes, &signature.0)?;
+        public_key
+            .to_verifying_key()?
+            .verify(&bytes, &signature.0)?;
 
         let hash_input = HashInput {
             prompt: prompt.clone(),
@@ -139,6 +140,17 @@ impl QueryRoot {
         }
 
         Ok(model_context.t5_model_builder.run_model(&prompt)?)
+    }
+
+    async fn query_deposited(
+        &self,
+        ctx: &Context<'_>,
+        public_key: PublicKey,
+        query_id: CryptoHash,
+    ) -> Result<bool, CopilotError> {
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        let owner: Owner = Owner::from(public_key);
+        Ok(model_context.state.query_deposited(owner, query_id).await?)
     }
 }
 
