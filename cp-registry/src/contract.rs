@@ -97,6 +97,7 @@ impl CPRegistryContract {
         &mut self,
         params: RegisterParameters,
     ) -> Result<CPRegistryResponse, CPRegistryError> {
+        log::info!("OP Register from chain {}", self.runtime.chain_id());
         if self.state.exist_node_with_link(params.clone().link).await? {
             return Err(CPRegistryError::AlreadyRegistered);
         }
@@ -149,11 +150,6 @@ impl CPRegistryContract {
     }
 
     fn on_op_request_subscribe(&mut self) -> Result<CPRegistryResponse, CPRegistryError> {
-        log::info!(
-            "Request subscribe op from chain {} to chain {}",
-            self.runtime.message_id().unwrap().chain_id,
-            self.runtime.chain_id()
-        );
         self.runtime
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()

@@ -327,11 +327,6 @@ impl ActivityContract {
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
-        log::info!(
-            "operation subscribe from chain {} to chain {}",
-            self.runtime.chain_id(),
-            self.runtime.application_id().creation.chain_id,
-        );
         Ok(())
     }
 

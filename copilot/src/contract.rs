@@ -38,6 +38,10 @@ impl Contract for CopilotContract {
     }
 
     async fn instantiate(&mut self, argument: InstantiationArgument) {
+        if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
+            return
+        }
+
         self.state.instantiate(argument.clone()).await;
 
         let mut cp_registry_params: cp_registry::RegisterParameters = argument.into();
@@ -50,6 +54,11 @@ impl Contract for CopilotContract {
         );
         cp_registry_params.node_id = Some(CryptoHash::new(&cp_registry_params));
 
+        log::info!(
+            "Register computing node {:?} at chain {}",
+            cp_registry_params.node_id,
+            self.runtime.chain_id()
+        );
         self.cp_registry_register(cp_registry_params)
             .expect("Failed register node");
     }
