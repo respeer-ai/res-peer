@@ -37,6 +37,7 @@ impl Contract for CopilotContract {
         CopilotContract { state, runtime }
     }
 
+    // TODO: this will be run each time the chain is instantiate (e.g. load in a new wallet)
     async fn instantiate(&mut self, argument: InstantiationArgument) {
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
             return
@@ -54,10 +55,16 @@ impl Contract for CopilotContract {
         );
         cp_registry_params.node_id = Some(CryptoHash::new(&cp_registry_params));
 
+        let signer = match self.runtime.authenticated_signer() {
+            Some(owner) => owner.to_string(),
+            _ => "Invalid signer".to_string(),
+        };
+
         log::info!(
-            "Register computing node {:?} at chain {}",
+            "Register computing node {:?} at chain {} by {}",
             cp_registry_params.node_id,
-            self.runtime.chain_id()
+            self.runtime.chain_id(),
+            signer,
         );
         self.cp_registry_register(cp_registry_params)
             .expect("Failed register node");
