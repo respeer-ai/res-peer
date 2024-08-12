@@ -106,7 +106,7 @@ impl CPRegistryContract {
             .authenticated_caller_id()
             .expect("Invalid applicationId");
         log::info!(
-            "Register node {} from chain {}",
+            "OP Register node {} from chain {}",
             node.node_id,
             self.runtime.chain_id()
         );
@@ -150,7 +150,8 @@ impl CPRegistryContract {
 
     fn on_op_request_subscribe(&mut self) -> Result<CPRegistryResponse, CPRegistryError> {
         log::info!(
-            "Request subscribe op from chain {}",
+            "Request subscribe op from chain {} to chain {}",
+            self.runtime.message_id().unwrap().chain_id,
             self.runtime.chain_id()
         );
         self.runtime
@@ -162,8 +163,9 @@ impl CPRegistryContract {
 
     async fn on_msg_register(&mut self, params: RegisterParameters) -> Result<(), CPRegistryError> {
         log::info!(
-            "MSG Register from chain {}",
-            self.runtime.message_id().unwrap().chain_id
+            "MSG Register from chain {} at chain {}",
+            self.runtime.message_id().unwrap().chain_id,
+            self.runtime.chain_id(),
         );
         self.state
             .register_cp_node(params.clone(), self.runtime.system_time())
@@ -172,6 +174,11 @@ impl CPRegistryContract {
             return Ok(());
         }
         let dest = Destination::Subscribers(ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()));
+        log::info!(
+            "Publish msg Register to {:?} from chain {}",
+            dest,
+            self.runtime.chain_id()
+        );
         self.runtime
             .prepare_message(Message::Register { params })
             .with_authentication()
