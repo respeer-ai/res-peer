@@ -39,7 +39,7 @@ const requestSubscribe = async () => {
 
 const requestSubscribeThroughCheCko = () => {
   const query = gql`
-    mutation requestSubscribe {
+    mutation requestSubscribeThroughCheCko {
       requestSubscribe
     }
   `
@@ -50,7 +50,7 @@ const requestSubscribeThroughCheCko = () => {
       query: {
         query: query.loc?.source?.body,
         variables: {},
-        operationName: 'requestSubscribe'
+        operationName: 'requestSubscribeThroughCheCko'
       }
     }
   }).then((result) => {

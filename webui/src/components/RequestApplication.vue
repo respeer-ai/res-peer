@@ -106,12 +106,9 @@ const onApplications = (index: number, applications: string[]) => {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const requestApplication = async (index: number, retry: boolean) => {
-  if (index >= constants.appIds.length) {
-    return
-  }
   if (retry) {
     setTimeout(() => {
-      void requestApplication(index + 1, retry)
+      void requestApplication(index, false)
     }, 1000)
     return
   }
@@ -175,12 +172,9 @@ const onApplicationsThroughCheCko = (index: number, applications: string[]) => {
 }
 
 const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
-  if (index >= constants.appIds.length) {
-    return
-  }
   if (retry) {
     setTimeout(() => {
-      void requestApplicationThroughCheCko(index + 1, retry)
+      void requestApplicationThroughCheCko(index, false)
     }, 1000)
     return
   }
