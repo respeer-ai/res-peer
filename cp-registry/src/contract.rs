@@ -105,6 +105,11 @@ impl CPRegistryContract {
             .runtime
             .authenticated_caller_id()
             .expect("Invalid applicationId");
+        log::info!(
+            "Register node {} from chain {}",
+            node.node_id,
+            self.runtime.chain_id()
+        );
         if self.state.exist_node_with_id(node.node_id).await? {
             return Err(CPRegistryError::AlreadyRegistered);
         }
@@ -144,7 +149,10 @@ impl CPRegistryContract {
     }
 
     fn on_op_request_subscribe(&mut self) -> Result<CPRegistryResponse, CPRegistryError> {
-        log::info!("Request subscribe op from chain {}", self.runtime.chain_id());
+        log::info!(
+            "Request subscribe op from chain {}",
+            self.runtime.chain_id()
+        );
         self.runtime
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
@@ -153,6 +161,10 @@ impl CPRegistryContract {
     }
 
     async fn on_msg_register(&mut self, params: RegisterParameters) -> Result<(), CPRegistryError> {
+        log::info!(
+            "MSG Register from chain {}",
+            self.runtime.message_id().unwrap().chain_id
+        );
         self.state
             .register_cp_node(params.clone(), self.runtime.system_time())
             .await?;
@@ -201,7 +213,10 @@ impl CPRegistryContract {
     }
 
     async fn on_msg_request_subscribe(&mut self) -> Result<(), CPRegistryError> {
-        log::info!("Request subscribe msg from chain {}", self.runtime.chain_id());
+        log::info!(
+            "Request subscribe msg from chain {}",
+            self.runtime.chain_id()
+        );
         let message_id = self.require_message_id()?;
         // The subscribe message must be from another chain
         if message_id.chain_id == self.runtime.application_id().creation.chain_id {
@@ -211,9 +226,17 @@ impl CPRegistryContract {
             message_id.chain_id,
             ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
         );
-        log::info!("Request subscribe from chain {} nodes {}", message_id.chain_id, self.state._nodes().await?.len());
+        log::info!(
+            "Request subscribe from chain {} nodes {}",
+            message_id.chain_id,
+            self.state._nodes().await?.len()
+        );
         for node in self.state._nodes().await? {
-            log::info!("Notify node {} to chain {}", node.node_id, message_id.chain_id);
+            log::info!(
+                "Notify node {} to chain {}",
+                node.node_id,
+                message_id.chain_id
+            );
             self.runtime
                 .prepare_message(Message::ExistNode { node })
                 .with_authentication()
