@@ -18,7 +18,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'activities', component: () => import('pages/ActivitiesPage.vue') },
       { path: 'activity', component: () => import('pages/ActivityPage.vue') },
       { path: 'activity/register', component: () => import('pages/ActivityRegister.vue') },
-      { path: 'activity/vote', component: () => import('pages/ActivityVote.vue') }
+      { path: 'activity/vote', component: () => import('pages/ActivityVote.vue') },
+      { path: 'computing', component: () => import('pages/ComputingProvidersPage.vue') }
     ]
   },
 

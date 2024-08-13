@@ -47,6 +47,7 @@
       <activity-applications-keys-query />
       <activity-applications-query />
       <native-balance-query />
+      <computing-nodes-query />
     </q-page-container>
 
     <q-footer bordered :style='{height: "32px", lineHeight: "32px"}'>
@@ -114,6 +115,7 @@ import ActivitiesQuery from 'src/components/ActivitiesQuery.vue'
 import ActivityApplicationsKeysQuery from 'src/components/ActivityApplicationsKeysQuery.vue'
 import ActivityApplicationsQuery from 'src/components/ActivityApplicationsQuery.vue'
 import NativeBalanceQuery from 'src/components/NativeBalanceQuery.vue'
+import ComputingNodesQuery from 'src/components/ComputingNodesQuery.vue'
 
 const logining = ref(false)
 const user = useUserStore()

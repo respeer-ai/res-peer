@@ -7,6 +7,11 @@
       @selection-change='handleSelectionChange'
     />
   </div>
+  <q-dialog v-model='showing' full-width>
+    <div :style='{padding: "96px"}'>
+      <TextCopilot :text='selectedText' :task-type='taskType' @cancel='onCopilotCancel' />
+    </div>
+  </q-dialog>
 </template>
 
 <script setup lang='ts'>
@@ -62,6 +67,9 @@ import { getClientOptions } from 'src/apollo'
 import { graphqlResult } from 'src/utils'
 import { useApplicationStore } from 'src/stores/application'
 import { targetChain } from 'src/stores/chain'
+import { TaskType, taskTypeName } from 'src/stores/cpregistry'
+
+import TextCopilot from './TextCopilot.vue'
 
 const setting = useSettingStore()
 const cheCkoConnect = computed(() => setting.cheCkoConnect)
@@ -71,6 +79,9 @@ const application = useApplicationStore()
 const copilotApp = computed(() => application.copilotApp)
 
 const apiURL = ref('')
+
+const showing = ref(false)
+const taskType = ref(TaskType.FixGrammar)
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const uploadMedia = (resolve: (value: string) => void, reject: (value: string) => void, filename: string, base64: string) => {
@@ -120,15 +131,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{(ev: 'update:modelValue', modelValue: string): void}>()
 
-enum TaskType {
-  FixGrammar = 'Fix the grammar',
-  RewriteEasierUnderstand = 'Rewrite to make this easier to understand',
-  Paraphrase = 'Paraphrase this',
-  WriteFormally = 'Write this more formally',
-  WriteMoreNeutral = 'Write in a more neutral way',
-  GenerateIllustrate = 'Generate illustrate'
-}
-
 const editorInit = ref({
   height: 500,
   min_height: 500,
@@ -172,40 +174,39 @@ const editorInit = ref({
 
     /* adding a menu button */
     editor.ui.registry.addMenuItem('fixGrammar', {
-      text: TaskType.FixGrammar,
+      text: taskTypeName(TaskType.FixGrammar),
       onAction: function () {
-        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
         onParagraphCopilot(TaskType.FixGrammar)
       }
     })
     editor.ui.registry.addMenuItem('RewriteEasierUnderstand', {
-      text: TaskType.RewriteEasierUnderstand,
+      text: taskTypeName(TaskType.RewriteEasierUnderstand),
       onAction: function () {
-        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+        onParagraphCopilot(TaskType.RewriteEasierUnderstand)
       }
     })
     editor.ui.registry.addMenuItem('Paraphrase', {
-      text: TaskType.Paraphrase,
+      text: taskTypeName(TaskType.Paraphrase),
       onAction: function () {
-        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+        onParagraphCopilot(TaskType.Paraphrase)
       }
     })
     editor.ui.registry.addMenuItem('WriteFormally', {
-      text: TaskType.WriteFormally,
+      text: taskTypeName(TaskType.WriteFormally),
       onAction: function () {
-        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+        onParagraphCopilot(TaskType.WriteFormally)
       }
     })
     editor.ui.registry.addMenuItem('WriteMoreNeutral', {
-      text: TaskType.WriteMoreNeutral,
+      text: taskTypeName(TaskType.WriteMoreNeutral),
       onAction: function () {
-        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+        onParagraphCopilot(TaskType.WriteMoreNeutral)
       }
     })
     editor.ui.registry.addMenuItem('GenerateIllustrate', {
-      text: TaskType.GenerateIllustrate,
+      text: taskTypeName(TaskType.GenerateIllustrate),
       onAction: function () {
-        editor.insertContent('<p>Here\'s some content inserted from a basic menu!</p>')
+        onParagraphCopilot(TaskType.GenerateIllustrate)
       }
     })
     /* adding a toolbar menu button */
@@ -216,44 +217,44 @@ const editorInit = ref({
         const items = [
           {
             type: 'menuitem',
-            text: TaskType.FixGrammar,
+            text: taskTypeName(TaskType.FixGrammar),
             onAction: function () {
-              editor.insertContent('&nbsp<em>You clicked tool menu item 1!</em>')
+              onParagraphCopilot(TaskType.FixGrammar)
             }
           },
           {
             type: 'menuitem',
-            text: TaskType.RewriteEasierUnderstand,
+            text: taskTypeName(TaskType.RewriteEasierUnderstand),
             onAction: function () {
-              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+              onParagraphCopilot(TaskType.RewriteEasierUnderstand)
             }
           },
           {
             type: 'menuitem',
-            text: TaskType.Paraphrase,
+            text: taskTypeName(TaskType.Paraphrase),
             onAction: function () {
-              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+              onParagraphCopilot(TaskType.Paraphrase)
             }
           },
           {
             type: 'menuitem',
-            text: TaskType.WriteFormally,
+            text: taskTypeName(TaskType.WriteFormally),
             onAction: function () {
-              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+              onParagraphCopilot(TaskType.WriteFormally)
             }
           },
           {
             type: 'menuitem',
-            text: TaskType.WriteMoreNeutral,
+            text: taskTypeName(TaskType.WriteMoreNeutral),
             onAction: function () {
-              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+              onParagraphCopilot(TaskType.WriteMoreNeutral)
             }
           },
           {
             type: 'menuitem',
-            text: TaskType.GenerateIllustrate,
+            text: taskTypeName(TaskType.GenerateIllustrate),
             onAction: function () {
-              editor.insertContent('&nbsp<em>You clicked tool menu item 2!</em>')
+              onParagraphCopilot(TaskType.GenerateIllustrate)
             }
           }
         ]
@@ -413,10 +414,13 @@ const onDepositQuery = (queryId: any) => {
   }
 }
 
-const onParagraphCopilot = (taskType: TaskType) => {
+const onParagraphCopilot = (_taskType: TaskType) => {
   if (!selectedText.value.length) return
+  showing.value = true
+  taskType.value = _taskType
+
   const web3 = new Web3(window.linera)
-  const prompt = taskType + ': ' + selectedText.value
+  const prompt = _taskType + ': ' + selectedText.value
   const hexPrompt = web3.utils.utf8ToHex(prompt)
   web3.eth.sign(hexPrompt, '0x' + loginAccount.value.slice(0, 40)).then((v) => {
     if (cheCkoConnect.value) {
@@ -428,4 +432,9 @@ const onParagraphCopilot = (taskType: TaskType) => {
     console.log('Sign', prompt, hexPrompt, loginAccount.value, e)
   })
 }
+
+const onCopilotCancel = () => {
+  showing.value = false
+}
+
 </script>

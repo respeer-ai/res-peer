@@ -275,7 +275,7 @@ const onDashboardClick = () => {
 }
 
 const onComputingMarketClick = () => {
-  tab.value = 'computing'
+  tab.value = 'computing-registry'
   void router.push({
     path: '/computing',
     query: {

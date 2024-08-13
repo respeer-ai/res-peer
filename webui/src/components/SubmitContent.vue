@@ -66,7 +66,7 @@
           </template>
         </FileUpload>
         <div
-          :style='{marginLeft: "192px", marginTop: "-28px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
+          :style='{marginLeft: "192px", marginTop: "-32px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
           class='cursor-pointer shadow-6 helper-icon'
         >
           <q-img :src='copilotIcon' width='16px' height='16px' fit='contain' />
@@ -86,7 +86,7 @@
           placeholder='Use part of the first paragraph as abbreviation or create with Copilot.'
         />
         <div
-          :style='{marginLeft: "calc(100% - 28px)", marginTop: "-28px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
+          :style='{marginLeft: "calc(100% - 28px)", marginTop: "-32px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
           class='cursor-pointer shadow-6 helper-icon'
         >
           <q-img
