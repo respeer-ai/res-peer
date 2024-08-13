@@ -7,6 +7,7 @@ members = [
     "review",
     "activity",
     "copilot",
+    "illustrator",
     "blob-gateway",
     "cp-registry"
 ]
@@ -29,8 +30,9 @@ tokio-stream = "0.1.14"
 tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 futures-util = "0.3.28"
 webassembly-test = "0.1.0"
-candle-core = "0.4.1"
-candle-transformers = "0.4.1"
+candle-core = "0.6.0"
+candle-transformers = "0.6.0"
+candle-nn = "0.6.0"
 getrandom = { version = "0.2.12", default-features = false, features = ["custom"] }
 sha3 = "0.10.8"
 tokenizers = { git = "https://github.com/christos-h/tokenizers", default-features = false, features = ["unstable_wasm"] }
@@ -38,6 +40,9 @@ rand = "0.8.5"
 anyhow = { version = "1", features = ["backtrace"] }
 hex = "0.4.3"
 ed25519-dalek = { version = "2.1.1", features = ["batch", "serde"] }
+image = { version = "0.25.2", default-features = false, features = ["jpeg", "png"] }
+tracing = "0.1.40"
+base64 = "0.13"
 
 credit = { path = "./credit" }
 feed = { path = "./feed" }
@@ -45,6 +50,7 @@ review = { path = "./review" }
 foundation = { path = "./foundation" }
 market = { path = "./market" }
 copilot = { path = "./copilot" }
+illustrator = { path = "./illustrator" }
 blob-gateway = { path = "./blob-gateway" }
 cp-registry = { path = "./cp-registry" }
 
