@@ -15,17 +15,16 @@
       </q-step>
       <q-step
         :name='2'
-        title='Get Query Id'
+        title='Get Task Id'
         :done='step > 2'
       >
         <div class='text-black'>
           <CopilotQueryId :node-id='cpNodeId' :text='text' :task-type='taskType' />
         </div>
-        {{ text }} {{ taskType }}
       </q-step>
       <q-step
         :name='3'
-        title='Pay Query'
+        title='Pay Task'
         :done='step > 3'
       >
         {{ text }} {{ taskType }}
