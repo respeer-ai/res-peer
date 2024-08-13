@@ -32,18 +32,26 @@
             <q-spinner-facebook size='80px' />
           </q-inner-loading>
         </q-card>
-        <div :style='{width: "240px"}' class='text-center text-grey-8'>
+        <div :style='{width: "240px"}' :class='["text-center text-grey-8", error ? "text-red-6" : ""]'>
           {{ stepText }}
         </div>
       </div>
       <q-space />
     </div>
   </q-card>
+  <RequestApplication
+    v-if='node && step === 1'
+    :application-id='node?.applicationId'
+    @done='onRequestApplicationDone'
+    @fail='onRequestApplicationFail'
+  />
 </template>
 
 <script setup lang='ts'>
 import { TaskType, taskTypeName, useCPRegistryStore } from 'src/stores/cpregistry'
 import { computed, ref, toRef } from 'vue'
+
+import RequestApplication from '../application/RequestApplication.vue'
 
 interface Props {
   nodeId: string
@@ -56,7 +64,9 @@ const nodeId = toRef(props, 'nodeId')
 const text = toRef(props, 'text')
 const taskType = toRef(props, 'taskType')
 
+const step = ref(1)
 const stepText = ref('Requesting application ...')
+const error = ref(false)
 
 const cpRegistry = useCPRegistryStore()
 const node = computed(() => cpRegistry.nodes.find((el) => el.nodeId === nodeId.value))
@@ -64,5 +74,14 @@ const node = computed(() => cpRegistry.nodes.find((el) => el.nodeId === nodeId.v
 // TODO: request application
 // TODO: application request subscribe
 // TODO: get query Id
+
+const onRequestApplicationDone = () => {
+  stepText.value = 'Subscribing to creation chain ...'
+}
+
+const onRequestApplicationFail = () => {
+  stepText.value = 'Failed to request application!'
+  error.value = true
+}
 
 </script>
