@@ -132,8 +132,8 @@ sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid',/g" webui/src/co
 sed -i "s/activityApp =.*/activityApp = '$activity_appid',/g" webui/src/const/index.ts
 sed -i "s/blobGatewayApp =.*/blobGatewayApp = '$blob_gateway_appid',/g" webui/src/const/index.ts
 sed -i "s/cpRegistryApp =.*/cpRegistryApp = '$cp_registry_appid',/g" webui/src/const/index.ts
-sed -i "s/illustratorApp =.*/illustratorApp = '$illustrator_appid',/g" webui/src/const/index.ts
-sed -i "s/copilotApp =.*/copilotApp = '$copilot_appid'/g" webui/src/const/index.ts
+sed -i "s/copilotApp =.*/copilotApp = '$copilot_appid',/g" webui/src/const/index.ts
+sed -i "s/illustratorApp =.*/illustratorApp = '$illustrator_appid'/g" webui/src/const/index.ts
 
 sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
 sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts
