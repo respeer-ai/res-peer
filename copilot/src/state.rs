@@ -30,6 +30,10 @@ impl Copilot {
         *self.quota_price.get()
     }
 
+    pub(crate) async fn set_quota_price(&mut self, amount: Amount) {
+        self.quota_price.set(amount);
+    }
+
     pub(crate) async fn free_query(&mut self, owner: Owner) -> Result<bool, CopilotError> {
         match self.query_deposits.get(&owner).await? {
             Some(queries) => Ok((queries.len() as u32) < *self.free_quota.get()),

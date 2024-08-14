@@ -88,6 +88,7 @@ pub struct DepositQuota {
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     Deposit { query_id: CryptoHash },
+    RequestSubscribe,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -101,6 +102,10 @@ pub enum Message {
     },
     Paid {
         query_id: CryptoHash,
+    },
+    RequestSubscribe,
+    QuotaPrice {
+        amount: Amount,
     },
 }
 
@@ -118,6 +123,12 @@ pub enum CopilotError {
 
     #[error("Invalid pay chain")]
     InvalidPayChain,
+
+    #[error("Insufficient funds")]
+    InsufficientFunds,
+
+    #[error("Invalid messageId")]
+    InvalidMessageId,
 
     #[error(transparent)]
     CryptoError(#[from] CryptoError),

@@ -1,5 +1,5 @@
-use candle_core as candle;
 use candle::{Result, Tensor, D};
+use candle_core as candle;
 use candle_nn as nn;
 use candle_nn::Module;
 

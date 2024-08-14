@@ -24,15 +24,18 @@
       </div>
       <q-space />
       <div>
-        <q-card v-if='!queryId?.queryId?.length' flat :style='{width: "240px", height: "80px"}'>
+        <q-card flat :style='{width: "320px", height: "80px"}'>
           <q-inner-loading
             :showing='!queryId?.queryId?.length'
             class='text-red-4'
           >
             <q-spinner-facebook size='80px' />
           </q-inner-loading>
+          <div v-if='queryId?.queryId?.length' class='text-center' :style='{height: "100%", fontSize: "24px", paddingTop: "32px"}'>
+            Query Id
+          </div>
         </q-card>
-        <div :style='{width: "240px"}' :class='["text-center text-grey-8", error ? "text-red-6" : ""]'>
+        <div :style='{width: "320px", wordBreak: "break-word"}' :class='["text-center", error ? "text-red-6" : "text-grey-8"]'>
           {{ stepText }}
         </div>
       </div>
@@ -58,7 +61,7 @@
 
 <script setup lang='ts'>
 import { TaskType, taskTypeName, useCPRegistryStore } from 'src/stores/cpregistry'
-import { computed, ref, toRef, defineModel } from 'vue'
+import { computed, ref, toRef, defineModel, watch } from 'vue'
 
 import RequestApplication from '../application/RequestApplication.vue'
 import GetQueryId from '../copilot/GetQueryId.vue'
@@ -93,6 +96,10 @@ const onRequestApplicationFail = () => {
   stepText.value = 'Failed to request application!'
   error.value = true
 }
+
+watch(queryId, () => {
+  stepText.value = (queryId.value as QueryId)?.queryId
+})
 
 const onGetQueryIdDone = () => {
   stepText.value = (queryId.value as QueryId)?.queryId

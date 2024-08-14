@@ -8,8 +8,8 @@ use super::unet_2d_blocks::{
     DownEncoderBlock2D, DownEncoderBlock2DConfig, UNetMidBlock2D, UNetMidBlock2DConfig,
     UpDecoderBlock2D, UpDecoderBlock2DConfig,
 };
-use candle_core as candle;
 use candle::{Result, Tensor};
+use candle_core as candle;
 use candle_nn as nn;
 use candle_nn::Module;
 

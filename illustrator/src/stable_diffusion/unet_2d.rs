@@ -2,13 +2,15 @@
 //!
 //! The 2D Unet models take as input a noisy sample and the current diffusion
 //! timestep and return a denoised version of the input.
-use super::embeddings::{TimestepEmbedding, Timesteps};
-use super::unet_2d_blocks::*;
-use candle_transformers::models::with_tracing::{conv2d, Conv2d};
-use candle_core as candle;
+use super::{
+    embeddings::{TimestepEmbedding, Timesteps},
+    unet_2d_blocks::*,
+};
 use candle::{Result, Tensor};
+use candle_core as candle;
 use candle_nn as nn;
 use candle_nn::Module;
+use candle_transformers::models::with_tracing::{conv2d, Conv2d};
 
 #[derive(Debug, Clone, Copy)]
 pub struct BlockConfig {

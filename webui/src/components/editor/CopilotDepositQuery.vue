@@ -3,7 +3,7 @@
     <div class='row'>
       <div>
         <div :style='{fontSize: "28px"}'>
-          Deposit task query
+          Paying task
         </div>
         <div :style='{marginTop: "16px"}' class='text-bold'>
           Task Node:
@@ -21,6 +21,12 @@
         <div class='text-grey-6'>
           {{ text }}
         </div>
+        <div :style='{marginTop: "16px"}' class='text-bold'>
+          Query Id:
+        </div>
+        <div class='text-grey-6'>
+          {{ queryId }}
+        </div>
       </div>
       <q-space />
       <div>
@@ -32,7 +38,7 @@
             <q-spinner-facebook size='80px' />
           </q-inner-loading>
         </q-card>
-        <div :style='{width: "240px"}' :class='["text-center text-grey-8", error ? "text-red-6" : ""]'>
+        <div :style='{width: "240px"}' :class='["text-center", error ? "text-red-6" : "text-grey-8"]'>
           {{ stepText }}
         </div>
       </div>

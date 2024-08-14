@@ -47,7 +47,7 @@ const queryDeposited = () => {
     endpoint: 'copilot',
     applicationId: cpNode.value?.applicationId,
     publicKey: loginAccount.value,
-    queryId,
+    queryId: queryId.value,
     chainId: targetChain.value
   }, {
     fetchPolicy: 'network-only'
@@ -77,14 +77,15 @@ const queryDepositedThroughCheCko = () => {
         query: query.loc?.source?.body,
         variables: {
           publicKey: loginAccount.value,
-          queryId
+          queryId: queryId.value
         },
-        operationName: 'getQueryIdThroughCheCko'
+        operationName: 'queryDepositedThroughCheCko'
       }
     }
   }).then((result) => {
-    const paid = graphqlResult.keyValue(result, 'getQueryId') as boolean
+    const paid = graphqlResult.keyValue(result, 'queryDeposited') as boolean
     if (paid) emit('confirmed')
+    else setTimeout(() => queryDepositedThroughCheCko(), 1000)
   }).catch((e) => {
     console.log(e)
     emit('fail')

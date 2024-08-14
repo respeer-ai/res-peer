@@ -3,8 +3,8 @@
 //!
 //! Noise schedulers can be used to set the trade-off between
 //! inference speed and quality.
-use candle_core as candle;
 use candle::{Result, Tensor};
+use candle_core as candle;
 
 pub trait SchedulerConfig: std::fmt::Debug + Send + Sync {
     fn build(&self, inference_steps: usize) -> Result<Box<dyn Scheduler>>;

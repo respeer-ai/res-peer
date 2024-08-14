@@ -109,9 +109,7 @@ onMounted(() => {
   const web3 = new Web3(window.linera)
   const prompt = taskType.value + ': ' + text.value
   const hexPrompt = web3.utils.utf8ToHex(prompt)
-  console.log('Signing', prompt)
   web3.eth.sign(hexPrompt, '0x' + loginAccount.value.slice(0, 40)).then((v) => {
-    console.log('Signed', prompt, v)
     if (cheCkoConnect.value) {
       getQueryIdThroughCheCko(prompt, loginAccount.value, (v as string).substring(2))
     } else {

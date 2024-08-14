@@ -13,8 +13,8 @@ pub mod vae;
 
 use std::sync::Arc;
 
-use candle_core as candle;
 use candle::{DType, Device, Result};
+use candle_core as candle;
 use candle_nn as nn;
 
 use self::schedulers::{Scheduler, SchedulerConfig};
@@ -96,7 +96,7 @@ impl StableDiffusionConfig {
         }
     }
 
-    pub fn build_buffered_vae (
+    pub fn build_buffered_vae(
         &self,
         vae_weights: Vec<u8>,
         device: &Device,

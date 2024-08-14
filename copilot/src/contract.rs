@@ -9,7 +9,7 @@ use self::state::Copilot;
 use copilot::{CopilotError, CopilotParameters, InstantiationArgument, Message, Operation};
 use cp_registry::{CPRegistryAbi, RegisterParameters};
 use linera_sdk::{
-    base::{Account, Amount, ApplicationId, CryptoHash, WithContractAbi},
+    base::{Account, Amount, ApplicationId, ChannelName, CryptoHash, MessageId, WithContractAbi},
     views::{RootView, View, ViewStorageContext},
     Contract, ContractRuntime,
 };
@@ -24,6 +24,8 @@ linera_sdk::contract!(CopilotContract);
 impl WithContractAbi for CopilotContract {
     type Abi = copilot::CopilotAbi;
 }
+
+const SUBSCRIPTION_CHANNEL: &[u8] = b"subscriptions";
 
 impl Contract for CopilotContract {
     type Message = Message;
@@ -40,7 +42,7 @@ impl Contract for CopilotContract {
     // TODO: this will be run each time the chain is instantiate (e.g. load in a new wallet)
     async fn instantiate(&mut self, argument: InstantiationArgument) {
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
-            return
+            return;
         }
 
         self.state.instantiate(argument.clone()).await;
@@ -76,6 +78,9 @@ impl Contract for CopilotContract {
                 .on_op_deposit_query(query_id)
                 .await
                 .expect("Failed OP: deposit query"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: request subscribe"),
         }
     }
 
@@ -92,6 +97,11 @@ impl Contract for CopilotContract {
             Message::Paid { query_id } => {
                 self.on_msg_paid(query_id).await.expect("Failed MSG: paid")
             }
+            Message::RequestSubscribe => self
+                .on_msg_request_subscribe()
+                .await
+                .expect("Failed MSG: request subscribe"),
+            Message::QuotaPrice { amount } => self.on_msg_quota_price(amount).await,
         }
     }
 
@@ -146,14 +156,24 @@ impl CopilotContract {
         {
             return Err(CopilotError::InvalidQuery);
         }
-        self.state
-            .deposit_query(
-                self.runtime.authenticated_signer().expect("Invalid owner"),
-                query_id,
-            )
-            .await?;
+        let quota_price = self.state._quota_price().await;
+        let owner = self.runtime.authenticated_signer().unwrap();
+        if self.runtime.owner_balance(owner).le(&quota_price)
+            || self.runtime.chain_balance().le(&quota_price)
+        {
+            return Err(CopilotError::InsufficientFunds);
+        }
+        self.state.deposit_query(owner, query_id).await?;
         self.runtime
             .prepare_message(Message::Deposit { query_id })
+            .with_authentication()
+            .send_to(self.runtime.application_id().creation.chain_id);
+        Ok(())
+    }
+
+    fn on_op_request_subscribe(&mut self) -> Result<(), CopilotError> {
+        self.runtime
+            .prepare_message(Message::RequestSubscribe)
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
         Ok(())
@@ -193,7 +213,19 @@ impl CopilotContract {
             chain_id: self.runtime.application_id().creation.chain_id,
             owner: None,
         };
-        let owner = self.runtime.authenticated_signer();
+        let mut owner = self.runtime.authenticated_signer();
+        if owner.is_some() {
+            let owner_balance = self.runtime.owner_balance(owner.unwrap());
+            if owner_balance.le(&amount) {
+                owner = None
+            }
+        }
+        if owner.is_none() {
+            let chain_balance = self.runtime.chain_balance();
+            if chain_balance.le(&amount) {
+                return Err(CopilotError::InsufficientFunds);
+            }
+        }
         self.runtime.transfer(owner, destination, amount);
         self.runtime
             .prepare_message(Message::Paid { query_id })
@@ -208,5 +240,35 @@ impl CopilotContract {
             .state
             .deposit_query(owner.expect("Invalid owner"), query_id)
             .await?)
+    }
+
+    fn require_message_id(&mut self) -> Result<MessageId, CopilotError> {
+        match self.runtime.message_id() {
+            Some(message_id) => Ok(message_id),
+            None => Err(CopilotError::InvalidMessageId),
+        }
+    }
+
+    async fn on_msg_request_subscribe(&mut self) -> Result<(), CopilotError> {
+        let message_id = self.require_message_id()?;
+        // The subscribe message must be from another chain
+        if message_id.chain_id == self.runtime.application_id().creation.chain_id {
+            return Ok(());
+        }
+        self.runtime.subscribe(
+            message_id.chain_id,
+            ChannelName::from(SUBSCRIPTION_CHANNEL.to_vec()),
+        );
+        self.runtime
+            .prepare_message(Message::QuotaPrice {
+                amount: self.state._quota_price().await,
+            })
+            .with_authentication()
+            .send_to(self.require_message_id()?.chain_id);
+        Ok(())
+    }
+
+    async fn on_msg_quota_price(&mut self, amount: Amount) {
+        self.state.set_quota_price(amount).await;
     }
 }

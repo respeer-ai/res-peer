@@ -4,11 +4,11 @@
 //!
 //! Denoising Diffusion Implicit Models, K. He and al, 2015.
 //! https://arxiv.org/abs/1512.03385
-use candle_transformers::models::with_tracing::{conv2d, Conv2d};
-use candle_core as candle;
 use candle::{Result, Tensor, D};
+use candle_core as candle;
 use candle_nn as nn;
 use candle_nn::Module;
+use candle_transformers::models::with_tracing::{conv2d, Conv2d};
 
 /// Configuration for a ResNet block.
 #[derive(Debug, Clone, Copy)]

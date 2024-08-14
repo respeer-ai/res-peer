@@ -1,5 +1,5 @@
-use candle_core as candle;
 use candle::{Device, Result, Tensor};
+use candle_core as candle;
 
 pub fn linspace(start: f64, stop: f64, steps: usize) -> Result<Tensor> {
     if steps == 0 {
