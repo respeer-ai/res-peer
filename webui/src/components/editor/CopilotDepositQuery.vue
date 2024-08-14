@@ -18,7 +18,7 @@
         <div :style='{marginTop: "16px"}' class='text-bold'>
           {{ taskTypeName(taskType) }}:
         </div>
-        <div class='text-grey-6'>
+        <div class='text-grey-6' :style='{maxWidth: "600px"}'>
           {{ text }}
         </div>
         <div :style='{marginTop: "16px"}' class='text-bold'>

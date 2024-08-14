@@ -56,7 +56,10 @@
         title='Compare Result'
         :done='step > 5'
       >
-        {{ text }} {{ taskType }}
+        <CopilotCompareText
+          :prev-text='text'
+          :current-text='resultText'
+        />
       </q-step>
     </q-stepper>
     <div class='row'>
@@ -64,7 +67,7 @@
       <q-btn
         flat
         rounded
-        label='Next'
+        :label='nextText'
         class='bg-red-2'
         :disable='forwardable'
         @click='onNextClick'
@@ -72,7 +75,7 @@
       <q-btn
         flat
         rounded
-        label='Cancel'
+        :label='cancelText'
         @click='onCancelClick'
       />
     </div>
@@ -88,6 +91,7 @@ import CPNodeSelector from './CPNodeSelector.vue'
 import CopilotQueryId from './CopilotQueryId.vue'
 import CopilotDepositQuery from './CopilotDepositQuery.vue'
 import CopilotParagraphTask from './CopilotParagraphTask.vue'
+import CopilotCompareText from './CopilotCompareText.vue'
 
 interface Props {
   text: string
@@ -105,9 +109,14 @@ const queryConfirmed = ref(false)
 const signature = ref(undefined as unknown as string)
 const resultText = ref(undefined as unknown as string)
 
-const emit = defineEmits<{(ev: 'cancel'): void}>()
+const emit = defineEmits<{(ev: 'cancel'): void,
+  (ev: 'changeText', v: string): void
+}>()
 
 const onNextClick = () => {
+  if (step.value === 5) {
+    return emit('changeText', resultText.value)
+  }
   step.value++
 }
 
@@ -122,6 +131,20 @@ const forwardable = computed(() => {
     case 3: return !queryConfirmed.value
     case 4: return !resultText.value?.length
     default: return false
+  }
+})
+
+const nextText = computed(() => {
+  switch (step.value) {
+    case 5: return 'Accept'
+    default: return 'Next'
+  }
+})
+
+const cancelText = computed(() => {
+  switch (step.value) {
+    case 5: return 'Discard'
+    default: return 'Cancel'
   }
 })
 
