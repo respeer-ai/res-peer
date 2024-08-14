@@ -53,7 +53,9 @@ impl Contract for CopilotContract {
             "{}/chains/{}/applications/{}",
             cp_registry_params.link,
             self.runtime.chain_id(),
-            serde_json::to_string(&self.runtime.application_id()).unwrap().trim_matches('"'),
+            serde_json::to_string(&self.runtime.application_id())
+                .unwrap()
+                .trim_matches('"'),
         );
         cp_registry_params.node_id = Some(CryptoHash::new(&cp_registry_params));
 

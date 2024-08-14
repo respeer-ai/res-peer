@@ -16,7 +16,9 @@ use candle_core::{Device, Tensor};
 use candle_transformers::{generation::LogitsProcessor, models::quantized_t5 as t5};
 use copilot::{CopilotError, Operation};
 use linera_sdk::{
-    base::{BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi},
+    base::{
+        Amount, BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi,
+    },
     graphql::GraphQLMutationRoot,
     views::{View, ViewStorageContext},
     Service, ServiceRuntime,
@@ -151,6 +153,11 @@ impl QueryRoot {
         let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
         let owner: Owner = Owner::from(public_key);
         Ok(model_context.state.query_deposited(owner, query_id).await?)
+    }
+
+    async fn quota_price(&self, ctx: &Context<'_>) -> Amount {
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        model_context.state._quota_price().await
     }
 }
 

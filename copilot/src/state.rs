@@ -26,7 +26,7 @@ impl Copilot {
         self.free_quota.set(argument.free_quota);
     }
 
-    pub(crate) async fn _quota_price(&mut self) -> Amount {
+    pub(crate) async fn _quota_price(&self) -> Amount {
         *self.quota_price.get()
     }
 
