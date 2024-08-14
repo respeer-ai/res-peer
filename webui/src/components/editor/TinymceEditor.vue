@@ -9,7 +9,7 @@
   </div>
   <q-dialog v-model='showing' full-width>
     <div :style='{padding: "96px"}'>
-      <TextCopilot :text='selectedText' :task-type='taskType' @cancel='onCopilotCancel' />
+      <TextCopilot :text='selectedText' :task-type='taskType' @cancel='onCopilotCancel' @change-text='(text) => onChangeText(text)' />
     </div>
   </q-dialog>
 </template>
@@ -283,6 +283,11 @@ const onParagraphCopilot = (_taskType: TaskType) => {
 }
 
 const onCopilotCancel = () => {
+  showing.value = false
+}
+
+const onChangeText = (text: string) => {
+  internalValue.value = internalValue.value.substring(0, startOffset.value) + text + internalValue.value.substring(endOffset.value)
   showing.value = false
 }
 
