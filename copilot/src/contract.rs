@@ -50,10 +50,10 @@ impl Contract for CopilotContract {
         let mut cp_registry_params: cp_registry::RegisterParameters = argument.into();
         cp_registry_params.payment_chain_id = self.runtime.chain_id();
         cp_registry_params.link = format!(
-            "{}/chains/{:?}/applications/{:?}",
+            "{}/chains/{}/applications/{}",
             cp_registry_params.link,
             self.runtime.chain_id(),
-            self.runtime.application_id()
+            serde_json::to_string(&self.runtime.application_id()).unwrap().trim_matches('"'),
         );
         cp_registry_params.node_id = Some(CryptoHash::new(&cp_registry_params));
 
@@ -63,10 +63,11 @@ impl Contract for CopilotContract {
         };
 
         log::info!(
-            "Register computing node {:?} at chain {} by {}",
+            "Register computing node {:?} at chain {} by {} link {}",
             cp_registry_params.node_id,
             self.runtime.chain_id(),
             signer,
+            cp_registry_params.link,
         );
         self.cp_registry_register(cp_registry_params)
             .expect("Failed register node");
