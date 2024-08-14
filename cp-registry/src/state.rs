@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_graphql::SimpleObject;
-use cp_registry::{CPNode, CPRegistryError, RegisterParameters, UpdateParameters};
+use cp_registry::{CPNode, CPRegistryError, UpdateParameters};
 use linera_sdk::{
     base::{CryptoHash, Timestamp},
     views::{linera_views, MapView, RootView, SetView, ViewStorageContext},
@@ -39,13 +39,12 @@ impl CPRegistry {
 
     pub(crate) async fn register_cp_node(
         &mut self,
-        params: RegisterParameters,
+        mut node: CPNode,
         now: Timestamp,
     ) -> Result<CryptoHash, CPRegistryError> {
-        if self.links.contains(&params.link).await? {
+        if self.links.contains(&node.link).await? {
             return Err(CPRegistryError::AlreadyRegistered);
         }
-        let mut node: CPNode = params.into();
         node.created_at = now;
         self.nodes.insert(&node.node_id, node.clone())?;
         self.links.insert(&node.link)?;

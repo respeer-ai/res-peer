@@ -95,13 +95,13 @@ impl Contract for CPRegistryContract {
 impl CPRegistryContract {
     async fn on_op_register(
         &mut self,
-        params: RegisterParameters,
+        mut params: RegisterParameters,
     ) -> Result<CPRegistryResponse, CPRegistryError> {
         if self.state.exist_node_with_link(params.clone().link).await? {
             return Err(CPRegistryError::AlreadyRegistered);
         }
-        let mut node: CPNode = params.clone().into();
-        node.application_id = self
+        let node: CPNode = params.clone().into();
+        params.application_id = self
             .runtime
             .authenticated_caller_id()
             .expect("Invalid applicationId");
@@ -159,8 +159,9 @@ impl CPRegistryContract {
     }
 
     async fn on_msg_register(&mut self, params: RegisterParameters) -> Result<(), CPRegistryError> {
+        let node: CPNode = params.clone().into();
         self.state
-            .register_cp_node(params.clone(), self.runtime.system_time())
+            .register_cp_node(node, self.runtime.system_time())
             .await?;
         if self.runtime.chain_id() != self.runtime.application_id().creation.chain_id {
             return Ok(());
