@@ -162,7 +162,7 @@ impl CopilotContract {
         let quota_price = self.state._quota_price().await;
         let owner = self.runtime.authenticated_signer().unwrap();
         if self.runtime.owner_balance(owner).le(&quota_price)
-            || self.runtime.chain_balance().le(&quota_price)
+            && self.runtime.chain_balance().le(&quota_price)
         {
             return Err(CopilotError::InsufficientFunds);
         }
