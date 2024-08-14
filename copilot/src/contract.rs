@@ -6,7 +6,9 @@
 mod state;
 
 use self::state::Copilot;
-use copilot::{CopilotError, CopilotParameters, InstantiationArgument, Message, Operation};
+use copilot::{
+    CopilotError, CopilotParameters, CopilotResponse, InstantiationArgument, Message, Operation,
+};
 use cp_registry::{CPRegistryAbi, RegisterParameters};
 use linera_sdk::{
     base::{Account, Amount, ApplicationId, ChannelName, CryptoHash, MessageId, WithContractAbi},
@@ -75,15 +77,13 @@ impl Contract for CopilotContract {
             .expect("Failed register node");
     }
 
-    async fn execute_operation(&mut self, operation: Self::Operation) -> () {
+    async fn execute_operation(
+        &mut self,
+        operation: Self::Operation,
+    ) -> Result<CopilotResponse, CopilotError> {
         match operation {
-            Operation::Deposit { query_id } => self
-                .on_op_deposit_query(query_id)
-                .await
-                .expect("Failed OP: deposit query"),
-            Operation::RequestSubscribe => self
-                .on_op_request_subscribe()
-                .expect("Failed OP: request subscribe"),
+            Operation::Deposit { query_id } => self.on_op_deposit_query(query_id).await,
+            Operation::RequestSubscribe => self.on_op_request_subscribe(),
         }
     }
 
@@ -151,20 +151,23 @@ impl CopilotContract {
             .await?)
     }
 
-    async fn on_op_deposit_query(&mut self, query_id: CryptoHash) -> Result<(), CopilotError> {
+    async fn on_op_deposit_query(
+        &mut self,
+        query_id: CryptoHash,
+    ) -> Result<CopilotResponse, CopilotError> {
         if self
             .state
             .query_deposited(self.runtime.authenticated_signer().unwrap(), query_id)
             .await?
         {
-            return Err(CopilotError::InvalidQuery);
+            return Ok(CopilotResponse::Error(CopilotError::InvalidQuery));
         }
         let quota_price = self.state._quota_price().await;
         let owner = self.runtime.authenticated_signer().unwrap();
         if self.runtime.owner_balance(owner).le(&quota_price)
             && self.runtime.chain_balance().le(&quota_price)
         {
-            return Err(CopilotError::InsufficientFunds);
+            return Ok(CopilotResponse::Error(CopilotError::InsufficientFunds));
         }
         self.state.deposit_query(owner, query_id).await?;
         self.runtime

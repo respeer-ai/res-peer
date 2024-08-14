@@ -48,14 +48,16 @@ const queryDeposited = () => {
     applicationId: cpNode.value?.applicationId,
     publicKey: loginAccount.value,
     queryId: queryId.value,
-    chainId: targetChain.value
+    chainId: cpNode.value?.paymentChainId
   }, {
     fetchPolicy: 'network-only'
   }))
 
   onResult((res) => {
     if (res.loading) return
-    emit('confirmed')
+    const paid = graphqlResult.data(res, 'queryDeposited') as boolean
+    if (paid) emit('confirmed')
+    else setTimeout(() => queryDeposited(), 5000)
   })
 
   onError((e) => {
@@ -64,40 +66,8 @@ const queryDeposited = () => {
   })
 }
 
-const queryDepositedThroughCheCko = () => {
-  const query = gql`
-    query queryDepositedThroughCheCko($publicKey: String!, $queryId: String!) {
-      queryDeposited(publicKey: $publicKey, queryId: $queryId)
-    }`
-  window.linera.request({
-    method: 'linera_graphqlQuery',
-    params: {
-      applicationId: cpNode.value?.applicationId,
-      query: {
-        query: query.loc?.source?.body,
-        variables: {
-          publicKey: loginAccount.value,
-          queryId: queryId.value
-        },
-        operationName: 'queryDepositedThroughCheCko'
-      }
-    }
-  }).then((result) => {
-    const paid = graphqlResult.keyValue(result, 'queryDeposited') as boolean
-    if (paid) emit('confirmed')
-    else setTimeout(() => queryDepositedThroughCheCko(), 1000)
-  }).catch((e) => {
-    console.log(e)
-    emit('fail')
-  })
-}
-
 const _queryDeposited = () => {
-  if (cheCkoConnect.value) {
-    queryDepositedThroughCheCko()
-  } else {
-    void queryDeposited()
-  }
+  void queryDeposited()
 }
 
 const depositQuery = async () => {

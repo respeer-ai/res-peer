@@ -101,7 +101,9 @@ const onApplications = (index: number, applications: string[]) => {
     }
     void requestApplication(index + 1, false)
   } else {
-    void requestApplication(index, true)
+    setTimeout(() => {
+      getApplications(index, onApplications)
+    }, 1000)
   }
 }
 
@@ -171,8 +173,9 @@ const onApplicationsThroughCheCko = (index: number, applications: string[]) => {
     }
     void requestApplicationThroughCheCko(index + 1, false)
   } else {
-    console.log('ReRequest application', index, constants.appIds[index])
-    void requestApplicationThroughCheCko(index, true)
+    setTimeout(() => {
+      getApplicationsThroughCheCko(index, onApplicationsThroughCheCko)
+    }, 1000)
   }
 }
 

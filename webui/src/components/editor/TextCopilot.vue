@@ -88,6 +88,7 @@ const taskType = toRef(props, 'taskType')
 const step = ref(1)
 const cpNodeId = ref(undefined as unknown as string)
 const queryId = ref(undefined as unknown as QueryId)
+const queryConfirmed = ref(false)
 
 const emit = defineEmits<{(ev: 'cancel'): void}>()
 
@@ -103,12 +104,13 @@ const forwardable = computed(() => {
   switch (step.value) {
     case 1: return !cpNodeId.value?.length
     case 2: return !queryId.value?.queryId?.length
+    case 3: return !queryConfirmed.value
     default: return false
   }
 })
 
 const onDepositQueryDone = () => {
-  step.value++
+  queryConfirmed.value = true
 }
 
 const onDepositQueryFail = () => {

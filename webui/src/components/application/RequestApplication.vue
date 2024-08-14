@@ -80,7 +80,9 @@ const onApplications = (applications: string[]) => {
   if (applications.includes(applicationId.value)) {
     emit('done')
   } else {
-    void requestApplication(true)
+    setTimeout(() => {
+      getApplications(onApplications)
+    }, 1000)
   }
 }
 
@@ -116,7 +118,9 @@ const onApplicationsThroughCheCko = (applications: string[]) => {
   if (applications.includes(applicationId.value)) {
     emit('done')
   } else {
-    void requestApplicationThroughCheCko(true)
+    setTimeout(() => {
+      getApplicationsThroughCheCko(onApplicationsThroughCheCko)
+    }, 1000)
   }
 }
 

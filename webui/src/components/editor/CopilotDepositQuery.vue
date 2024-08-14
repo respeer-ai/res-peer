@@ -32,11 +32,14 @@
       <div>
         <q-card flat :style='{width: "240px", height: "80px"}'>
           <q-inner-loading
-            :showing='true'
+            :showing='!queryConfirmed'
             class='text-red-4'
           >
             <q-spinner-facebook size='80px' />
           </q-inner-loading>
+          <div v-if='queryConfirmed'>
+            Query paid
+          </div>
         </q-card>
         <div :style='{width: "240px"}' :class='["text-center", error ? "text-red-6" : "text-grey-8"]'>
           {{ stepText }}
@@ -79,6 +82,7 @@ const text = toRef(props, 'text')
 
 const stepText = ref('Paying task ...')
 const error = ref(false)
+const queryConfirmed = ref(false)
 
 const cpRegistry = useCPRegistryStore()
 const node = computed(() => cpRegistry.nodes.find((el) => el.nodeId === nodeId.value))
@@ -95,6 +99,7 @@ const onDepositQueryFail = () => {
 
 const onQueryConfirmed = () => {
   stepText.value = ''
+  queryConfirmed.value = true
   emit('done')
 }
 </script>

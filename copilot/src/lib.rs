@@ -18,7 +18,7 @@ pub struct CopilotAbi;
 
 impl ContractAbi for CopilotAbi {
     type Operation = Operation;
-    type Response = ();
+    type Response = CopilotResponse;
 }
 
 impl ServiceAbi for CopilotAbi {
@@ -144,4 +144,11 @@ pub enum CopilotError {
 
     #[error(transparent)]
     HexError(#[from] hex::FromHexError),
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub enum CopilotResponse {
+    #[default]
+    Ok,
+    Error(CopilotError),
 }
