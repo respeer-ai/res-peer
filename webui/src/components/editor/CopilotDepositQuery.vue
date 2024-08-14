@@ -3,7 +3,7 @@
     <div class='row'>
       <div>
         <div :style='{fontSize: "28px"}'>
-          Preparing task query
+          Deposit task query
         </div>
         <div :style='{marginTop: "16px"}' class='text-bold'>
           Task Node:
@@ -24,9 +24,9 @@
       </div>
       <q-space />
       <div>
-        <q-card v-if='!queryId?.queryId?.length' flat :style='{width: "240px", height: "80px"}'>
+        <q-card flat :style='{width: "240px", height: "80px"}'>
           <q-inner-loading
-            :showing='!queryId?.queryId?.length'
+            :showing='true'
             class='text-red-4'
           >
             <q-spinner-facebook size='80px' />
@@ -39,68 +39,56 @@
       <q-space />
     </div>
   </q-card>
-  <RequestApplication
-    v-if='node && step === 1'
-    :application-id='node?.applicationId'
-    @done='onRequestApplicationDone'
-    @fail='onRequestApplicationFail'
-  />
-  <GetQueryId
-    v-if='step === 2'
+  <DepositQuery
     :node-id='nodeId'
-    :text='text'
-    :task-type='taskType'
-    v-model='queryId'
-    @done='onGetQueryIdDone'
-    @fail='onGetQueryIdFail'
+    :query-id='queryId'
+    @paid='onQueryPaid'
+    @confirmed='onQueryConfirmed'
+    @fail='onDepositQueryFail'
   />
 </template>
 
 <script setup lang='ts'>
 import { TaskType, taskTypeName, useCPRegistryStore } from 'src/stores/cpregistry'
-import { computed, ref, toRef, defineModel } from 'vue'
+import { computed, ref, toRef } from 'vue'
 
-import RequestApplication from '../application/RequestApplication.vue'
-import GetQueryId from '../copilot/GetQueryId.vue'
-import { QueryId } from 'src/stores/copilot'
+import DepositQuery from '../copilot/DepositQuery.vue'
 
 interface Props {
   nodeId: string
-  text: string
+  queryId: string
   taskType: TaskType
+  text: string
 }
+
+const emit = defineEmits<{(ev: 'done'): void,
+  (ev: 'fail'): void
+}>()
 
 const props = defineProps<Props>()
 const nodeId = toRef(props, 'nodeId')
-const text = toRef(props, 'text')
+const queryId = toRef(props, 'queryId')
 const taskType = toRef(props, 'taskType')
+const text = toRef(props, 'text')
 
-const step = ref(1)
-const stepText = ref('Requesting application ...')
+const stepText = ref('Paying task ...')
 const error = ref(false)
 
 const cpRegistry = useCPRegistryStore()
 const node = computed(() => cpRegistry.nodes.find((el) => el.nodeId === nodeId.value))
 
-const queryId = defineModel({ type: Object })
-
-const onRequestApplicationDone = () => {
-  stepText.value = 'Generating queryId ...'
-  step.value++
+const onQueryPaid = () => {
+  stepText.value = 'Waiting for confirmation ...'
 }
 
-const onRequestApplicationFail = () => {
-  stepText.value = 'Failed to request application!'
+const onDepositQueryFail = () => {
+  stepText.value = 'Failed to pay task!'
   error.value = true
+  emit('fail')
 }
 
-const onGetQueryIdDone = () => {
-  stepText.value = (queryId.value as QueryId)?.queryId
+const onQueryConfirmed = () => {
+  stepText.value = ''
+  emit('done')
 }
-
-const onGetQueryIdFail = () => {
-  stepText.value = 'Failed to get queryId!'
-  error.value = true
-}
-
 </script>

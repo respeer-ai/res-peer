@@ -99,6 +99,7 @@ const onApplications = (index: number, applications: string[]) => {
         application.copilotApp = constants.Apps.copilotApp
         break
     }
+    void requestApplication(index + 1, false)
   } else {
     void requestApplication(index, true)
   }
@@ -106,6 +107,9 @@ const onApplications = (index: number, applications: string[]) => {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const requestApplication = async (index: number, retry: boolean) => {
+  if (index >= constants.appIds.length) {
+    return
+  }
   if (retry) {
     setTimeout(() => {
       void requestApplication(index, false)
@@ -165,6 +169,7 @@ const onApplicationsThroughCheCko = (index: number, applications: string[]) => {
         application.copilotApp = constants.Apps.copilotApp
         break
     }
+    void requestApplicationThroughCheCko(index + 1, false)
   } else {
     console.log('ReRequest application', index, constants.appIds[index])
     void requestApplicationThroughCheCko(index, true)
@@ -172,6 +177,9 @@ const onApplicationsThroughCheCko = (index: number, applications: string[]) => {
 }
 
 const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
+  if (index >= constants.appIds.length) {
+    return
+  }
   if (retry) {
     setTimeout(() => {
       void requestApplicationThroughCheCko(index, false)
@@ -207,10 +215,7 @@ const requestApplications = () => {
   if (cheCkoConnect.value) {
     if (window.linera) {
       setTimeout(() => {
-        for (let i = 0; i < constants.appIds.length; i++) {
-          console.log('Request application', i, constants.appIds[i])
-          void requestApplicationThroughCheCko(i, false)
-        }
+        void requestApplicationThroughCheCko(0, false)
       }, 500)
     } else {
       setTimeout(() => {
@@ -218,9 +223,7 @@ const requestApplications = () => {
       }, 500)
     }
   } else {
-    for (let i = 0; i < constants.appIds.length; i++) {
-      void requestApplication(i, false)
-    }
+    void requestApplication(0, false)
   }
 }
 

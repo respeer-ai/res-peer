@@ -33,7 +33,14 @@ export /* async */ function getClientOptions (/* {app, router, ...}, options?: P
         case 'activity':
           return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.activityApp
         case 'copilot':
-          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.copilotApp
+        {
+          let applicationId = constants.Apps.copilotApp
+          if (operation.variables.applicationId) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            applicationId = operation.variables.applicationId
+          }
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + applicationId
+        }
         case 'cp-registry':
           return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.cpRegistryApp
         case 'blob-gateway':

@@ -16,7 +16,7 @@
 
 <script setup lang='ts'>
 /* eslint-disable  @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
-import { ref, watch, defineProps, withDefaults, defineEmits, onMounted, computed } from 'vue'
+import { ref, watch, defineProps, withDefaults, defineEmits, onMounted } from 'vue'
 import Editor from '@tinymce/tinymce-vue'
 import 'tinymce/tinymce.min.js'
 import 'tinymce/plugins/accordion/plugin.min.js'
@@ -57,26 +57,9 @@ import 'tinymce/models/dom/model.js'
 import 'tinymce/icons/default/icons.js'
 
 import { Cookies } from 'quasar'
-import Web3 from 'web3'
-import { useUserStore } from 'src/stores/user'
-import { provideApolloClient, useMutation, useQuery } from '@vue/apollo-composable'
-import { ApolloClient } from '@apollo/client/core'
-import gql from 'graphql-tag'
-import { useSettingStore } from 'src/stores/setting'
-import { getClientOptions } from 'src/apollo'
-import { graphqlResult } from 'src/utils'
-import { useApplicationStore } from 'src/stores/application'
-import { targetChain } from 'src/stores/chain'
 import { TaskType, taskTypeName } from 'src/stores/cpregistry'
 
 import TextCopilot from './TextCopilot.vue'
-
-const setting = useSettingStore()
-const cheCkoConnect = computed(() => setting.cheCkoConnect)
-const options = /* await */ getClientOptions(/* {app, router ...} */)
-const apolloClient = new ApolloClient(options)
-const application = useApplicationStore()
-const copilotApp = computed(() => application.copilotApp)
 
 const apiURL = ref('')
 
@@ -293,144 +276,10 @@ onMounted(() => {
   initApiURL()
 })
 
-const user = useUserStore()
-const loginAccount = computed(() => user.account)
-
-const getQueryId = (prompt: string, publicKey: string, signature: string, done?: (queryId: any) => void) => {
-  const { /* result, refetch, fetchMore, */ onResult /*, onError */ } = provideApolloClient(apolloClient)(() => useQuery(gql`
-    query getQueryId($prompt: String!, $publicKey: String!, $signature: String!) {
-      getQueryId(prompt: $prompt, publicKey: $publicKey, signature: $signature) {
-        queryId
-        nonce
-        timestamp
-      }
-    }
-  `, {
-    endpoint: 'copilot',
-    prompt,
-    publicKey,
-    signature,
-    chainId: targetChain.value
-  }, {
-    fetchPolicy: 'network-only'
-  }))
-
-  onResult((res) => {
-    if (res.loading) return
-    const queryId = graphqlResult.data(res, 'getQueryId')
-    done?.(queryId)
-  })
-}
-
-const getQueryIdThroughCheCko = (prompt: string, publicKey: string, signature: string, done?: (queryId: any) => void) => {
-  const query = gql`
-    query getQueryIdThroughCheCko($prompt: String!, $publicKey: String!, $signature: String!) {
-      getQueryId(prompt: $prompt, publicKey: $publicKey, signature: $signature) {
-        queryId
-        nonce
-        timestamp
-      }
-    }`
-  window.linera.request({
-    method: 'linera_graphqlQuery',
-    params: {
-      applicationId: copilotApp.value,
-      query: {
-        query: query.loc?.source?.body,
-        variables: {
-          prompt,
-          publicKey,
-          signature
-        },
-        operationName: 'getQueryIdThroughCheCko'
-      }
-    }
-  }).then((result) => {
-    const queryId = graphqlResult.keyValue(result, 'getQueryId')
-    done?.(queryId)
-  }).catch((e) => {
-    console.log(e)
-  })
-}
-
-const depositQuery = async (queryId: string, done?: () => void) => {
-  const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
-    mutation depositQuery($queryId: String!) {
-      deposit(queryId: $queryId)
-    }
-  `))
-
-  onDone(() => {
-    done?.()
-  })
-  onError((error) => {
-    console.log(error)
-  })
-  await mutate({
-    queryId,
-    endpoint: 'copilot',
-    chainId: targetChain.value
-  })
-}
-
-const depositQueryThroughCheCko = (queryId: string, done?: () => void) => {
-  const query = gql`
-    mutation depositQueryThroughCheCko($queryId: String!) {
-      deposit(queryId: $queryId)
-    }`
-  window.linera.request({
-    method: 'linera_graphqlMutation',
-    params: {
-      applicationId: copilotApp.value,
-      query: {
-        query: query.loc?.source?.body,
-        variables: {
-          queryId
-        },
-        operationName: 'depositQueryThroughCheCko'
-      }
-    }
-  }).then(() => {
-    done?.()
-  }).catch((e) => {
-    console.log(e)
-  })
-}
-
-const onExecTask = (queryId: any) => {
-  // We should wait a moment for payment ready
-  console.log(queryId)
-}
-
-const onDepositQuery = (queryId: any) => {
-  if (cheCkoConnect.value) {
-    depositQueryThroughCheCko((queryId as Record<string, string>).queryId, () => {
-      onExecTask(queryId)
-    })
-  } else {
-    void depositQuery((queryId as Record<string, string>).queryId, () => {
-      onExecTask(queryId)
-    })
-  }
-}
-
 const onParagraphCopilot = (_taskType: TaskType) => {
   if (!selectedText.value.length) return
   showing.value = true
   taskType.value = _taskType
-
-  const web3 = new Web3(window.linera)
-  const prompt = _taskType + ': ' + selectedText.value
-  const hexPrompt = web3.utils.utf8ToHex(prompt)
-  web3.eth.sign(hexPrompt, '0x' + loginAccount.value.slice(0, 40)).then((v) => {
-    if (cheCkoConnect.value) {
-      getQueryIdThroughCheCko(prompt, loginAccount.value, (v as string).substring(2), onDepositQuery)
-    } else {
-      getQueryId(prompt, loginAccount.value, v as string, onDepositQuery)
-    }
-  }).catch((e) => {
-    console.log('Sign', prompt, hexPrompt, loginAccount.value, e)
-  })
 }
 
 const onCopilotCancel = () => {
