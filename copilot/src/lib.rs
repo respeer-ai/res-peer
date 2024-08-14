@@ -150,5 +150,4 @@ pub enum CopilotError {
 pub enum CopilotResponse {
     #[default]
     Ok,
-    Error(CopilotError),
 }

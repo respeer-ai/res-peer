@@ -77,13 +77,15 @@ impl Contract for CopilotContract {
             .expect("Failed register node");
     }
 
-    async fn execute_operation(
-        &mut self,
-        operation: Self::Operation,
-    ) -> Result<CopilotResponse, CopilotError> {
+    async fn execute_operation(&mut self, operation: Self::Operation) -> CopilotResponse {
         match operation {
-            Operation::Deposit { query_id } => self.on_op_deposit_query(query_id).await,
-            Operation::RequestSubscribe => self.on_op_request_subscribe(),
+            Operation::Deposit { query_id } => self
+                .on_op_deposit_query(query_id)
+                .await
+                .expect("Failed OP: deposit"),
+            Operation::RequestSubscribe => self
+                .on_op_request_subscribe()
+                .expect("Failed OP: request subscribe"),
         }
     }
 
@@ -160,29 +162,29 @@ impl CopilotContract {
             .query_deposited(self.runtime.authenticated_signer().unwrap(), query_id)
             .await?
         {
-            return Ok(CopilotResponse::Error(CopilotError::InvalidQuery));
+            return Err(CopilotError::InvalidQuery);
         }
         let quota_price = self.state._quota_price().await;
         let owner = self.runtime.authenticated_signer().unwrap();
         if self.runtime.owner_balance(owner).le(&quota_price)
             && self.runtime.chain_balance().le(&quota_price)
         {
-            return Ok(CopilotResponse::Error(CopilotError::InsufficientFunds));
+            return Err(CopilotError::InsufficientFunds);
         }
         self.state.deposit_query(owner, query_id).await?;
         self.runtime
             .prepare_message(Message::Deposit { query_id })
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
-        Ok(())
+        Ok(CopilotResponse::Ok)
     }
 
-    fn on_op_request_subscribe(&mut self) -> Result<(), CopilotError> {
+    fn on_op_request_subscribe(&mut self) -> Result<CopilotResponse, CopilotError> {
         self.runtime
             .prepare_message(Message::RequestSubscribe)
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
-        Ok(())
+        Ok(CopilotResponse::Ok)
     }
 
     // Only in creation chain
