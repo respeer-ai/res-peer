@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import { TaskType, useCPRegistryStore } from 'src/stores/cpregistry'
+import { TaskType, taskTypeName, useCPRegistryStore } from 'src/stores/cpregistry'
 import { useSettingStore } from 'src/stores/setting'
 import { useUserStore } from 'src/stores/user'
 import { computed, onMounted, toRef, defineModel } from 'vue'
@@ -32,6 +32,8 @@ const cpRegistry = useCPRegistryStore()
 const cpNode = computed(() => cpRegistry.nodes.find((el) => el.nodeId === nodeId.value))
 
 const queryId = defineModel({ type: Object })
+const signature = defineModel('signature', { type: String })
+
 const emit = defineEmits<{(ev: 'done'): void,
   (ev: 'fail'): void
 }>()
@@ -107,9 +109,10 @@ const getQueryIdThroughCheCko = (prompt: string, publicKey: string, signature: s
 onMounted(() => {
   if (!ready()) return emit('fail')
   const web3 = new Web3(window.linera)
-  const prompt = taskType.value + ': ' + text.value
+  const prompt = taskTypeName(taskType.value) + ': ' + text.value
   const hexPrompt = web3.utils.utf8ToHex(prompt)
   web3.eth.sign(hexPrompt, '0x' + loginAccount.value.slice(0, 40)).then((v) => {
+    signature.value = (v as string).replace('0x', '')
     if (cheCkoConnect.value) {
       getQueryIdThroughCheCko(prompt, loginAccount.value, (v as string).substring(2))
     } else {

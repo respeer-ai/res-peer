@@ -54,6 +54,7 @@
     :text='text'
     :task-type='taskType'
     v-model='queryId'
+    v-model:signature='signature'
     @done='onGetQueryIdDone'
     @fail='onGetQueryIdFail'
   />
@@ -86,6 +87,7 @@ const cpRegistry = useCPRegistryStore()
 const node = computed(() => cpRegistry.nodes.find((el) => el.nodeId === nodeId.value))
 
 const queryId = defineModel({ type: Object })
+const signature = defineModel('signature', { type: String })
 
 const onRequestApplicationDone = () => {
   stepText.value = 'Generating queryId ...'

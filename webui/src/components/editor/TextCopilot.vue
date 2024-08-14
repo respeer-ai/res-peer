@@ -19,7 +19,10 @@
         :done='step > 2'
       >
         <div class='text-black'>
-          <CopilotQueryId :node-id='cpNodeId' :text='text' :task-type='taskType' v-model='queryId' />
+          <CopilotQueryId
+            :node-id='cpNodeId' :text='text' :task-type='taskType' v-model='queryId'
+            v-model:signature='signature'
+          />
         </div>
       </q-step>
       <q-step
@@ -37,7 +40,16 @@
         title='Execute Task'
         :done='step > 4'
       >
-        {{ text }} {{ taskType }}
+        <CopilotParagraphTask
+          v-model='resultText'
+          :node-id='cpNodeId'
+          :query-id='queryId'
+          :task-type='taskType'
+          :text='text'
+          :signature='signature'
+          @done='onExecuteTaskDone'
+          @fail='onExecuteTaskFail'
+        />
       </q-step>
       <q-step
         :name='5'
@@ -75,6 +87,7 @@ import { QueryId } from 'src/stores/copilot'
 import CPNodeSelector from './CPNodeSelector.vue'
 import CopilotQueryId from './CopilotQueryId.vue'
 import CopilotDepositQuery from './CopilotDepositQuery.vue'
+import CopilotParagraphTask from './CopilotParagraphTask.vue'
 
 interface Props {
   text: string
@@ -89,6 +102,8 @@ const step = ref(1)
 const cpNodeId = ref(undefined as unknown as string)
 const queryId = ref(undefined as unknown as QueryId)
 const queryConfirmed = ref(false)
+const signature = ref(undefined as unknown as string)
+const resultText = ref(undefined as unknown as string)
 
 const emit = defineEmits<{(ev: 'cancel'): void}>()
 
@@ -105,6 +120,7 @@ const forwardable = computed(() => {
     case 1: return !cpNodeId.value?.length
     case 2: return !queryId.value?.queryId?.length
     case 3: return !queryConfirmed.value
+    case 4: return !resultText.value?.length
     default: return false
   }
 })
@@ -114,6 +130,14 @@ const onDepositQueryDone = () => {
 }
 
 const onDepositQueryFail = () => {
+  // TODO
+}
+
+const onExecuteTaskDone = () => {
+  // TODO
+}
+
+const onExecuteTaskFail = () => {
   // TODO
 }
 
