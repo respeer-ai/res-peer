@@ -100,13 +100,6 @@ print $'\U01f499' $LIGHTGREEN " BlobGateway application deployed"
 echo -e "    Bytecode ID:    $BLUE$blob_gateway_bid$NC"
 echo -e "    Application ID: $BLUE$blob_gateway_appid$NC"
 
-print $'\U01F4AB' $YELLOW " Deploying Illustrator application ..."
-illustrator_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/illustrator_{contract,service}.wasm`
-illustrator_appid=`linera --with-wallet 1 create-application $illustrator_bid`
-print $'\U01f499' $LIGHTGREEN " Illustrator application deployed"
-echo -e "    Bytecode ID:    $BLUE$illustrator_bid$NC"
-echo -e "    Application ID: $BLUE$illustrator_appid$NC"
-
 print $'\U01F4AB' $YELLOW " Deploying CPRegistry application ..."
 cp_registry_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/cp_registry_{contract,service}.wasm`
 cp_registry_appid=`linera --with-wallet 1 create-application $cp_registry_bid`
@@ -116,6 +109,13 @@ echo -e "    Application ID: $BLUE$cp_registry_appid$NC"
 
 app_deploy_chain=`linera --with-wallet 1 wallet show | grep "Public Key" | awk '{print $2}'`
 app_deploy_owner=`linera --with-wallet 1 wallet show | grep "Owner" | awk '{print $4}'`
+
+print $'\U01F4AB' $YELLOW " Deploying Illustrator application ..."
+illustrator_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/illustrator_{contract,service}.wasm`
+illustrator_appid=`linera --with-wallet 1 create-application $illustrator_bid`
+print $'\U01f499' $LIGHTGREEN " Illustrator application deployed"
+echo -e "    Bytecode ID:    $BLUE$illustrator_bid$NC"
+echo -e "    Application ID: $BLUE$illustrator_appid$NC"
 
 print $'\U01F4AB' $YELLOW " Deploying Copilot application ..."
 copilot_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/copilot_{contract,service}.wasm`
