@@ -13,8 +13,8 @@ pub mod vae;
 
 use std::sync::Arc;
 
-use candle::{DType, Device, Result};
 use candle_core as candle;
+use candle::{DType, Device, Result};
 use candle_nn as nn;
 
 use self::schedulers::{Scheduler, SchedulerConfig};
@@ -31,7 +31,7 @@ pub struct StableDiffusionConfig {
 }
 
 impl StableDiffusionConfig {
-    pub fn vtiny_sd(
+    pub fn tiny_sd(
         sliced_attention_size: Option<usize>,
         height: Option<usize>,
         width: Option<usize>,
@@ -88,7 +88,7 @@ impl StableDiffusionConfig {
         StableDiffusionConfig {
             width,
             height,
-            clip: clip::Config::vtiny_sd(),
+            clip: clip::Config::tiny_sd(),
             clip2: None,
             autoencoder,
             scheduler,
@@ -96,7 +96,7 @@ impl StableDiffusionConfig {
         }
     }
 
-    pub fn build_buffered_vae(
+    pub fn build_buffered_vae (
         &self,
         vae_weights: Vec<u8>,
         device: &Device,

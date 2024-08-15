@@ -102,7 +102,7 @@ echo -e "    Application ID: $BLUE$copilot_appid$NC"
 
 print $'\U01F4AB' $YELLOW " Deploying Illustrator application ..."
 illustrator_bid=`linera --with-wallet 0 publish-bytecode ./target/wasm32-unknown-unknown/release/illustrator_{contract,service}.wasm`
-illustrator_appid=`linera --with-wallet 0 create-application $illustrator_bid`
+illustrator_appid=`linera --with-wallet 0 create-application $illustrator_bid --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\"}" --required-application-ids $cp_registry_appid`
 print $'\U01f499' $LIGHTGREEN " Illustrator application deployed"
 echo -e "    Bytecode ID:    $BLUE$illustrator_bid$NC"
 echo -e "    Application ID: $BLUE$illustrator_appid$NC"
