@@ -22,6 +22,7 @@ textarea
   letter-spacing: 1px
   padding: 10px
   width: 100%
+  max-width: 800px
   line-height: 1.5
   border-radius: 5px
   border: 1px solid $red-1
