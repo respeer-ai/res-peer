@@ -21,11 +21,12 @@ while getopts $options opt; do
   esac
 done
 
-NODE_LOG_FILE=$HOME/linera-project/linera.log
-SERVICE_LOG_FILE=$HOME/linera-project/service_8080.log
+PROJECT_ROOT=/home/test
+NODE_LOG_FILE=$PROJECT_ROOT/linera-project/linera.log
+SERVICE_LOG_FILE=$PROJECT_ROOT/linera-project/service_8080.log
 WALLET_NUMBER=4
 EXTRA_WALLET_NUMBER=`expr $WALLET_NUMBER - 1`
-WALLET_BASEDIR=$HOME/.config/linera
+WALLET_BASEDIR=$PROJECT_ROOT/.config/linera
 
 print $'\U01F4AB' $YELLOW " Running lienra net, log in $NODE_LOG_FILE ..."
 

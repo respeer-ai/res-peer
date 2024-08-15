@@ -1,6 +1,6 @@
 [build]
 target = "wasm32-unknown-unknown"
-rustflags = ["--cfg", "tokio_unstable"]
+rustflags = ["--cfg", "tokio_unstable", "--cfg", "web_sys_unstable_apis"]
 
 [target.wasm32-unknown-unknown]
 # Requires running `cargo build --release --bin linera-wasm-test-runner` once first.
