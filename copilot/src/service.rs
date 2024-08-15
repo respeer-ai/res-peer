@@ -180,13 +180,13 @@ impl Service for CopilotService {
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
         let device = Device::Cpu;
         info!("Downloading t5 model");
-        let raw_weights = runtime.fetch_url("http://localhost:10001/t5_small/model.gguf");
+        let raw_weights = runtime.fetch_url("http://localhost:10001/coedit-t5/t5_small/model.gguf");
 
         info!("Downloading tokenizer");
-        let tokenizer_bytes = runtime.fetch_url("http://localhost:10001/t5_small/tokenizer.json");
+        let tokenizer_bytes = runtime.fetch_url("http://localhost:10001/coedit-t5/t5_small/tokenizer.json");
 
         info!("Downloading config");
-        let config = runtime.fetch_url("http://localhost:10001/t5_small/config.json");
+        let config = runtime.fetch_url("http://localhost:10001/coedit-t5/t5_small/config.json");
 
         let config_format: Result<String, std::string::FromUtf8Error> = String::from_utf8(config);
         let mut config_str = String::new();
