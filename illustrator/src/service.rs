@@ -8,15 +8,24 @@ mod state;
 
 mod stable_diffusion;
 
-use std::{io::Cursor, sync::Arc};
+use std::{io::Cursor, sync::{Arc, Mutex}};
 
-use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
-use candle_core::{
-    utils::{cuda_is_available, metal_is_available},
-    DType, Device, IndexOp, Module, Result as CandleResult, Tensor, D,
+use ed25519_dalek::Verifier;
+
+use async_graphql::{Context, EmptySubscription, Object, Request, Response, Schema, SimpleObject};
+use candle_core::{DType, Device, Tensor, D, Module, IndexOp, Result as CandleResult, utils::{cuda_is_available, metal_is_available}};
+use illustrator::{IllustratorError, Operation};
+use linera_sdk::{
+    base::{
+        Amount, BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi
+    },
+    graphql::GraphQLMutationRoot,
+    views::{View, ViewStorageContext},
+    Service, ServiceRuntime,
 };
-use linera_sdk::{base::WithServiceAbi, Service, ServiceRuntime};
-use log::{error, info};
+use log::{info, error};
+use serde::{Deserialize, Serialize};
+use state::Illustrator;
 use tokenizers::Tokenizer;
 
 use anyhow::{Error as E, Result as AnyResult};
@@ -24,7 +33,7 @@ use anyhow::{Error as E, Result as AnyResult};
 use image::{ImageBuffer, Rgb};
 
 pub struct IllustratorService {
-    t5_model_builder: Arc<T5ModelBuilder>,
+    model_context: Arc<ModelContext>,
 }
 
 linera_sdk::service!(IllustratorService);
@@ -35,20 +44,134 @@ impl WithServiceAbi for IllustratorService {
 
 struct QueryRoot {}
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+struct HashInput {
+    prompt: String,
+    public_key: PublicKey,
+    signature: Signature,
+    timestamp: Timestamp,
+    nonce: [u8; 32],
+}
+
+impl BcsHashable for HashInput {}
+
+#[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq)]
+struct QueryId {
+    /// sha256(prompt, nonce, signature, public_key, timestamp)
+    query_id: CryptoHash,
+    timestamp: Timestamp,
+    nonce: [u8; 32],
+}
+
 #[Object]
 impl QueryRoot {
-    async fn prompt(&self, ctx: &Context<'_>, prompt: String) -> String {
-        let t5_model_builder = ctx.data::<Arc<T5ModelBuilder>>().unwrap();
-        info!("run model");
-        t5_model_builder.run_model(&prompt).unwrap()
+    async fn get_query_id(
+        &self,
+        ctx: &Context<'_>,
+        prompt: String,
+        public_key: PublicKey,
+        signature: Signature,
+    ) -> Result<QueryId, IllustratorError> {
+        let hex_prompt = format!("{}", hex::encode(prompt.clone()));
+        let bytes = hex::decode(hex_prompt)?;
+        public_key
+            .to_verifying_key()?
+            .verify(&bytes, &signature.0)?;
+
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        let timestamp = model_context.runtime.lock().unwrap().system_time();
+
+        let mut hash_input = HashInput {
+            prompt,
+            public_key,
+            signature,
+            timestamp,
+            nonce: [0u8; 32],
+        };
+        getrandom::getrandom(&mut hash_input.nonce).unwrap();
+        Ok(QueryId {
+            query_id: CryptoHash::new(&hash_input),
+            timestamp,
+            nonce: hash_input.nonce,
+        })
+    }
+
+    async fn prompt(
+        &self,
+        ctx: &Context<'_>,
+        query_id: CryptoHash,
+        prompt: String,
+        public_key: PublicKey,
+        signature: Signature,
+        timestamp: Timestamp,
+        nonce: [u8; 32],
+    ) -> Result<String, IllustratorError> {
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        if model_context
+            .runtime
+            .lock()
+            .unwrap()
+            .system_time()
+            .duration_since(timestamp)
+            .as_millis()
+            > 60 * 60 * 1000
+        {
+            return Err(IllustratorError::StaleQuery);
+        }
+
+        let hex_prompt = format!("{}", hex::encode(prompt.clone()));
+        let bytes = hex::decode(hex_prompt)?;
+        public_key
+            .to_verifying_key()?
+            .verify(&bytes, &signature.0)?;
+
+        let hash_input = HashInput {
+            prompt: prompt.clone(),
+            public_key,
+            signature,
+            timestamp,
+            nonce,
+        };
+        if query_id != CryptoHash::new(&hash_input) {
+            return Err(IllustratorError::InvalidQuery);
+        }
+
+        let owner: Owner = Owner::from(public_key);
+        if !model_context.state.query_deposited(owner, query_id).await? {
+            return Err(IllustratorError::UnpaidQuery);
+        }
+
+        Ok(model_context.sd_model_builder.run_model(&prompt)?)
+    }
+
+    async fn query_deposited(
+        &self,
+        ctx: &Context<'_>,
+        public_key: PublicKey,
+        query_id: CryptoHash,
+    ) -> Result<bool, IllustratorError> {
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        let owner: Owner = Owner::from(public_key);
+        Ok(model_context.state.query_deposited(owner, query_id).await?)
+    }
+
+    async fn quota_price(&self, ctx: &Context<'_>) -> Amount {
+        let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
+        model_context.state._quota_price().await
     }
 }
 
-struct T5ModelBuilder {
+struct SDModelBuilder {
     sd_tokenizer: Vec<u8>,
     clip_weights: Vec<u8>,
     vae_weights: Vec<u8>,
     unet_weights: Vec<u8>,
+}
+
+struct ModelContext {
+    sd_model_builder: SDModelBuilder,
+    runtime: Mutex<ServiceRuntime<IllustratorService>>,
+    state: Arc<Illustrator>,
 }
 
 impl Service for IllustratorService {
@@ -56,14 +179,11 @@ impl Service for IllustratorService {
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
         info!("Downloading sd tokenizer");
-        let sd_tokenizer_bytes =
-            runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/tokenizer.json");
+        let sd_tokenizer_bytes = runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/tokenizer.json");
         info!("sd_tokenizer_bytes len {:?}", sd_tokenizer_bytes.len());
 
         info!("Downloading sd clip_weights");
-        let clip_weights_bytes = runtime.fetch_url(
-            "http://localhost:10001/stable_diffusion/tiny_sd/text_encoder/model.safetensors",
-        );
+        let clip_weights_bytes = runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/text_encoder/model.safetensors");
         info!("clip_weights_bytes len {:?}", clip_weights_bytes.len());
 
         info!("Downloading sd vae_weights");
@@ -71,31 +191,38 @@ impl Service for IllustratorService {
         info!("vae_weights_bytes len {:?}", vae_weights_bytes.len());
 
         info!("Downloading sd unet_weights");
-        let unet_weights_bytes = runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/unet/diffusion_pytorch_model_contiguous.safetensors");
+        let unet_weights_bytes = runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/unet/diffusion_pytorch_model.safetensors");
         info!("unet_weights_bytes len {:?}", unet_weights_bytes.len());
 
-        let t5_model_builder = Arc::new(T5ModelBuilder {
+        let sd_model_builder = SDModelBuilder {
             sd_tokenizer: sd_tokenizer_bytes,
             clip_weights: clip_weights_bytes,
             vae_weights: vae_weights_bytes,
             unet_weights: unet_weights_bytes,
-        });
+        };
 
-        IllustratorService { t5_model_builder }
+        let state = Illustrator::load(ViewStorageContext::from(runtime.key_value_store()))
+            .await
+            .expect("Failed to load state");
+
+        IllustratorService { 
+            model_context: Arc::new(ModelContext {
+                sd_model_builder,
+                runtime: Mutex::new(runtime),
+                state: Arc::new(state),
+            }),
+        }
     }
 
     async fn handle_query(&self, request: Request) -> Response {
-        let query_string = &request.query;
-        info!("query: {}", query_string);
-
-        let schema = Schema::build(QueryRoot {}, EmptyMutation, EmptySubscription)
-            .data(self.t5_model_builder.clone())
+        let schema = Schema::build(QueryRoot {}, Operation::mutation_root(), EmptySubscription)
+            .data(self.model_context.clone())
             .finish();
         schema.execute(request).await
     }
 }
 
-impl T5ModelBuilder {
+impl SDModelBuilder {
     pub fn build_device(cpu: bool) -> CandleResult<Device> {
         if cpu {
             Ok(Device::Cpu)
@@ -160,15 +287,9 @@ impl T5ModelBuilder {
         };
         let clip_weights = &self.clip_weights;
         info!("Building the Clip transformer.");
-        let text_model = stable_diffusion::build_buffered_clip_transformer(
-            clip_config,
-            clip_weights.to_vec(),
-            device,
-            dtype,
-        )
-        .expect("invalid clip");
+        let text_model = stable_diffusion::build_buffered_clip_transformer(clip_config, clip_weights.to_vec(), device, dtype).expect("invalid clip");
         info!("Building the Clip transformer done.");
-
+       
         let text_embeddings = text_model.forward(&tokens)?;
 
         let text_embeddings = if use_guide_scale {
@@ -217,7 +338,7 @@ impl T5ModelBuilder {
             .unsqueeze(0)?;
         Ok(img)
     }
-
+        
     #[allow(clippy::too_many_arguments)]
     fn generate_image(
         vae: &stable_diffusion::vae::AutoEncoderKL,
@@ -232,7 +353,7 @@ impl T5ModelBuilder {
         let mut image_base64_str = String::new();
         for batch in 0..bsize {
             let image = images.i(batch)?;
-            image_base64_str = T5ModelBuilder::generate_image_data(&image)?;
+            image_base64_str = SDModelBuilder::generate_image_data(&image)?;
         }
         Ok(image_base64_str)
     }
@@ -249,7 +370,7 @@ impl T5ModelBuilder {
                 Some(image) => image,
                 None => candle_core::bail!("error saving image"),
             };
-        let base64_string = T5ModelBuilder::convert_image_to_base64(image.clone());
+        let base64_string = SDModelBuilder::convert_image_to_base64(image.clone());
         info!("Base64 Encoded Image successful");
         let image_head = "data:image/png;base64,".to_string();
         let base64_img_string = image_head + &base64_string;
@@ -260,19 +381,18 @@ impl T5ModelBuilder {
         let mut buffer = Vec::new();
         {
             let mut cursor = Cursor::new(&mut buffer);
-            image
-                .write_to(&mut cursor, image::ImageFormat::Png)
-                .unwrap();
+            image.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
         }
         base64::encode(&buffer)
     }
-
+    
     fn run_model(&self, prompt_string: &str) -> Result<String, candle_core::Error> {
         let prompt = prompt_string;
-        let cpu = true;
-        let height: Option<usize> = Some(24);
-        let width: Option<usize> = Some(24);
-
+        let use_cpu = true;
+        let height: Option<usize> = Some(80);
+        let width: Option<usize> = Some(80);
+        
+        let dtype = DType::F16;
         let use_flash_attn = false;
         let sliced_attention_size: Option<usize> = None;
         let num_samples: usize = 1;
@@ -288,40 +408,35 @@ impl T5ModelBuilder {
 
         let guidance_scale = 7.5;
         let n_steps = 30;
-        let dtype = DType::F16;
-        let sd_config =
-            stable_diffusion::StableDiffusionConfig::vtiny_sd(sliced_attention_size, height, width);
+        let sd_config = stable_diffusion::StableDiffusionConfig::tiny_sd(sliced_attention_size, height, width);
 
-        let scheduler = sd_config
-            .build_scheduler(n_steps)
-            .expect("invalid build_scheduler");
-        let device = T5ModelBuilder::build_device(cpu).expect("invalid build_device");
+        let scheduler = sd_config.build_scheduler(n_steps).expect("invalid build_scheduler");
+        let device = SDModelBuilder::build_device(use_cpu).expect("invalid build_device");
         if let Some(seed) = seed {
             let _ = device.set_seed(seed);
         }
         let use_guide_scale = guidance_scale > 1.0;
         let which = vec![true];
         let text_embeddings = which
-            .iter()
-            .map(|first| {
-                T5ModelBuilder::text_embeddings(
-                    self,
-                    &prompt,
-                    &uncond_prompt,
-                    &sd_config,
-                    &device,
-                    dtype,
-                    use_guide_scale,
-                    *first,
-                )
-            })
-            .collect::<AnyResult<Vec<_>>>()
-            .expect("invalid text_embeddings");
+        .iter()
+        .map(|first| {
+            SDModelBuilder::text_embeddings(
+                self,
+                &prompt,
+                &uncond_prompt,
+                &sd_config,
+                &device,
+                dtype,
+                use_guide_scale,
+                *first,
+            )
+        })
+        .collect::<AnyResult<Vec<_>>>().expect("invalid text_embeddings");
 
         let text_embeddings = Tensor::cat(&text_embeddings, D::Minus1)?;
         let text_embeddings = text_embeddings.repeat((bsize, 1, 1))?;
         // info!("{text_embeddings:?}");
-
+    
         info!("Building the vae_weights autoencoder.");
         let vae_weights = &self.vae_weights;
         let vae = sd_config.build_buffered_vae(vae_weights.to_vec(), &device, dtype)?;
@@ -330,19 +445,14 @@ impl T5ModelBuilder {
         let init_latent_dist = match &img2img {
             None => None,
             Some(image) => {
-                let image = T5ModelBuilder::image_preprocess(image)
-                    .expect("invalid image_preprocess")
-                    .to_device(&device)
-                    .expect("innvalid to_device");
+                let image = SDModelBuilder::image_preprocess(image).expect("invalid image_preprocess").to_device(&device).expect("innvalid to_device");
                 Some(vae.encode(&image)?)
             }
         };
 
         info!("Building the unet.");
         let unet_weights = &self.unet_weights;
-        let unet = sd_config
-            .build_buffered_unet(unet_weights.to_vec(), &device, 4, use_flash_attn, dtype)
-            .expect("invalid build unet");
+        let unet = sd_config.build_buffered_unet(unet_weights.to_vec(), &device, 4, use_flash_attn, dtype).expect("invalid build unet");
         info!("Building the unet done.");
 
         let t_start = if img2img.is_some() {
@@ -350,7 +460,7 @@ impl T5ModelBuilder {
         } else {
             0
         };
-
+    
         let vae_scale = 0.18215;
         let mut image_base64_str = String::new();
 
@@ -377,7 +487,7 @@ impl T5ModelBuilder {
                 }
             };
             let mut latents = latents.to_dtype(dtype)?;
-
+    
             for (timestep_index, &timestep) in timesteps.iter().enumerate() {
                 if timestep_index < t_start {
                     continue;
@@ -388,39 +498,42 @@ impl T5ModelBuilder {
                 } else {
                     latents.clone()
                 };
-
-                let latent_model_input =
-                    scheduler.scale_model_input(latent_model_input, timestep)?;
+    
+                let latent_model_input = scheduler.scale_model_input(latent_model_input, timestep)?;
                 let noise_pred =
                     unet.forward(&latent_model_input, timestep as f64, &text_embeddings)?;
-
+                
                 let noise_pred = if use_guide_scale {
                     let noise_pred = noise_pred.chunk(2, 0)?;
                     let (noise_pred_uncond, noise_pred_text) = (&noise_pred[0], &noise_pred[1]);
-
-                    (noise_pred_uncond
-                        + ((noise_pred_text - noise_pred_uncond)? * guidance_scale)?)?
+    
+                    (noise_pred_uncond + ((noise_pred_text - noise_pred_uncond)? * guidance_scale)?)?
                 } else {
                     noise_pred
                 };
-
+    
                 latents = scheduler.step(&noise_pred, timestep, &latents)?;
                 // let dt = start_time.elapsed().as_secs_f32();
                 // info!("step {}/{n_steps} done, {:.2}s", timestep_index + 1, dt);
                 info!("step {}/{n_steps} done", timestep_index + 1);
             }
-
+    
             info!(
                 "Generating the final image for sample {}/{}.",
                 idx + 1,
                 num_samples
             );
-
-            image_base64_str = T5ModelBuilder::generate_image(&vae, &latents, vae_scale, bsize)
-                .expect("invalid generate image");
+     
+            image_base64_str = SDModelBuilder::generate_image(
+                &vae,
+                &latents,
+                vae_scale,
+                bsize,
+            ).expect("invalid generate image");
         }
 
         let output = image_base64_str;
         Ok(output)
     }
+
 }

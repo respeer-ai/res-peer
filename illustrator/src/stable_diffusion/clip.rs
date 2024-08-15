@@ -4,8 +4,8 @@
 //! pairs of images with related texts.
 //!
 //! https://github.com/openai/CLIP
-use candle::{DType, Device, Result, Tensor, D};
 use candle_core as candle;
+use candle::{DType, Device, Result, Tensor, D};
 use candle_nn as nn;
 use candle_nn::Module;
 
@@ -40,7 +40,7 @@ pub struct Config {
 impl Config {
     // The config details can be found in the "text_config" section of this json file:
     // https://huggingface.co/openai/clip-vit-large-patch14/blob/main/config.json
-    pub fn vtiny_sd() -> Self {
+    pub fn tiny_sd() -> Self {
         Self {
             vocab_size: 49408,
             embed_dim: 768,
