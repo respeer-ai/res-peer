@@ -13,9 +13,10 @@ function print() {
   echo -e $1$2$3$NC
 }
 
-NODE_LOG_FILE=$HOME/linera-project/linera.log
-SERVICE_LOG_FILE=$HOME/linera-project/service_8080.log
-FAUCET_LOG_FILE=$HOME/linera-project/faucet_8080.log
+PROJECT_ROOT=/home/test
+NODE_LOG_FILE=$PROJECT_ROOT/linera-project/linera.log
+SERVICE_LOG_FILE=$PROJECT_ROOT/linera-project/service_8080.log
+FAUCET_LOG_FILE=$PROJECT_ROOT/linera-project/faucet_8080.log
 WALLET_NUMBER=5
 EXTRA_WALLET_NUMBER=`expr $WALLET_NUMBER - 1`
 SERVICE_WALLET_NUMBER=`expr $EXTRA_WALLET_NUMBER - 1`
