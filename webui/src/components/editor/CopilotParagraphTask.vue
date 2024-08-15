@@ -37,11 +37,16 @@
           >
             <q-spinner-facebook size='80px' />
           </q-inner-loading>
-          <div v-if='generated' class='text-center flex items-center justify-center' :style='{width: "320px", wordBreak: "break-word", fontSize: "28px"}'>
-            Generated text
-          </div>
-          <div v-if='generated' class='text-center flex items-center justify-center text-grey-8' :style='{width: "320px", height: "100%", wordBreak: "break-word"}'>
-            {{ result }}
+          <div v-if='generated'>
+            <div v-if='taskType !== TaskType.GenerateIllustrate' class='text-center flex items-center justify-center' :style='{width: "320px", wordBreak: "break-word", fontSize: "28px"}'>
+              Generated text
+            </div>
+            <div v-if='taskType !== TaskType.GenerateIllustrate' class='text-center flex items-center justify-center text-grey-8' :style='{width: "320px", height: "100%", wordBreak: "break-word"}'>
+              {{ result }}
+            </div>
+            <div v-else>
+              <q-img :src='result' height='160px' fit='contain' />
+            </div>
           </div>
         </q-card>
         <div :style='{width: "320px"}' :class='["text-center", error ? "text-red-6" : "text-grey-8"]'>
