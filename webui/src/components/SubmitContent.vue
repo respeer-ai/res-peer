@@ -16,13 +16,6 @@
     </q-input>
     <div :style='{marginTop: "24px"}' />
     <div :style='{width: "100%", height: "500px"}'>
-      <Editor
-        v-if='false'
-        v-model='content'
-        editor-style='height: 320px; font-size: 16px'
-        placeholder='Body'
-        @selection-change='ev => onSelectedTextChange(ev)'
-      />
       <TinymceEditor v-model='content' />
     </div>
     <div class='row content-operation' :style='{marginTop: "24px"}'>
@@ -68,6 +61,7 @@
         <div
           :style='{marginLeft: "192px", marginTop: "-32px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
           class='cursor-pointer shadow-6 helper-icon'
+          @click='onCoverCopilotClick'
         >
           <q-img :src='copilotIcon' width='16px' height='16px' fit='contain' />
         </div>
@@ -111,6 +105,11 @@
       />
     </div>
   </div>
+  <q-dialog v-model='showCoverCopilot' full-width>
+    <div :style='{padding: "96px"}'>
+      <IllustrateCopilot :text='coverDescription' @cancel='onCoverCopilotCancel' @generated='(base64) => onCoverGenerated(base64)' />
+    </div>
+  </q-dialog>
 </template>
 
 <script setup lang="ts">
@@ -125,16 +124,23 @@ import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
 import { useSettingStore } from 'src/stores/setting'
 import { useApplicationStore } from 'src/stores/application'
-
-import Editor, { EditorSelectionChangeEvent } from 'primevue/editor'
 import FileUpload from 'primevue/fileupload'
+import { htmlToText } from 'html-to-text'
+
 import TinymceEditor from './editor/TinymceEditor.vue'
+import IllustrateCopilot from './editor/IllustrateCopilot.vue'
 
 import { copilotIcon } from 'src/assets'
 
 const title = ref('')
 const content = ref('')
 const abbreviation = ref('')
+const coverDescription = computed({
+  get: () => htmlToText(content.value, { wordwrap: false }).split(' ').slice(0, 77).join(' '),
+  set: () => {
+    // Do nothing
+  }
+})
 
 const options = /* await */ getClientOptions(/* {app, router ...} */)
 const apolloClient = new ApolloClient(options)
@@ -224,24 +230,23 @@ const onCancelClick = () => {
   emit('canceled')
 }
 
-interface Range {
-  index: number
-  length: number
-}
-
-const showCopilot = ref(false)
-
-const onSelectedTextChange = (ev: EditorSelectionChangeEvent) => {
-  const range = ev.range as Range
-  if (!range || range.length === 0) {
-    showCopilot.value = false
-    return
-  }
-  showCopilot.value = true
-}
-
 const onAdvancedUpload = (ev: unknown) => {
   console.log(ev)
+}
+
+const showCoverCopilot = ref(false)
+
+const onCoverGenerated = (base64: string) => {
+  console.log(base64)
+  showCoverCopilot.value = false
+}
+
+const onCoverCopilotCancel = () => {
+  showCoverCopilot.value = false
+}
+
+const onCoverCopilotClick = () => {
+  showCoverCopilot.value = true
 }
 
 </script>

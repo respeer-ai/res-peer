@@ -269,6 +269,7 @@ watch(() => props.modelValue, (newValue) => {
 })
 
 const handleEditorInput = (content: string) => {
+  console.log(content)
   internalValue.value = content
 }
 
