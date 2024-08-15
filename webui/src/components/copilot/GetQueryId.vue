@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import { TaskType, taskTypeName, useCPRegistryStore } from 'src/stores/cpregistry'
+import { TaskType, taskTypePrefix, useCPRegistryStore } from 'src/stores/cpregistry'
 import { useSettingStore } from 'src/stores/setting'
 import { useUserStore } from 'src/stores/user'
 import { computed, onMounted, toRef, defineModel } from 'vue'
@@ -109,7 +109,7 @@ const getQueryIdThroughCheCko = (prompt: string, publicKey: string, signature: s
 onMounted(() => {
   if (!ready()) return emit('fail')
   const web3 = new Web3(window.linera)
-  const prompt = taskTypeName(taskType.value) + ': ' + text.value
+  const prompt = taskTypePrefix(taskType.value) + text.value
   const hexPrompt = web3.utils.utf8ToHex(prompt)
   web3.eth.sign(hexPrompt, '0x' + loginAccount.value.slice(0, 40)).then((v) => {
     signature.value = (v as string).replace('0x', '')

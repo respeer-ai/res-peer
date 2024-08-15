@@ -33,6 +33,11 @@ export const taskTypeName = (taskType: TaskType) => {
   return taskTypes.get(taskType) || 'Unsupported task'
 }
 
+export const taskTypePrefix = (taskType: TaskType) => {
+  if (taskType === TaskType.GenerateIllustrate) return ''
+  return taskTypeName(taskType) + ': '
+}
+
 export interface CPNode {
   nodeId: string
   brandLogo: string

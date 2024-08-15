@@ -1,7 +1,7 @@
 <script setup lang='ts'>
 import { targetChain } from 'src/stores/chain'
 import { QueryId } from 'src/stores/copilot'
-import { TaskType, taskTypeName, useCPRegistryStore } from 'src/stores/cpregistry'
+import { TaskType, taskTypePrefix, useCPRegistryStore } from 'src/stores/cpregistry'
 import { useUserStore } from 'src/stores/user'
 import { computed, onMounted, toRef, defineModel } from 'vue'
 import { provideApolloClient, useQuery } from '@vue/apollo-composable'
@@ -56,7 +56,7 @@ const prompt = () => {
     applicationId: cpNode.value?.applicationId,
     publicKey: loginAccount.value,
     queryId: queryId.value?.queryId,
-    prompt: taskTypeName(taskType.value) + ': ' + text.value,
+    prompt: taskTypePrefix(taskType.value) + text.value,
     signature: signature.value,
     timestamp: queryId.value?.timestamp,
     nonce: queryId.value?.nonce,

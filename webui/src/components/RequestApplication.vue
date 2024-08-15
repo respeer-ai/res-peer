@@ -98,6 +98,9 @@ const onApplications = (index: number, applications: string[]) => {
       case 8:
         application.copilotApp = constants.Apps.copilotApp
         break
+      case 9:
+        application.illustratorApp = constants.Apps.illustratorApp
+        break
     }
     void requestApplication(index + 1, false)
   } else {
@@ -170,6 +173,9 @@ const onApplicationsThroughCheCko = (index: number, applications: string[]) => {
       case 8:
         application.copilotApp = constants.Apps.copilotApp
         break
+      case 9:
+        application.illustratorApp = constants.Apps.illustratorApp
+        break
     }
     void requestApplicationThroughCheCko(index + 1, false)
   } else {
@@ -183,6 +189,7 @@ const requestApplicationThroughCheCko = (index: number, retry: boolean) => {
   if (index >= constants.appIds.length) {
     return
   }
+  console.log('Request application', index, constants.appIds[index])
   if (retry) {
     setTimeout(() => {
       void requestApplicationThroughCheCko(index, false)

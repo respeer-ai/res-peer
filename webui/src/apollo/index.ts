@@ -41,6 +41,15 @@ export /* async */ function getClientOptions (/* {app, router, ...}, options?: P
           }
           return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + applicationId
         }
+        case 'illustrate':
+        {
+          let applicationId = constants.Apps.illustratorApp
+          if (operation.variables.applicationId) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            applicationId = operation.variables.applicationId
+          }
+          return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + applicationId
+        }
         case 'cp-registry':
           return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.cpRegistryApp
         case 'blob-gateway':
