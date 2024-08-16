@@ -30,7 +30,7 @@ Author submit their content to reviewer DAO. If it's approved, author will get s
 
 ### Avatar Marketplace
 
-In ResPeer, every user can decorate their avatar with assets owned by them. It means they can design their avatar by some artist they issue, or use a NFT they bought from avatar marketplace. Assets weared by the user will be displayed in ResPeer at different place, e.g. user center, contents list, content comments, etc. When user sell their work in avatar marketplace, a fix ratio of their transaction amount will be deposited to foundation application. Part of that will be used as the remuneration of the authors, the fee of reviewers, and the budget of activites.
+In ResPeer, every user can decorate their avatar with assets owned by them. It means they can design their avatar by some artist they issue, or use a NFT they bought from avatar marketplace. Assets weared by the user will be displayed in ResPeer at different place, e.g. user center, contents list, content comments, etc. When user sell their work in avatar marketplace, a fix ratio of their transaction amount will be deposited to foundation application.
 
 ### Reviewer DAO
 
@@ -42,6 +42,19 @@ Above we list how creators' can earn tokens and credits in ResPeer. But a social
 
 ### Author Copilot and Computing Market
 
+Author may write some tiny mistake in their content, or has great idea but poor at description. Thanks to Linera edge AI, we can have AI copilot to help user for several tasks such fix grammar, rewrite, generate illustrate or cover, generate abbreviation, etc. Community members can register their computing resource to registry application with price they think of reasonable. If author think of the price is acceptable, they will rent the computing resource for their tasks. Here author pay to the computing provider before the task is finished. They don't need to pay for full task in advance, but just pay for the finished part of the task. For example, if the rewriting need to generate 10000 words, author will pay to computing provider each 1000 words. If computing provider find author do not pay for the coming part words, it won't generate. Also, if author find the paid part is not served, she/he won't pay anymore. The author may lose a very small amount of payment in that case.
+
 ### Foundation
 
+A fix ratio of each transaction amount will be deposited to foundation application. Part of that will be used as the remuneration of the authors, the fee of reviewers, and the budget of activites.
+
+## CheCko Wallet
+
+Linera has different account system from tranditional blockchain. Sining block with wallet client let most of the exists wallets not work with Linera. ResPeer invent a **Microchain as a Service** architecture which separate chain store and wallet client. CheCko is the browser wallet client of Linera. It depends on MaaS cluster to communicate with Linera network. CheCko plans to implement all web3.js interface, then web application who already integrate Ethereum just need to replace their window.ethereum to window.linera, then they can access Linera network. CheCko wallet is the login system of ResPeer application. Other web applications who would like to integrate Linera can also connect to Linera with CheCko. In future, MaaS cluster may implement a web3.js compatible layer to let exists wallets like Metamask be able to access Linera network if possible.
+
 ## Achievements
+
+[Linera Summer School Hackathon 2023 First Place Winner]
+[Linera Autumn School Hackathon 2023 First Place Winner]
+[Rebuild Ownership Hackathon Linera Track First Place Winner]
+[Linera Spring Hackathon 2024 First Place Winner]
