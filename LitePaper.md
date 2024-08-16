@@ -20,7 +20,7 @@ ResPeer also implements a copilot the help creators improve their work with Line
 
 ## Governance
 
-As a web3 content application, ResPeer design a reviewer DAO which will review all content before publishing. If creators want to list their works in ResPeer application, they should submit their works to reviewer DAO firstly. The initial members of the reviewer DAO is configured when the reviewer application is created. Community members could apply to be a reviewer with their contribution to the community and their resume. All types applications will be reviewed by reviewer DAO members distributely. If an application get enough approvals, it'll be approved automatically.
+As a web3 content application, ResPeer design a reviewer DAO which will review all content before publishing. If creators want to list their works in ResPeer application, they should submit their works to reviewer DAO firstly. The initial members of the reviewer DAO is configured when the reviewer application is created. Community members could apply to be a reviewer with their contribution to the community and their resume. All types applications will be reviewed by reviewer DAO members distributely. If an application get enough approvals, it'll be approved automatically. The members of the reviewer DAO could be removed by voting, thus if some members have dispute behavior, any reviewer DAO member could propose to remove the dispute member, then the dispute account will be removed automatically after the proposal is approved.
 
 ## Creator Economy
 
