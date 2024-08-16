@@ -3,12 +3,14 @@
     v-for='(_content, index) in contents'
     :key='_content.cid'
     :style='{width: "100%", margin: "16px 0 16px 0"}'
-    class='row cursor-pointer content-card'
+    class='row cursor-pointer'
   >
     <q-space />
     <div>
-      <content-card-view :cid='_content.cid' />
-      <q-separator v-if='index > 0' :style='{margin: "48px 0"}' />
+      <div class='content-card'>
+        <content-card-view :cid='_content.cid' />
+      </div>
+      <q-separator v-if='index < contents.length - 1' :style='{margin: "24px 0"}' />
     </div>
     <q-space />
   </div>
@@ -30,4 +32,6 @@ const contents = computed(() => content._contents())
   background: $grey-3
   border-radius: 16px
   transition: 1s
+  .item-icon
+    color: $red-6 !important
 </style>

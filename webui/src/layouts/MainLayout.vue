@@ -181,9 +181,9 @@ watch(() => window.linera, () => {
 })
 
 onBeforeMount(() => {
-  Cookies.set('service-port', port.value.toString())
-  Cookies.set('service-host', host.value.toString())
-  Cookies.set('cheCkoConnect', cheCkoConnect.value === undefined ? 'true' : cheCkoConnect.value ? 'true' : 'false')
+  Cookies.set('service-port', port.value.toString(), { path: '/' })
+  Cookies.set('service-host', host.value.toString(), { path: '/' })
+  Cookies.set('cheCkoConnect', cheCkoConnect.value === undefined ? 'true' : cheCkoConnect.value ? 'true' : 'false', { path: '/' })
 
   user.account = Cookies.get('account')
   setting.cheCkoConnect = Cookies.get('cheCkoConnect') === 'true'
@@ -207,6 +207,9 @@ const onWriteClick = () => {
   void router.push({
     path: 'dashboard',
     query: {
+      host: Cookies.get('service-host'),
+      port: Cookies.get('service-port'),
+      cheCkoConnect: Cookies.get('cheCkoConnect'),
       write: 'true'
     }
   })

@@ -6,10 +6,10 @@
     >
       <q-step
         :name='1'
-        title='Cover Description'
+        title='Illustrate Description'
         :done='step > 1'
       >
-        <CopilotCoverDescription v-model='coverDescription' />
+        <CopilotIllustrateDescription v-model='illustrateDescription' />
       </q-step>
       <q-step
         :name='2'
@@ -84,7 +84,7 @@ import { computed, defineProps, ref, toRef, defineModel, onMounted } from 'vue'
 import { TaskType } from 'src/stores/cpregistry'
 import { QueryId } from 'src/stores/copilot'
 
-import CopilotCoverDescription from './CopilotCoverDescription.vue'
+import CopilotIllustrateDescription from './CopilotIllustrateDescription.vue'
 import CPNodeSelector from './CPNodeSelector.vue'
 import CopilotQueryId from './CopilotQueryId.vue'
 import CopilotDepositQuery from './CopilotDepositQuery.vue'
@@ -101,7 +101,7 @@ const text = toRef(props, 'text')
 const taskType = ref(TaskType.GenerateIllustrate)
 
 const step = ref(1)
-const coverDescription = defineModel({ type: String })
+const illustrateDescription = defineModel({ type: String })
 const cpNodeId = ref(undefined as unknown as string)
 const queryId = ref(undefined as unknown as QueryId)
 const queryConfirmed = ref(false)
@@ -165,7 +165,7 @@ const onExecuteTaskFail = () => {
 
 onMounted(() => {
   // Work around to defineModel issue
-  coverDescription.value = text.value
+  illustrateDescription.value = text.value
 })
 
 </script>

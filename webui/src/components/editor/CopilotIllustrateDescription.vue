@@ -1,10 +1,10 @@
 <template>
   <q-card flat bordered :style='{padding: "24px", height: "320px"}' class='text-center'>
     <div :style='{fontSize: "28px", lineHeight: "28px"}'>
-      Confirm Cover Description
+      Confirm Illustrate Description
     </div>
     <div :style='{marginTop: "16px", width: "100%"}'>
-      <textarea v-model='coverDescription' auto-resize />
+      <textarea v-model='illustrateDescription' auto-resize />
     </div>
   </q-card>
 </template>
@@ -12,7 +12,7 @@
 <script setup lang='ts'>
 import { defineModel } from 'vue'
 
-const coverDescription = defineModel({ type: String })
+const illustrateDescription = defineModel({ type: String })
 
 </script>
 

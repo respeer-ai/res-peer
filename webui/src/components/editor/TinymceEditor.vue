@@ -8,8 +8,11 @@
     />
   </div>
   <q-dialog v-model='showing' full-width>
-    <div :style='{padding: "96px"}'>
+    <div :style='{padding: "96px"}' v-if='taskType !== TaskType.GenerateIllustrate'>
       <TextCopilot :text='selectedText' :task-type='taskType' @cancel='onCopilotCancel' @change-text='(text) => onChangeText(text)' />
+    </div>
+    <div :style='{padding: "96px"}' v-else>
+      <IllustrateCopilot :text='selectedText' @cancel='onCopilotCancel' @generated='(base64) => onCoverGenerated(base64)' />
     </div>
   </q-dialog>
 </template>
@@ -60,6 +63,7 @@ import { Cookies } from 'quasar'
 import { TaskType, taskTypeName } from 'src/stores/cpregistry'
 
 import TextCopilot from './TextCopilot.vue'
+import IllustrateCopilot from './IllustrateCopilot.vue'
 
 const apiURL = ref('')
 
@@ -288,6 +292,13 @@ const onCopilotCancel = () => {
 }
 
 const onChangeText = (text: string) => {
+  internalValue.value = internalValue.value.substring(0, startOffset.value) + text + internalValue.value.substring(endOffset.value)
+  showing.value = false
+}
+
+const onCoverGenerated = (base64: string) => {
+  const text = `<br><img width="720px" fit="contain" src="${base64}"><br>`
+  startOffset.value = endOffset.value
   internalValue.value = internalValue.value.substring(0, startOffset.value) + text + internalValue.value.substring(endOffset.value)
   showing.value = false
 }

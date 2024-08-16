@@ -27,7 +27,7 @@
     </div>
     <div :style='{marginLeft: "52px", marginTop: "24px"}'>
       <div class='row'>
-        <div>
+        <div :style='{width: "calc(100% - 180px - 32px)"}'>
           <div class='cursor-pointer' :style='{fontWeight: "bold", fontSize: "26px", wordBreak: "break-word"}' @click='onTitleClick(_content.cid)'>
             {{ _content.title?.length ? _content.title : 'You should have a title!' }}
           </div>
