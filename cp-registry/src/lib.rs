@@ -137,8 +137,8 @@ pub struct UpdateParameters {
     pub price_quota: Option<u16>,
     pub quota_price: Option<Amount>,
     pub supported_task_types: Option<Vec<TaskType>>,
-    pub ai_model: String,
-    pub ai_model_url: String,
+    pub ai_model: Option<String>,
+    pub ai_model_url: Option<String>,
     pub payment_chain_id: Option<ChainId>,
     pub available: Option<bool>,
 }
