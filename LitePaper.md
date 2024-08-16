@@ -26,6 +26,8 @@ As a web3 content application, ResPeer design a reviewer DAO which will review a
 
 ### Feed Contents
 
+Author submit their content to reviewer DAO. If it's approved, author will get some credits according to current balance of the credits. Moreover, if foundation application has Linera native token balance, it'll will distribute some tokens to the approved content author as remuneration.
+
 ### Avatar Marketplace
 
 ### Reviewer DAO
