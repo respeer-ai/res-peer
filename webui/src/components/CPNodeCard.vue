@@ -1,8 +1,8 @@
 <template>
   <q-card :style='{padding: "24px"}'>
     <div class='row'>
-      <q-avatar size='64px'>
-        <q-img :src='cpNode.brandLogo' width='64px' height='64px' />
+      <q-avatar size='64px' color='red-1'>
+        <q-img :src='cpNode.brandLogo' width='64px' height='64px' fit='contain' />
       </q-avatar>
       <div :style='{marginLeft: "16px", borderBottom: "1px solid lightgrey", width: "calc(100% - 64px - 16px)"}'>
         <div :style='{fontSize: "20px"}' class='text-bold text-grey-9'>
