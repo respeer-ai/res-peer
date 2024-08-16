@@ -10,8 +10,6 @@ members = [
     "illustrator",
     "blob-gateway",
     "cp-registry",
-    "service/copilot_service",
-    "service/illustrator_service"
 ]
 resolver = "2"
 
