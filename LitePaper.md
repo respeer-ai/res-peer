@@ -18,51 +18,51 @@ We can persist messages, content and images to blob storage which works as a Con
 
 ## Technique Overview
 
-Basically, there're two types producer in ResPeer, one is the content producer who publishes content, they will get rewards from the reward pool of the fundation, and get credits incentive issued by credit application. Another is asset producer who create digital arts then put on shelves of the market for sale, the asset's price will be set with Linera.
+Basically, there are two types of producers in ResPeer: one is the content producer who publishes content; they will receive rewards from the reward pool of the foundation and credits as incentives issued by the credit application. The other is the asset producer who creates digital art and puts it on the market shelves for sale; the asset's price will be set in Linera.
 
-A initial credit supply will be set when the application is deploy to Linera. The credits of each reaction will be exponential decay. Each credit amount earned by user reaction has its alive time, and will be destroyed (or return to current total supply) when expired. If the credit balance is lower than threshold, the total supply will be increased with 5% of the initial supply.
+An initial credit supply will be established when the application is deployed to Linera. The credits for each transaction will decay exponentially. Each credit amount earned by user interactions has its own lifetime and will be destroyed (or returned to the current total supply) when expired. If the credit balance is lower than the threshold, the total supply will be increased by 5% of the initial supply.
 
-ResPeer provides a market for asset producers to put their work on shelves. Producer sets price of their work with Linera. The market have a unique setting which define the exchange rate of the credits and Linera token. When user buy assets, if they have credits, they can pay to the work with Linera token and credits. A fix ratio of the asset sale amount will be deposit to fundation application, which will be used to reward the content, and pay the fee for the reviewer.
+ResPeer provides a market for asset producers to showcase their work. Producers set the price of their work in Linera. The market has a unique setting that defines the exchange rate of credits and Linera tokens. When a user buys assets, if they have credits, they can pay for the work with Linera tokens and credits. A fixed ratio of the asset sale amount will be deposited into the foundation application, which will be used to reward the content creators and pay the fees for the reviewers.
 
-ResPeer also implements a copilot the help creators improve their work with Linera Edge Generative AI. When creator has new task, they can select computing resource from computing provider registry, then pay to the provider for their task.
+ResPeer also implements a copilot to help creators improve their work with Linera Edge Generative AI. When a creator has a new task, they can select computing resources from the computing provider registry and then pay the provider for their task.
 
 ## Governance
 
-As a web3 content application, ResPeer design a reviewer DAO which will review all content before publishing. If creators want to list their works in ResPeer application, they should submit their works to reviewer DAO firstly. The initial members of the reviewer DAO is configured when the reviewer application is created. Community members could apply to be a reviewer with their contribution to the community and their resume. All types applications will be reviewed by reviewer DAO members distributely. If an application get enough approvals, it'll be approved automatically. The members of the reviewer DAO could be removed by voting, thus if some members have dispute behavior, any reviewer DAO member could propose to remove the dispute member, then the dispute account will be removed automatically after the proposal is approved.
+As a web3 content application, ResPeer designs a Reviewer DAO that will review all content before publishing. If creators want to list their works in the ResPeer application, they should submit their works to the Reviewer DAO first. The initial members of the Reviewer DAO are configured when the Reviewer application is created. Community members can apply to be a reviewer based on their contributions to the community and their resumes. All types of applications will be reviewed by Reviewer DAO members in a distributed manner. If an application receives enough approvals, it will be approved automatically. The members of the Reviewer DAO can be removed by voting; thus, if some members exhibit disputed behavior, any Reviewer DAO member can propose to remove the disputed member, and the disputed account will be removed automatically after the proposal is approved.
 
 ## Creator Economy
 
 ### Feed Contents
 
-Author submit their content to reviewer DAO. If it's approved, author will get some credits according to current balance of the credits. Moreover, if foundation application has Linera native token balance, it'll will distribute some tokens to the approved content author as remuneration.
+Authors submit their content to the Reviewer DAO. If it's approved, the author will receive some credits according to the current balance of the credits. Moreover, if the foundation application has a Linera native token balance, it will distribute some tokens to the approved content author as remuneration.
 
 ### Avatar Marketplace
 
-In ResPeer, every user can decorate their avatar with assets owned by them. It means they can design their avatar by some artist they issue, or use a NFT they bought from avatar marketplace. Assets weared by the user will be displayed in ResPeer at different place, e.g. user center, contents list, content comments, etc. When user sell their work in avatar marketplace, a fix ratio of their transaction amount will be deposited to foundation application.
+In ResPeer, every user can decorate their avatar with assets owned by them. It means they can design their avatar using some artwork they created, or use an NFT they bought from the avatar marketplace. Assets worn by the user will be displayed in ResPeer at different places, e.g., user center, content lists, content comments, etc. When users sell their work in the avatar marketplace, a fixed ratio of their transaction amount will be deposited into the foundation application.
 
 ### Reviewer DAO
 
-If foundation application has balance, reviewer will receive Linera native tokens as their fee each time they approve or reject an application.
+If the foundation application has a balance, reviewers will receive Linera native tokens as their fee each time they approve or reject an application.
 
 ### Users Club
 
-Above we list how creators' can earn tokens and credits in ResPeer. But a social feed application must have readers. In ResPeer readers can also earn tokens and credits by participating activities hold by users club. Any one can apply to hold an activity. If the activity application is approved by reviewer DAO, foundation application will lock tokens for the activity. If activity has items to vote for rewards, the voters of winners will get a part of rewards of the winners accoring to the setting of the activity. The host of the activity will also earn some tokens and credits.
+Above, we list how creators can earn tokens and credits in ResPeer. However, a social feed application must have readers. In ResPeer, readers can also earn tokens and credits by participating in activities held by the users' club. Anyone can apply to host an activity. If the activity application is approved by the Reviewer DAO, the foundation application will lock tokens for the activity. If the activity has items to vote for rewards, the voters for the winners will receive a part of the rewards according to the settings of the activity. The host of the activity will also earn some tokens and credits.
 
 ### Author Copilot and Computing Market
 
-Author may write some tiny mistake in their content, or has great idea but poor at description. Thanks to Linera edge AI, we can have AI copilot to help user for several tasks such fix grammar, rewrite, generate illustrate or cover, generate abbreviation, etc. Community members can register their computing resource to registry application with price they think of reasonable. If author think of the price is acceptable, they will rent the computing resource for their tasks. Here author pay to the computing provider before the task is finished. They don't need to pay for full task in advance, but just pay for the finished part of the task. For example, if the rewriting need to generate 10000 words, author will pay to computing provider each 1000 words. If computing provider find author do not pay for the coming part words, it won't generate. Also, if author find the paid part is not served, she/he won't pay anymore. The author may lose a very small amount of payment in that case.
+Authors may write some tiny mistakes in their content, or have great ideas but are poor at description. Thanks to Linera's Edge AI, we can have an AI copilot to help users with several tasks such as fixing grammar, rewriting, generating illustrations or covers, and generating abbreviations, etc. Community members can register their computing resources with the registry application at a price they think is reasonable. If the author thinks the price is acceptable, they will rent the computing resources for their tasks. Here, the author pays the computing provider before the task is finished. They don't need to pay for the full task in advance, but just pay for the finished part of the task. For example, if the rewriting needs to generate 10,000 words, the author will pay the computing provider for each 1,000 words. If the computing provider finds that the author has not paid for the upcoming part of the words, it won't generate the rest. Also, if the author finds that the paid part is not served, they won't pay anymore. The author may lose a very small amount of payment in that case.
 
 ### Foundation
 
-A fix ratio of each transaction amount will be deposited to foundation application. Part of that will be used as the remuneration of the authors, the fee of reviewers, and the budget of activites.
+A fixed ratio of each transaction amount will be deposited into the foundation application. Part of that will be used as the remuneration for the authors, the fees for reviewers, and the budget for activities.
 
 ## CheCko Wallet
 
-Linera has different account system from tranditional blockchain. Sining block with wallet client let most of the exists wallets not work with Linera. ResPeer invent a **Microchain as a Service** architecture which separate chain store and wallet client. CheCko is the browser wallet client of Linera. It depends on MaaS cluster to communicate with Linera network. CheCko plans to implement all web3.js interface, then web application who already integrate Ethereum just need to replace their window.ethereum to window.linera, then they can access Linera network. CheCko wallet is the login system of ResPeer application. Other web applications who would like to integrate Linera can also connect to Linera with CheCko. In future, MaaS cluster may implement a web3.js compatible layer to let exists wallets like Metamask be able to access Linera network if possible.
+Linera has a different account system from traditional blockchains. Signing blocks with a wallet client makes most of the existing wallets incompatible with Linera. ResPeer invented a **Microchain as a Service** architecture that separates chain storage and wallet clients. CheCko is the browser wallet client for Linera. It depends on the MaaS cluster to communicate with the Linera network. CheCko plans to implement the entire web3.js interface, so web applications that have already integrated Ethereum just need to replace their window.ethereum with window.linera to access the Linera network. The CheCko wallet serves as the login system for the ResPeer application. Other web applications that would like to integrate Linera can also connect to Linera using CheCko. In the future, the MaaS cluster may implement a web3.js compatible layer to allow existing wallets like MetaMask to access the Linera network if possible.
 
 ## Achievements
 
-[Linera Summer School Hackathon 2023 First Place Winner]
-[Linera Autumn School Hackathon 2023 First Place Winner]
-[Rebuild Ownership Hackathon Linera Track First Place Winner]
-[Linera Spring Hackathon 2024 First Place Winner]
+[Linera Developer Summer School 2023 First Place Winner](https://devpost.com/software/respeer-peer-to-peer-content-delivery-platform)
+[Linera Autumn Developer School 2023 | Rust, WASM, Linera SDK First Place Winner](https://dorahacks.io/hackathon/linera-autumn-2023/results)
+[Rebuild Ownership 2.0: Internet Privacy Linera Track First Place Winner](https://devfolio.co/projects/respeer-peertopeer-content-publishing-applicati-f0c9)
+[Rust on Linera: Spring 2024 Hackathon First Place Winner](https://devpost.com/software/respeer-p2p-content-publishing-application-on-linera)
