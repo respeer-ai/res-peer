@@ -82,7 +82,7 @@
             class='item-icon'
             :style='{marginRight: "6px"}'
           />
-          {{ comments.length }}
+          {{ comments.length + recommends.length }}
         </div>
         <div class='row cursor-pointer content-action' :style='{marginLeft: "8px", background: "#0000000f", padding: "4px 8px", borderRadius: "16px", fontSize: "12px", lineHeight: "16px"}' @click='onShareClick(_content.cid)'>
           <inline-svg
