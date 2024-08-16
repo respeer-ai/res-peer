@@ -22,6 +22,8 @@
           {{ date.formatDate(_content.createdAt / 1000, 'YYYY-MM-DD HH:mm:ss') }}
         </div>
       </div>
+      <q-space />
+      <q-img :src='moreIcon' width='24px' height='20px' fit='contain' />
     </div>
     <div :style='{marginLeft: "52px", marginTop: "24px"}'>
       <div class='row'>
@@ -52,17 +54,45 @@
         :stamp='date.formatDate(comments[0].createdAt / 1000, "YYYY-MM-DD HH:mm:ss")'
       />
       <div class='row' :style='{marginTop: "16px"}'>
-        <div class='row cursor-pointer' @click='onLikeClick(_content.cid)'>
-          <q-icon name='thumb_up' size='20px' :style='{marginRight: "6px"}' />
+        <div class='row cursor-pointer content-action' @click='onLikeClick(_content.cid)' :style='{background: "#0000000f", padding: "4px 8px", borderRadius: "16px", fontSize: "12px", lineHeight: "16px"}'>
+          <inline-svg
+            :src='likeIcon'
+            width='16'
+            height='16'
+            class='item-icon'
+            :style='{marginRight: "6px"}'
+          />
           {{ _content.likes }}
         </div>
-        <div class='row cursor-pointer' :style='{marginLeft: "16px"}' @click='onDislikeClick(_content.cid)'>
-          <q-icon name='thumb_down' size='20px' :style='{marginRight: "6px"}' />
+        <div class='row cursor-pointer content-action' :style='{marginLeft: "8px", background: "#0000000f", padding: "4px 8px", borderRadius: "16px", fontSize: "12px", lineHeight: "16px"}' @click='onDislikeClick(_content.cid)'>
+          <inline-svg
+            :src='dislikeIcon'
+            width='16'
+            height='16'
+            class='item-icon'
+            :style='{marginRight: "6px"}'
+          />
           {{ _content.dislikes }}
         </div>
-        <div class='row cursor-pointer' :style='{marginLeft: "16px"}' @click='onCommentClick(_content.cid)'>
-          <q-icon name='comment' size='20px' :style='{marginRight: "6px"}' />
+        <div class='row cursor-pointer content-action' :style='{marginLeft: "8px", background: "#0000000f", padding: "4px 8px", borderRadius: "16px", fontSize: "12px", lineHeight: "16px"}' @click='onCommentClick(_content.cid)'>
+          <inline-svg
+            :src='commentIcon'
+            width='16'
+            height='16'
+            class='item-icon'
+            :style='{marginRight: "6px"}'
+          />
           {{ comments.length }}
+        </div>
+        <div class='row cursor-pointer content-action' :style='{marginLeft: "8px", background: "#0000000f", padding: "4px 8px", borderRadius: "16px", fontSize: "12px", lineHeight: "16px"}' @click='onShareClick(_content.cid)'>
+          <inline-svg
+            :src='shareIcon'
+            width='16'
+            height='16'
+            class='item-icon'
+            :style='{marginRight: "6px"}'
+          />
+          Share
         </div>
       </div>
     </div>
@@ -82,6 +112,7 @@ import { Cookies, date } from 'quasar'
 import { useRouter } from 'vue-router'
 import { useSettingStore } from 'src/stores/setting'
 import { useApplicationStore } from 'src/stores/application'
+import { commentIcon, dislikeIcon, likeIcon, moreIcon, shareIcon } from 'src/assets'
 
 interface Props {
   cid: string
@@ -194,7 +225,6 @@ onMounted(() => {
   if (!ready()) return
   getContentAvatar()
   contentText.value = contentText.value.replace('<img ', '<img width="678px" fit="contain" ')
-  console.log(_content.value?.cover, _content.value?.abbreviation, _content.value.cid)
 })
 
 const onLikeClick = async (cid: string) => {
@@ -253,6 +283,10 @@ const onCommentClick = (cid: string) => {
   emit('comment')
 }
 
+const onShareClick = (cid: string) => {
+  console.log(cid)
+}
+
 const onTitleClick = (cid: string) => {
   void router.push({
     path: '/content',
@@ -273,4 +307,9 @@ const onTitleClick = (cid: string) => {
   border-radius: 50%
   background-size: cover
   background-repeat: no-repeat
+
+.content-action:hover
+  .item-icon
+    color:$red-6
+    transition: 1s
 </style>
