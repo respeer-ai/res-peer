@@ -30,6 +30,8 @@ Author submit their content to reviewer DAO. If it's approved, author will get s
 
 ### Avatar Marketplace
 
+In ResPeer, every user can decorate their avatar with assets owned by them. It means they can design their avatar by some artist they issue, or use a NFT they bought from avatar marketplace. Assets weared by the user will be displayed in ResPeer at different place, e.g. user center, contents list, content comments, etc. When user sell their work in avatar marketplace, a fix ratio of their transaction amount will be deposited to foundation application. Part of that will be used as the remuneration of the authors, the fee of reviewers, and the budget of activites.
+
 ### Reviewer DAO
 
 ### Users Club
