@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use async_graphql::SimpleObject;
-use illustrator::{IllustratorError, DepositQuota, InstantiationArgument};
+use illustrator::{DepositQuota, IllustratorError, InstantiationArgument};
 use linera_sdk::{
     base::{Amount, CryptoHash, Owner},
     views::{MapView, RegisterView, RootView, ViewStorageContext},

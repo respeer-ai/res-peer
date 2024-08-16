@@ -8,22 +8,28 @@ mod state;
 
 mod stable_diffusion;
 
-use std::{io::Cursor, sync::{Arc, Mutex}};
+use std::{
+    io::Cursor,
+    sync::{Arc, Mutex},
+};
 
 use ed25519_dalek::Verifier;
 
 use async_graphql::{Context, EmptySubscription, Object, Request, Response, Schema, SimpleObject};
-use candle_core::{DType, Device, Tensor, D, Module, IndexOp, Result as CandleResult, utils::{cuda_is_available, metal_is_available}};
+use candle_core::{
+    utils::{cuda_is_available, metal_is_available},
+    DType, Device, IndexOp, Module, Result as CandleResult, Tensor, D,
+};
 use illustrator::{IllustratorError, Operation};
 use linera_sdk::{
     base::{
-        Amount, BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi
+        Amount, BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi,
     },
     graphql::GraphQLMutationRoot,
     views::{View, ViewStorageContext},
     Service, ServiceRuntime,
 };
-use log::{info, error};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use state::Illustrator;
 use tokenizers::Tokenizer;
@@ -179,11 +185,14 @@ impl Service for IllustratorService {
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
         info!("Downloading sd tokenizer");
-        let sd_tokenizer_bytes = runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/tokenizer.json");
+        let sd_tokenizer_bytes =
+            runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/tokenizer.json");
         info!("sd_tokenizer_bytes len {:?}", sd_tokenizer_bytes.len());
 
         info!("Downloading sd clip_weights");
-        let clip_weights_bytes = runtime.fetch_url("http://localhost:10001/stable_diffusion/tiny_sd/text_encoder/model.safetensors");
+        let clip_weights_bytes = runtime.fetch_url(
+            "http://localhost:10001/stable_diffusion/tiny_sd/text_encoder/model.safetensors",
+        );
         info!("clip_weights_bytes len {:?}", clip_weights_bytes.len());
 
         info!("Downloading sd vae_weights");
@@ -205,7 +214,7 @@ impl Service for IllustratorService {
             .await
             .expect("Failed to load state");
 
-        IllustratorService { 
+        IllustratorService {
             model_context: Arc::new(ModelContext {
                 sd_model_builder,
                 runtime: Mutex::new(runtime),
@@ -287,9 +296,15 @@ impl SDModelBuilder {
         };
         let clip_weights = &self.clip_weights;
         info!("Building the Clip transformer.");
-        let text_model = stable_diffusion::build_buffered_clip_transformer(clip_config, clip_weights.to_vec(), device, dtype).expect("invalid clip");
+        let text_model = stable_diffusion::build_buffered_clip_transformer(
+            clip_config,
+            clip_weights.to_vec(),
+            device,
+            dtype,
+        )
+        .expect("invalid clip");
         info!("Building the Clip transformer done.");
-       
+
         let text_embeddings = text_model.forward(&tokens)?;
 
         let text_embeddings = if use_guide_scale {
@@ -338,7 +353,7 @@ impl SDModelBuilder {
             .unsqueeze(0)?;
         Ok(img)
     }
-        
+
     #[allow(clippy::too_many_arguments)]
     fn generate_image(
         vae: &stable_diffusion::vae::AutoEncoderKL,
@@ -381,17 +396,19 @@ impl SDModelBuilder {
         let mut buffer = Vec::new();
         {
             let mut cursor = Cursor::new(&mut buffer);
-            image.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
+            image
+                .write_to(&mut cursor, image::ImageFormat::Png)
+                .unwrap();
         }
         base64::encode(&buffer)
     }
-    
+
     fn run_model(&self, prompt_string: &str) -> Result<String, candle_core::Error> {
         let prompt = prompt_string;
         let use_cpu = true;
         let height: Option<usize> = Some(80);
         let width: Option<usize> = Some(80);
-        
+
         let dtype = DType::F16;
         let use_flash_attn = false;
         let sliced_attention_size: Option<usize> = None;
@@ -408,9 +425,12 @@ impl SDModelBuilder {
 
         let guidance_scale = 7.5;
         let n_steps = 30;
-        let sd_config = stable_diffusion::StableDiffusionConfig::tiny_sd(sliced_attention_size, height, width);
+        let sd_config =
+            stable_diffusion::StableDiffusionConfig::tiny_sd(sliced_attention_size, height, width);
 
-        let scheduler = sd_config.build_scheduler(n_steps).expect("invalid build_scheduler");
+        let scheduler = sd_config
+            .build_scheduler(n_steps)
+            .expect("invalid build_scheduler");
         let device = SDModelBuilder::build_device(use_cpu).expect("invalid build_device");
         if let Some(seed) = seed {
             let _ = device.set_seed(seed);
@@ -418,25 +438,26 @@ impl SDModelBuilder {
         let use_guide_scale = guidance_scale > 1.0;
         let which = vec![true];
         let text_embeddings = which
-        .iter()
-        .map(|first| {
-            SDModelBuilder::text_embeddings(
-                self,
-                &prompt,
-                &uncond_prompt,
-                &sd_config,
-                &device,
-                dtype,
-                use_guide_scale,
-                *first,
-            )
-        })
-        .collect::<AnyResult<Vec<_>>>().expect("invalid text_embeddings");
+            .iter()
+            .map(|first| {
+                SDModelBuilder::text_embeddings(
+                    self,
+                    &prompt,
+                    &uncond_prompt,
+                    &sd_config,
+                    &device,
+                    dtype,
+                    use_guide_scale,
+                    *first,
+                )
+            })
+            .collect::<AnyResult<Vec<_>>>()
+            .expect("invalid text_embeddings");
 
         let text_embeddings = Tensor::cat(&text_embeddings, D::Minus1)?;
         let text_embeddings = text_embeddings.repeat((bsize, 1, 1))?;
         // info!("{text_embeddings:?}");
-    
+
         info!("Building the vae_weights autoencoder.");
         let vae_weights = &self.vae_weights;
         let vae = sd_config.build_buffered_vae(vae_weights.to_vec(), &device, dtype)?;
@@ -445,14 +466,19 @@ impl SDModelBuilder {
         let init_latent_dist = match &img2img {
             None => None,
             Some(image) => {
-                let image = SDModelBuilder::image_preprocess(image).expect("invalid image_preprocess").to_device(&device).expect("innvalid to_device");
+                let image = SDModelBuilder::image_preprocess(image)
+                    .expect("invalid image_preprocess")
+                    .to_device(&device)
+                    .expect("innvalid to_device");
                 Some(vae.encode(&image)?)
             }
         };
 
         info!("Building the unet.");
         let unet_weights = &self.unet_weights;
-        let unet = sd_config.build_buffered_unet(unet_weights.to_vec(), &device, 4, use_flash_attn, dtype).expect("invalid build unet");
+        let unet = sd_config
+            .build_buffered_unet(unet_weights.to_vec(), &device, 4, use_flash_attn, dtype)
+            .expect("invalid build unet");
         info!("Building the unet done.");
 
         let t_start = if img2img.is_some() {
@@ -460,7 +486,7 @@ impl SDModelBuilder {
         } else {
             0
         };
-    
+
         let vae_scale = 0.18215;
         let mut image_base64_str = String::new();
 
@@ -487,7 +513,7 @@ impl SDModelBuilder {
                 }
             };
             let mut latents = latents.to_dtype(dtype)?;
-    
+
             for (timestep_index, &timestep) in timesteps.iter().enumerate() {
                 if timestep_index < t_start {
                     continue;
@@ -498,42 +524,39 @@ impl SDModelBuilder {
                 } else {
                     latents.clone()
                 };
-    
-                let latent_model_input = scheduler.scale_model_input(latent_model_input, timestep)?;
+
+                let latent_model_input =
+                    scheduler.scale_model_input(latent_model_input, timestep)?;
                 let noise_pred =
                     unet.forward(&latent_model_input, timestep as f64, &text_embeddings)?;
-                
+
                 let noise_pred = if use_guide_scale {
                     let noise_pred = noise_pred.chunk(2, 0)?;
                     let (noise_pred_uncond, noise_pred_text) = (&noise_pred[0], &noise_pred[1]);
-    
-                    (noise_pred_uncond + ((noise_pred_text - noise_pred_uncond)? * guidance_scale)?)?
+
+                    (noise_pred_uncond
+                        + ((noise_pred_text - noise_pred_uncond)? * guidance_scale)?)?
                 } else {
                     noise_pred
                 };
-    
+
                 latents = scheduler.step(&noise_pred, timestep, &latents)?;
                 // let dt = start_time.elapsed().as_secs_f32();
                 // info!("step {}/{n_steps} done, {:.2}s", timestep_index + 1, dt);
                 info!("step {}/{n_steps} done", timestep_index + 1);
             }
-    
+
             info!(
                 "Generating the final image for sample {}/{}.",
                 idx + 1,
                 num_samples
             );
-     
-            image_base64_str = SDModelBuilder::generate_image(
-                &vae,
-                &latents,
-                vae_scale,
-                bsize,
-            ).expect("invalid generate image");
+
+            image_base64_str = SDModelBuilder::generate_image(&vae, &latents, vae_scale, bsize)
+                .expect("invalid generate image");
         }
 
         let output = image_base64_str;
         Ok(output)
     }
-
 }

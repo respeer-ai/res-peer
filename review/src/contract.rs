@@ -77,8 +77,10 @@ impl Contract for ReviewContract {
                 cid,
                 title,
                 content,
+                cover,
+                abbreviation,
             } => self
-                .on_op_submit_content(cid, title, content)
+                .on_op_submit_content(cid, title, content, cover, abbreviation)
                 .expect("Failed OP: submit content"),
             Operation::ApproveContent {
                 content_cid,
@@ -174,8 +176,10 @@ impl Contract for ReviewContract {
                 cid,
                 title,
                 content,
+                cover,
+                abbreviation,
             } => self
-                .on_msg_submit_content(cid, title, content)
+                .on_msg_submit_content(cid, title, content, cover, abbreviation)
                 .await
                 .expect("Failed MSG: submit content"),
             Message::ApproveContent {
@@ -299,12 +303,16 @@ impl ReviewContract {
         title: String,
         content: String,
         author: Owner,
+        cover: String,
+        abbreviation: String,
     ) -> Result<(), ReviewError> {
         let call = feed::Operation::Publish {
             cid: cid.clone(),
             title,
             content,
             author,
+            cover,
+            abbreviation,
         };
         let feed_app_id = self.feed_app_id();
         self.runtime.call_application(true, feed_app_id, &call);
@@ -478,6 +486,8 @@ impl ReviewContract {
         title: String,
         content: String,
         author: Owner,
+        cover: String,
+        abbreviation: String,
         creation_chain: bool,
     ) -> Result<(), ReviewError> {
         self.state
@@ -488,6 +498,8 @@ impl ReviewContract {
                 title,
                 content,
                 author,
+                cover,
+                abbreviation,
                 reviewers: HashMap::default(),
                 approved: 0,
                 rejected: 0,
@@ -516,6 +528,8 @@ impl ReviewContract {
                 title: String::default(),
                 content: comment,
                 author,
+                cover: "".to_string(),
+                abbreviation: "".to_string(),
                 reviewers: HashMap::default(),
                 approved: 0,
                 rejected: 0,
@@ -567,6 +581,8 @@ impl ReviewContract {
                             content.title,
                             content.content,
                             content.author,
+                            content.cover,
+                            content.abbreviation,
                         )
                         .await?
                     }
@@ -849,12 +865,16 @@ impl ReviewContract {
         cid: String,
         title: String,
         content: String,
+        cover: String,
+        abbreviation: String,
     ) -> Result<ReviewResponse, ReviewError> {
         self.runtime
             .prepare_message(Message::SubmitContent {
                 cid,
                 title,
                 content,
+                cover,
+                abbreviation,
             })
             .with_authentication()
             .send_to(self.runtime.application_id().creation.chain_id);
@@ -1129,6 +1149,8 @@ impl ReviewContract {
         cid: String,
         title: String,
         content: String,
+        cover: String,
+        abbreviation: String,
     ) -> Result<(), ReviewError> {
         let author = self.require_authenticated_signer()?;
         let creation_chain =
@@ -1138,6 +1160,8 @@ impl ReviewContract {
             title.clone(),
             content.clone(),
             author,
+            cover.clone(),
+            abbreviation.clone(),
             creation_chain,
         )
         .await?;
@@ -1150,6 +1174,8 @@ impl ReviewContract {
                 cid,
                 title,
                 content,
+                cover,
+                abbreviation,
             })
             .with_authentication()
             .send_to(dest);

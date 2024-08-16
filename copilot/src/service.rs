@@ -183,7 +183,8 @@ impl Service for CopilotService {
         let raw_weights = runtime.fetch_url("http://localhost:10001/coedit-t5/t5_small/model.gguf");
 
         info!("Downloading tokenizer");
-        let tokenizer_bytes = runtime.fetch_url("http://localhost:10001/coedit-t5/t5_small/tokenizer.json");
+        let tokenizer_bytes =
+            runtime.fetch_url("http://localhost:10001/coedit-t5/t5_small/tokenizer.json");
 
         info!("Downloading config");
         let config = runtime.fetch_url("http://localhost:10001/coedit-t5/t5_small/config.json");

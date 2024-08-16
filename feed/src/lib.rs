@@ -34,6 +34,8 @@ pub struct Content {
     pub author: Owner,
     pub title: String,
     pub content: String,
+    pub cover: String,
+    pub abbreviation: String,
     pub likes: u64,
     pub dislikes: u64,
     pub accounts: HashMap<Owner, bool>,
@@ -62,6 +64,8 @@ pub enum Operation {
         cid: String,
         title: String,
         content: String,
+        cover: String,
+        abbreviation: String,
         author: Owner,
     },
     Recommend {
@@ -96,6 +100,8 @@ pub enum Message {
         cid: String,
         title: String,
         content: String,
+        cover: String,
+        abbreviation: String,
         author: Owner,
     },
     Recommend {

@@ -141,6 +141,8 @@ impl ActivityContract {
             cid: params.cid,
             title: params.title,
             content: params.content,
+            cover: "".to_string(),
+            abbreviation: "".to_string(),
         };
         let review_app_id = self.review_app_id();
         self.runtime.call_application(true, review_app_id, &call);

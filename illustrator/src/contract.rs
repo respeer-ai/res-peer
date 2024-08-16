@@ -6,10 +6,11 @@
 mod state;
 
 use self::state::Illustrator;
-use illustrator::{
-    IllustratorError, IllustratorParameters, IllustratorResponse, InstantiationArgument, Message, Operation,
-};
 use cp_registry::{CPRegistryAbi, RegisterParameters};
+use illustrator::{
+    IllustratorError, IllustratorParameters, IllustratorResponse, InstantiationArgument, Message,
+    Operation,
+};
 use linera_sdk::{
     base::{Account, Amount, ApplicationId, ChannelName, CryptoHash, MessageId, WithContractAbi},
     views::{RootView, View, ViewStorageContext},

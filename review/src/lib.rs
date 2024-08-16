@@ -76,6 +76,8 @@ pub struct Content {
     pub author: Owner,
     pub title: String,
     pub content: String,
+    pub cover: String,
+    pub abbreviation: String,
     pub reviewers: HashMap<Owner, Review>,
     pub approved: u16,
     pub rejected: u16,
@@ -127,6 +129,8 @@ pub enum Operation {
         cid: String,
         title: String,
         content: String,
+        cover: String,
+        abbreviation: String,
     },
     ApproveContent {
         content_cid: String,
@@ -200,6 +204,8 @@ pub enum Message {
         cid: String,
         title: String,
         content: String,
+        cover: String,
+        abbreviation: String,
     },
     ApproveContent {
         content_cid: String,

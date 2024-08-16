@@ -74,8 +74,10 @@ impl Contract for FeedContract {
                 title,
                 content,
                 author,
+                cover,
+                abbreviation,
             } => self
-                .on_op_publish(cid, title, content, author)
+                .on_op_publish(cid, title, content, author, cover, abbreviation)
                 .expect("Failed OP: publish"),
             Operation::ContentAuthor { cid } => self
                 .on_op_content_author(cid)
@@ -98,8 +100,10 @@ impl Contract for FeedContract {
                 title,
                 content,
                 author,
+                cover,
+                abbreviation,
             } => self
-                .on_msg_publish(cid, title, content, author)
+                .on_msg_publish(cid, title, content, author, cover, abbreviation)
                 .await
                 .expect("Failed MSG: publish"),
             Message::Recommend {
@@ -166,6 +170,8 @@ impl FeedContract {
         title: String,
         content: String,
         author: Owner,
+        cover: String,
+        abbreviation: String,
         creation_chain: bool,
     ) -> Result<(), FeedError> {
         match self
@@ -176,6 +182,8 @@ impl FeedContract {
                     comment_to_cid,
                     title,
                     content,
+                    cover,
+                    abbreviation,
                     author,
                     likes: 0,
                     dislikes: 0,
@@ -329,12 +337,16 @@ impl FeedContract {
         title: String,
         content: String,
         author: Owner,
+        cover: String,
+        abbreviation: String,
     ) -> Result<FeedResponse, FeedError> {
         self.runtime
             .prepare_message(Message::Publish {
                 cid,
                 title,
                 content,
+                cover,
+                abbreviation,
                 author,
             })
             .with_authentication()
@@ -400,6 +412,8 @@ impl FeedContract {
         title: String,
         content: String,
         author: Owner,
+        cover: String,
+        abbreviation: String,
     ) -> Result<(), FeedError> {
         let creation_chain =
             self.runtime.chain_id() == self.runtime.application_id().creation.chain_id;
@@ -409,6 +423,8 @@ impl FeedContract {
             title.clone(),
             content.clone(),
             author,
+            cover.clone(),
+            abbreviation.clone(),
             creation_chain,
         )
         .await?;
@@ -421,6 +437,8 @@ impl FeedContract {
                 cid,
                 title,
                 content,
+                cover,
+                abbreviation,
                 author,
             })
             .with_authentication()
@@ -443,6 +461,8 @@ impl FeedContract {
             String::default(),
             reason.clone(),
             author,
+            "".to_string(),
+            "".to_string(),
             creation_chain,
         )
         .await?;
@@ -479,6 +499,8 @@ impl FeedContract {
             String::default(),
             comment.clone(),
             commentor,
+            "".to_string(),
+            "".to_string(),
             creation_chain,
         )
         .await?;
