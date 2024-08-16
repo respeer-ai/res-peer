@@ -10,6 +10,14 @@ Linera is new generation L1 blockchain which supports horizontal scaling by the 
 
 ## Technique Overview
 
+Basically, there're two types producer in ResPeer, one is the content producer who publishes content, they will get rewards from the reward pool of the fundation, and get credits incentive issued by credit application. Another is asset producer who create digital arts then put on shelves of the market for sale, the asset's price will be set with Linera.
+
+A initial credit supply will be set when the application is deploy to Linera. The credits of each reaction will be exponential decay. Each credit amount earned by user reaction has its alive time, and will be destroyed (or return to current total supply) when expired. If the credit balance is lower than threshold, the total supply will be increased with 5% of the initial supply.
+
+ResPeer provides a market for asset producers to put their work on shelves. Producer sets price of their work with Linera. The market have a unique setting which define the exchange rate of the credits and Linera token. When user buy assets, if they have credits, they can pay to the work with Linera token and credits. A fix ratio of the asset sale amount will be deposit to fundation application, which will be used to reward the content, and pay the fee for the reviewer.
+
+ResPeer also implements a copilot the help creators improve their work with Linera Edge Generative AI. When creator has new task, they can select computing resource from computing provider registry, then pay to the provider for their task.
+
 ## Governance
 
 ## Creator Economy
