@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 local-ip-address = "0.6.1"
-candle-core = { version = "0.6.0", features = ["cuda", "cudnn"] }
+candle-core = { version = "0.6.0", default-features = false }
 candle-transformers = "0.6.0"
 candle-nn = "0.6.0"
 anyhow = { version = "1", features = ["backtrace"] }
