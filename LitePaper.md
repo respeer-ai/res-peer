@@ -34,7 +34,11 @@ In ResPeer, every user can decorate their avatar with assets owned by them. It m
 
 ### Reviewer DAO
 
+If foundation application has balance, reviewer will receive Linera native tokens as their fee each time they approve or reject an application.
+
 ### Users Club
+
+Above we list how creators' can earn tokens and credits in ResPeer. But a social feed application must have readers. In ResPeer readers can also earn tokens and credits by participating activities hold by users club. Any one can apply to hold an activity. If the activity application is approved by reviewer DAO, foundation application will lock tokens for the activity. If activity has items to vote for rewards, the voters of winners will get a part of rewards of the winners accoring to the setting of the activity. The host of the activity will also earn some tokens and credits.
 
 ### Author Copilot and Computing Market
 
