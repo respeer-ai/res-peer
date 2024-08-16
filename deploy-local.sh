@@ -116,19 +116,35 @@ echo -e "    Application ID: $BLUE$cp_registry_appid$NC"
 app_deploy_chain=`linera --with-wallet 1 wallet show | grep "Public Key" | awk '{print $2}'`
 app_deploy_owner=`linera --with-wallet 1 wallet show | grep "Owner" | awk '{print $4}'`
 
-print $'\U01F4AB' $YELLOW " Deploying Copilot application ..."
-copilot_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/copilot_{contract,service}.wasm`
-copilot_appid=`linera --with-wallet 1 create-application $copilot_bid --json-argument "{\"node_id\":\"d7a776b018fefbd45d533d3031c101bb64c29d52423beb6e4d5cf84e322ef429\",\"brand_logo\":\"https://ipfs.moralis.io:2053/ipfs/QmTDxnzcvj2p3xBrKcGv1wxoyhAn2yzCQnZZ9LmFjReuH9\",\"brand_name\":\"respeer.ai\",\"link_base\":\"http://172.16.31.73:9081\",\"resource_type\":\"CPU\",\"device_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"cpu_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"storage_type\":\"NVME\",\"storage_bytes\":100000000000,\"memory_bytes\":256000000000,\"free_quota\":3,\"price_quota\":1,\"quota_price\":\"0.003\",\"supported_task_types\":[\"FixGrammar\",\"RewriteEasierUnderstand\",\"Paraphrase\",\"WriteFormally\",\"WriteMoreNeutral\"],\"payment_chain_id\":\"$app_deploy_chain\"}" --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\"}" --required-application-ids $cp_registry_appid`
-print $'\U01f499' $LIGHTGREEN " Copilot application deployed"
-echo -e "    Bytecode ID:    $BLUE$copilot_bid$NC"
-echo -e "    Application ID: $BLUE$copilot_appid$NC"
+print $'\U01F4AB' $YELLOW " Deploying Copilot CPU application ..."
+copilot_cpu_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/copilot_{contract,service}.wasm`
+copilot_cpu_appid=`linera --with-wallet 1 create-application $copilot_cpu_bid --json-argument "{\"node_id\":\"d7a776b018fefbd45d533d3031c101bb64c29d52423beb6e4d5cf84e322ef429\",\"brand_logo\":\"https://ipfs.moralis.io:2053/ipfs/QmTDxnzcvj2p3xBrKcGv1wxoyhAn2yzCQnZZ9LmFjReuH9\",\"brand_name\":\"respeer.ai\",\"link_base\":\"http://172.16.31.73:9081\",\"resource_type\":\"CPU\",\"device_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"cpu_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"storage_type\":\"NVME\",\"storage_bytes\":100000000000,\"memory_bytes\":256000000000,\"free_quota\":3,\"price_quota\":1,\"quota_price\":\"0.003\",\"supported_task_types\":[\"FixGrammar\",\"RewriteEasierUnderstand\",\"Paraphrase\",\"WriteFormally\",\"WriteMoreNeutral\"],\"payment_chain_id\":\"$app_deploy_chain\"}" --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\"}" --required-application-ids $cp_registry_appid`
+print $'\U01f499' $LIGHTGREEN " Copilot CPU application deployed"
+echo -e "    Bytecode ID:    $BLUE$copilot_cpu_bid$NC"
+echo -e "    Application ID: $BLUE$copilot_cpu_appid$NC"
 
-print $'\U01F4AB' $YELLOW " Deploying Illustrator application ..."
-illustrator_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/illustrator_{contract,service}.wasm`
-illustrator_appid=`linera --with-wallet 1 create-application $illustrator_bid --json-argument "{\"node_id\":\"d7a776b018fefbd45d533d3031c101bb64c29d52423beb6e4d5cf84e322ef429\",\"brand_logo\":\"https://ipfs.moralis.io:2053/ipfs/QmTDxnzcvj2p3xBrKcGv1wxoyhAn2yzCQnZZ9LmFjReuH9\",\"brand_name\":\"respeer.ai\",\"link_base\":\"http://172.16.31.73:9081\",\"resource_type\":\"CPU\",\"device_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"cpu_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"storage_type\":\"NVME\",\"storage_bytes\":100000000000,\"memory_bytes\":256000000000,\"free_quota\":3,\"price_quota\":1,\"quota_price\":\"0.03\",\"supported_task_types\":[\"GenerateIllustrate\"],\"payment_chain_id\":\"$app_deploy_chain\"}" --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\"}" --required-application-ids $cp_registry_appid`
-print $'\U01f499' $LIGHTGREEN " Illustrator application deployed"
-echo -e "    Bytecode ID:    $BLUE$illustrator_bid$NC"
-echo -e "    Application ID: $BLUE$illustrator_appid$NC"
+print $'\U01F4AB' $YELLOW " Deploying Copilot GPU application ..."
+copilot_fetch_server_url="http://localhost:9071/?prompt="
+copilot_gpu_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/copilot_{contract,service}.wasm`
+copilot_gpu_appid=`linera --with-wallet 1 create-application $copilot_gpu_bid --json-argument "{\"node_id\":\"d7a776b018fefbd45d533d3031c101bb64c29d52423beb6e4d5cf84e322ef429\",\"brand_logo\":\"https://ipfs.moralis.io:2053/ipfs/QmTDxnzcvj2p3xBrKcGv1wxoyhAn2yzCQnZZ9LmFjReuH9\",\"brand_name\":\"respeer.ai\",\"link_base\":\"http://172.16.31.73:9081\",\"resource_type\":\"GPU\",\"device_model\":\"NVIDIA GeForce RTX 3090\",\"cpu_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"storage_type\":\"NVME\",\"storage_bytes\":100000000000,\"memory_bytes\":256000000000,\"free_quota\":3,\"price_quota\":1,\"quota_price\":\"0.003\",\"supported_task_types\":[\"FixGrammar\",\"RewriteEasierUnderstand\",\"Paraphrase\",\"WriteFormally\",\"WriteMoreNeutral\"],\"payment_chain_id\":\"$app_deploy_chain\",\"fetch_server_url\":\"$copilot_fetch_server_url\"}" --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\"}" --required-application-ids $cp_registry_appid`
+print $'\U01f499' $LIGHTGREEN " Copilot GPU application deployed"
+echo -e "    Bytecode ID:    $BLUE$copilot_gpu_bid$NC"
+echo -e "    Application ID: $BLUE$copilot_gpu_appid$NC"
+
+print $'\U01F4AB' $YELLOW " Deploying Illustrator CPU application ..."
+illustrator_cpu_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/illustrator_{contract,service}.wasm`
+illustrator_cpu_appid=`linera --with-wallet 1 create-application $illustrator_cpu_bid --json-argument "{\"node_id\":\"d7a776b018fefbd45d533d3031c101bb64c29d52423beb6e4d5cf84e322ef429\",\"brand_logo\":\"https://ipfs.moralis.io:2053/ipfs/QmTDxnzcvj2p3xBrKcGv1wxoyhAn2yzCQnZZ9LmFjReuH9\",\"brand_name\":\"respeer.ai\",\"link_base\":\"http://172.16.31.73:9081\",\"resource_type\":\"CPU\",\"device_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"cpu_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"storage_type\":\"NVME\",\"storage_bytes\":100000000000,\"memory_bytes\":256000000000,\"free_quota\":3,\"price_quota\":1,\"quota_price\":\"0.03\",\"supported_task_types\":[\"GenerateIllustrate\"],\"payment_chain_id\":\"$app_deploy_chain\"}" --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\"}" --required-application-ids $cp_registry_appid`
+print $'\U01f499' $LIGHTGREEN " Illustrator CPU application deployed"
+echo -e "    Bytecode ID:    $BLUE$illustrator_cpu_bid$NC"
+echo -e "    Application ID: $BLUE$illustrator_cpu_appid$NC"
+
+print $'\U01F4AB' $YELLOW " Deploying Illustrator GPU application ..."
+illustrator_fetch_server_url="http://localhost:9072/?prompt="
+illustrator_gpu_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/illustrator_{contract,service}.wasm`
+illustrator_gpu_appid=`linera --with-wallet 1 create-application $illustrator_gpu_bid --json-argument "{\"node_id\":\"d7a776b018fefbd45d533d3031c101bb64c29d52423beb6e4d5cf84e322ef429\",\"brand_logo\":\"https://ipfs.moralis.io:2053/ipfs/QmTDxnzcvj2p3xBrKcGv1wxoyhAn2yzCQnZZ9LmFjReuH9\",\"brand_name\":\"respeer.ai\",\"link_base\":\"http://172.16.31.73:9081\",\"resource_type\":\"GPU\",\"device_model\":\"NVIDIA GeForce RTX 3090\",\"cpu_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"storage_type\":\"NVME\",\"storage_bytes\":100000000000,\"memory_bytes\":256000000000,\"free_quota\":3,\"price_quota\":1,\"quota_price\":\"0.03\",\"supported_task_types\":[\"GenerateIllustrate\"],\"payment_chain_id\":\"$app_deploy_chain\"}" --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\",\"fetch_server_url\":\"$illustrator_fetch_server_url\"}" --required-application-ids $cp_registry_appid`
+print $'\U01f499' $LIGHTGREEN " Illustrator GPU application deployed"
+echo -e "    Bytecode ID:    $BLUE$illustrator_gpu_bid$NC"
+echo -e "    Application ID: $BLUE$illustrator_gpu_appid$NC"
 
 sed -i "s/feedApp =.*/feedApp = '$feed_appid',/g" webui/src/const/index.ts
 sed -i "s/creditApp =.*/creditApp = '$credit_appid',/g" webui/src/const/index.ts
@@ -138,8 +154,10 @@ sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid',/g" webui/src/co
 sed -i "s/activityApp =.*/activityApp = '$activity_appid',/g" webui/src/const/index.ts
 sed -i "s/blobGatewayApp =.*/blobGatewayApp = '$blob_gateway_appid',/g" webui/src/const/index.ts
 sed -i "s/cpRegistryApp =.*/cpRegistryApp = '$cp_registry_appid',/g" webui/src/const/index.ts
-sed -i "s/copilotApp =.*/copilotApp = '$copilot_appid',/g" webui/src/const/index.ts
-sed -i "s/illustratorApp =.*/illustratorApp = '$illustrator_appid'/g" webui/src/const/index.ts
+sed -i "s/copilotCpuApp =.*/copilotCpuApp = '$copilot_cpu_appid',/g" webui/src/const/index.ts
+sed -i "s/copilotGpuApp =.*/copilotGpuApp = '$copilot_gpu_appid',/g" webui/src/const/index.ts
+sed -i "s/illustratorCpuApp =.*/illustratorCpuApp = '$illustrator_cpu_appid',/g" webui/src/const/index.ts
+sed -i "s/illustratorGpuApp =.*/illustratorGpuApp = '$illustrator_gpu_appid'/g" webui/src/const/index.ts
 
 sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
 sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts

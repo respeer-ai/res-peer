@@ -16,6 +16,7 @@ pub struct Copilot {
     quota_price: RegisterView<Amount>,
     deposit_quotas: MapView<Owner, DepositQuota>, // TODO: in future we'll meter fee with quota, but now we can just work with task
     query_deposits: MapView<Owner, Vec<CryptoHash>>,
+    fetch_server_url: RegisterView<Option<String>>,
 }
 
 #[allow(dead_code)]
@@ -24,6 +25,7 @@ impl Copilot {
         self.price_quota.set(argument.price_quota);
         self.quota_price.set(argument.quota_price);
         self.free_quota.set(argument.free_quota);
+        self.fetch_server_url.set(argument.fetch_server_url);
     }
 
     pub(crate) async fn _quota_price(&self) -> Amount {
@@ -64,5 +66,15 @@ impl Copilot {
         };
         queries.push(query_id);
         Ok(self.query_deposits.insert(&owner, queries)?)
+    }
+
+    pub(crate) async fn query_fetch_server_url(&self) -> String {
+        match &self.fetch_server_url.get() {
+            None => String::new(),
+            Some(url) => {
+                let fetch_url = url.to_string();
+                fetch_url
+            }
+        }
     }
 }
