@@ -169,8 +169,8 @@ const submitContent = async () => {
   const cid = CID.create(1, json.code, hash).toString()
 
   const { mutate, onDone, onError } = provideApolloClient(apolloClient)(() => useMutation(gql`
-    mutation submitContent ($cid: String!, $title: String!, $content: String!) {
-      submitContent(cid: $cid, title: $title, content: $content)
+    mutation submitContent ($cid: String!, $title: String!, $content: String!, $cover: String!, $abbreviation: String!) {
+      submitContent(cid: $cid, title: $title, content: $content, cover: $cover, abbreviation: $abbreviation)
     }
   `))
   onDone(() => {
@@ -184,6 +184,8 @@ const submitContent = async () => {
     cid,
     title: title.value,
     content: content.value,
+    cover: coverBase64.value,
+    abbreviation: abbreviation.value,
     endpoint: 'review',
     chainId: targetChain.value
   })
@@ -195,8 +197,8 @@ const submitContentThroughCheCko = async () => {
   const cid = CID.create(1, json.code, hash).toString()
 
   const query = gql`
-    mutation submitContent ($cid: String!, $title: String!, $content: String!) {
-      submitContent(cid: $cid, title: $title, content: $content)
+    mutation submitContent ($cid: String!, $title: String!, $content: String!, $cover: String!, $abbreviation: String!) {
+      submitContent(cid: $cid, title: $title, content: $content, cover: $cover, abbreviation: $abbreviation)
     }
   `
   window.linera.request({
@@ -209,6 +211,8 @@ const submitContentThroughCheCko = async () => {
           cid,
           title: title.value,
           content: content.value,
+          cover: coverBase64.value,
+          abbreviation: abbreviation.value,
           chainId: targetChain.value
         },
         operationName: 'submitContent'

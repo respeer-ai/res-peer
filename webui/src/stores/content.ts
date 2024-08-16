@@ -6,6 +6,8 @@ export interface Content {
   author: string
   title: string
   content: string
+  cover: string
+  abbreviation: string
   likes: number
   dislikes: number
   accounts: Record<string, boolean>

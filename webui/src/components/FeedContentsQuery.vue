@@ -40,6 +40,8 @@ const getContent = (contentKey: string, done?: () => void) => {
             commentToCid
             title
             content
+            cover
+            abbreviation
             author
             likes
             dislikes
@@ -89,6 +91,8 @@ const getContentThroughCheCko = (contentKey: string, done?: () => void) => {
             commentToCid
             title
             content
+            cover
+            abbreviation
             author
             likes
             dislikes

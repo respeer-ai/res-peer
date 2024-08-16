@@ -41,6 +41,8 @@ const getContentApplication = (contentApplicationKey: string, done?: () => void)
             author
             title
             content
+            cover
+            abbreviation
             reviewers
             approved
             rejected
@@ -76,6 +78,8 @@ const getContentApplicationThroughCheCko = (contentApplicationKey: string, done?
             author
             title
             content
+            cover
+            abbreviation
             reviewers
             approved
             rejected

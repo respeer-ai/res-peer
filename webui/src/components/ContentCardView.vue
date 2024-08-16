@@ -34,7 +34,7 @@
     </div>
     <div
       :style='{margin: "24px 0 24px 0", fontSize: "16px", wordBreak: "break-word"}'
-      v-html='_content.content?.length ? _content.content : "You should have some content!"'
+      v-html='contentText?.length ? contentText : "You should have some content!"'
     />
     <div class='row'>
       <div class='row cursor-pointer' @click='onLikeClick(_content.cid)'>
@@ -106,7 +106,7 @@
 
 <script setup lang='ts'>
 import { useContentStore, Content } from 'src/stores/content'
-import { computed, onMounted, toRef, watch } from 'vue'
+import { computed, onMounted, ref, toRef, watch } from 'vue'
 import { provideApolloClient, useMutation, useQuery } from '@vue/apollo-composable'
 import { ApolloClient } from '@apollo/client/core'
 import gql from 'graphql-tag'
@@ -132,6 +132,7 @@ const list = toRef(props, 'list')
 
 const content = useContentStore()
 const _content = computed(() => content.content(cid.value) as Content)
+const contentText = ref(_content.value?.content)
 const comments = computed(() => content._comments(cid.value))
 const recommends = computed(() => content._recommends(cid.value).slice(0, expand.value ? undefined : 1))
 const collection = useCollectionStore()
@@ -200,7 +201,6 @@ const getContentAvatarThroughCheCko = () => {
       }
     }
   }).then((result) => {
-    console.log('Avatar', result)
     const res = result as Record<string, Array<number>>
     collection.avatars.set(account, res.avatars)
   }).catch((e) => {
@@ -228,6 +228,8 @@ watch(targetChain, () => {
 onMounted(() => {
   if (!ready()) return
   getContentAvatar()
+  contentText.value = contentText.value.replace('<img ', '<img width="720px" fit="contain" ')
+  console.log(_content.value?.cover, _content.value?.abbreviation, _content.value.cid)
 })
 
 const onLikeClick = async (cid: string) => {
