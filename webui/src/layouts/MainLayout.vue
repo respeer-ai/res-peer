@@ -48,6 +48,28 @@
       <activity-applications-query />
       <native-balance-query />
       <computing-nodes-query />
+
+      <q-page-sticky position='bottom-right' :offset='[18, 18]'>
+        <div :style='{width: "56px"}'>
+          <q-btn fab color='red-6' @click='onWriteClick'>
+            <inline-svg
+              :src='writeIcon'
+              width='20'
+              height='20'
+              :style='{color: "white"}'
+            />
+          </q-btn>
+          <q-btn outline fab color='red-6' :style='{marginTop: "16px"}'>
+            <inline-svg
+              :src='createIcon'
+              width='20'
+              height='20'
+              :style='{color: "red-6"}'
+            />
+          </q-btn>
+        </div>
+        <div :style='{marginTop: "24px"}' />
+      </q-page-sticky>
     </q-page-container>
 
     <q-footer bordered :style='{height: "32px", lineHeight: "32px"}'>
@@ -75,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { computed, onBeforeMount, ref, watch } from 'vue'
 import { Cookies } from 'quasar'
 import { useUserStore } from 'src/stores/user'
@@ -116,6 +138,7 @@ import ActivityApplicationsKeysQuery from 'src/components/ActivityApplicationsKe
 import ActivityApplicationsQuery from 'src/components/ActivityApplicationsQuery.vue'
 import NativeBalanceQuery from 'src/components/NativeBalanceQuery.vue'
 import ComputingNodesQuery from 'src/components/ComputingNodesQuery.vue'
+import { createIcon, writeIcon } from 'src/assets'
 
 const logining = ref(false)
 const user = useUserStore()
@@ -176,6 +199,19 @@ onBeforeMount(() => {
     user.chainId = chainId.value
   }
 })
+
+const router = useRouter()
+
+const onWriteClick = () => {
+  setting.currentDashboardTab = 'contents'
+  void router.push({
+    path: 'dashboard',
+    query: {
+      write: 'true'
+    }
+  })
+}
+
 </script>
 
 <style scoped lang="sass">

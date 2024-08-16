@@ -3,11 +3,12 @@ import microchainIcon from './MicrochainIcon.svg'
 import copyIcon from './CopyIcon.svg'
 import writeIcon from './WriteIcon.svg'
 import copilotIcon from './CopilotIcon.svg'
-import likeIcon from 'src/assets/LikeIcon.svg'
-import dislikeIcon from 'src/assets/DislikeIcon.svg'
-import commentIcon from 'src/assets/CommentIcon.svg'
-import shareIcon from 'src/assets/ShareIcon.svg'
-import moreIcon from 'src/assets/MoreIcon.svg'
+import likeIcon from './LikeIcon.svg'
+import dislikeIcon from './DislikeIcon.svg'
+import commentIcon from './CommentIcon.svg'
+import shareIcon from './ShareIcon.svg'
+import moreIcon from './MoreIcon.svg'
+import createIcon from './CreateIcon.svg'
 
 export {
   addressIcon,
@@ -19,5 +20,6 @@ export {
   dislikeIcon,
   commentIcon,
   shareIcon,
-  moreIcon
+  moreIcon,
+  createIcon
 }

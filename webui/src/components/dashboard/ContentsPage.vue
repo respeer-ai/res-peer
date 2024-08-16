@@ -82,13 +82,20 @@
 <script setup lang='ts'>
 import { ref } from 'vue'
 import { writeIcon } from 'src/assets'
+import { useRoute } from 'vue-router'
 
 import SubmitContent from 'src/components/SubmitContent.vue'
 import ArticleList from 'src/components/ArticleList.vue'
 import ContentApplicationList from 'src/components/ContentApplicationList.vue'
 
+interface Query {
+  write: string
+}
+
+const route = useRoute()
+
 const tab = ref('submitted')
-const editing = ref(false)
+const editing = ref((route.query as unknown as Query).write === 'true')
 
 const onWriteClick = () => {
   editing.value = true
