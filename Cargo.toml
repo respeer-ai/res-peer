@@ -9,7 +9,9 @@ members = [
     "copilot",
     "illustrator",
     "blob-gateway",
-    "cp-registry"
+    "cp-registry",
+    "service/copilot_service",
+    "service/illustrator_service"
 ]
 resolver = "2"
 
