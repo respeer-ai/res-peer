@@ -93,6 +93,8 @@ const getCPNodesThroughCheCko = (done?: () => void) => {
             priceQuota
             quotaPrice
             supportedTaskTypes
+            aiModel
+            aiModelUrl
             paymentChainId
             available
             createdAt
