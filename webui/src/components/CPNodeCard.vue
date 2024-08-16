@@ -72,6 +72,14 @@
           </q-badge>
         </div>
       </div>
+      <div class='row' :style='{borderBottom: "1px solid lightgrey", padding: "8px 0"}'>
+        <div :style='{width: "160px"}'>
+          Model
+        </div>
+        <div :style='{width: "calc(100% - 160px)"}'>
+          <a :href='cpNode.aiModelUrl'>{{ cpNode.aiModel }}</a>
+        </div>
+      </div>
       <div class='row' :style='{padding: "8px 0"}'>
         <div :style='{width: "160px"}'>
           Created At

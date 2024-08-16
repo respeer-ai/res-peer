@@ -54,6 +54,8 @@ export interface CPNode {
   priceQuota: number
   quotaPrice: number
   supportedTaskTypes: TaskType[]
+  aiModel: string,
+  aiModelUrl: string,
   paymentChainId: string
   available: boolean
   createdAt: number

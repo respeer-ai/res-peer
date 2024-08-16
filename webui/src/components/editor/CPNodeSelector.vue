@@ -23,8 +23,11 @@
             </div>
           </div>
         </q-td>
-        <q-td key='deviceInformation' :props='props'>
+        <q-td key='modelInformation' :props='props'>
           <div>{{ props.row.resourceType }} {{ props.row.deviceModel }}</div>
+          <div><a :href='props.row.aiModelUrl'>{{ props.row.aiModel }}</a></div>
+        </q-td>
+        <q-td key='deviceInformation' :props='props'>
           <div>{{ props.row.cpuModel }} {{ bytes2HumanReadable(props.row.memoryBytes) }} RAM</div>
           <div>{{ bytes2HumanReadable(props.row.storageBytes) }} {{ props.row.storageType }}</div>
         </q-td>
@@ -94,6 +97,12 @@ const columns = computed(() => [
     label: 'Vendor Information',
     align: 'left',
     field: (row: CPNode) => row.nodeId
+  },
+  {
+    name: 'modelInformation',
+    label: 'Model Information',
+    align: 'left',
+    field: (row: CPNode) => row.aiModel
   },
   {
     name: 'deviceInformation',

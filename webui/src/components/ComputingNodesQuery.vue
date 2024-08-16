@@ -47,6 +47,8 @@ const getCPNodes = (done?: () => void) => {
             priceQuota
             quotaPrice
             supportedTaskTypes
+            aiModel
+            aiModelUrl
             paymentChainId
             available
             createdAt
