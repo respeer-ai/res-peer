@@ -46,6 +46,7 @@ pub struct InstantiationArgument {
     pub price_quota: u16,
     pub quota_price: Amount,
     pub supported_task_types: Vec<cp_registry::TaskType>,
+    pub fetch_server_url: Option<String>,
 }
 
 impl BcsHashable for InstantiationArgument {}

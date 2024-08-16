@@ -141,6 +141,21 @@ impl QueryRoot {
             return Err(CopilotError::UnpaidQuery);
         }
 
+        let fetch_server_url = model_context.state.query_fetch_server_url().await;
+        if !fetch_server_url.is_empty() {
+            let fetch_url = format!("{}{}", fetch_server_url, prompt);
+            let result_bytes = model_context.runtime.lock().unwrap().fetch_url(fetch_url.as_str());
+            let test_format: Result<String, std::string::FromUtf8Error> = String::from_utf8(result_bytes);
+            let mut result_str = String::new();
+            match test_format {
+                Ok(valid_string) => {
+                    result_str = valid_string;
+                }
+                Err(e) => info!("Error converting string: {:?}", e),
+            }
+            return Ok(result_str)
+        }
+
         Ok(model_context.t5_model_builder.run_model(&prompt)?)
     }
 
