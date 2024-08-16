@@ -105,6 +105,12 @@ impl CPRegistry {
         if let Some(supported_task_types) = params.supported_task_types {
             node.supported_task_types = supported_task_types;
         }
+        if let Some(ai_model) = params.ai_model {
+            node.ai_model = ai_model;
+        }
+        if let Some(ai_model_url) = params.ai_model_url {
+            node.ai_model_url = ai_model_url;
+        }
         if let Some(payment_chain_id) = params.payment_chain_id {
             node.payment_chain_id = payment_chain_id;
         }

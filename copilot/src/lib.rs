@@ -46,6 +46,8 @@ pub struct InstantiationArgument {
     pub price_quota: u16,
     pub quota_price: Amount,
     pub supported_task_types: Vec<cp_registry::TaskType>,
+    pub ai_model: String,
+    pub ai_model_url: String,
     pub fetch_server_url: Option<String>,
 }
 
@@ -72,6 +74,8 @@ impl Into<cp_registry::RegisterParameters> for InstantiationArgument {
             price_quota: self.price_quota,
             quota_price: self.quota_price,
             supported_task_types: self.supported_task_types,
+            ai_model: self.ai_model,
+            ai_model_url: self.ai_model_url,
             payment_chain_id: ChainId::from_str(
                 "1db1936dad0717597a7743a8353c9c0191c14c3a129b258e9743aec2b4f05d03",
             )
