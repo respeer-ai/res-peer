@@ -256,12 +256,14 @@ const internalValue = ref(props.modelValue)
 const selectedText = ref('')
 const startOffset = ref(0)
 const endOffset = ref(0)
+const selectionNode = ref(undefined as any)
 
 const handleSelectionChange = (event: any, editor: any) => {
   selectedText.value = editor.selection.getContent({ format: 'text' })
   const range = editor.selection.getRng()
   startOffset.value = range.startOffset
   endOffset.value = range.endOffset
+  selectionNode.value = editor.selection
 }
 
 watch(internalValue, (newValue) => {
@@ -273,7 +275,6 @@ watch(() => props.modelValue, (newValue) => {
 })
 
 const handleEditorInput = (content: string) => {
-  console.log(content)
   internalValue.value = content
 }
 
@@ -292,14 +293,14 @@ const onCopilotCancel = () => {
 }
 
 const onChangeText = (text: string) => {
-  internalValue.value = internalValue.value.substring(0, startOffset.value) + text + internalValue.value.substring(endOffset.value)
+  selectionNode.value?.setContent(text)
+  // TODO： hight result text
   showing.value = false
 }
 
 const onCoverGenerated = (base64: string) => {
-  const text = `<br><img width="720px" fit="contain" src="${base64}"><br>`
-  startOffset.value = endOffset.value
-  internalValue.value = internalValue.value.substring(0, startOffset.value) + text + internalValue.value.substring(endOffset.value)
+  const text = `${selectedText.value}<br><br><img width="720px" fit="contain" src="${base64}"><br><br>`
+  selectionNode.value?.setContent(text)
   showing.value = false
 }
 

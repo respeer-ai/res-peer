@@ -96,10 +96,16 @@ const onApplications = (index: number, applications: string[]) => {
         application.cpRegistryApp = constants.Apps.cpRegistryApp
         break
       case 8:
-        application.copilotApp = constants.Apps.copilotApp
+        application.copilotCpuApp = constants.Apps.copilotCpuApp
         break
       case 9:
-        application.illustratorApp = constants.Apps.illustratorApp
+        application.copilotGpuApp = constants.Apps.copilotGpuApp
+        break
+      case 10:
+        application.illustratorCpuApp = constants.Apps.illustratorCpuApp
+        break
+      case 11:
+        application.illustratorGpuApp = constants.Apps.illustratorGpuApp
         break
     }
     void requestApplication(index + 1, false)
@@ -171,10 +177,16 @@ const onApplicationsThroughCheCko = (index: number, applications: string[]) => {
         application.cpRegistryApp = constants.Apps.cpRegistryApp
         break
       case 8:
-        application.copilotApp = constants.Apps.copilotApp
+        application.copilotCpuApp = constants.Apps.copilotCpuApp
         break
       case 9:
-        application.illustratorApp = constants.Apps.illustratorApp
+        application.copilotGpuApp = constants.Apps.copilotGpuApp
+        break
+      case 10:
+        application.illustratorCpuApp = constants.Apps.illustratorCpuApp
+        break
+      case 11:
+        application.illustratorGpuApp = constants.Apps.illustratorGpuApp
         break
     }
     void requestApplicationThroughCheCko(index + 1, false)

@@ -34,7 +34,7 @@ export /* async */ function getClientOptions (/* {app, router, ...}, options?: P
           return 'http://' + host + ':' + port + '/chains/' + chainId + '/applications/' + constants.Apps.activityApp
         case 'copilot':
         {
-          let applicationId = constants.Apps.copilotApp
+          let applicationId = constants.Apps.copilotCpuApp
           if (operation.variables.applicationId) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             applicationId = operation.variables.applicationId
@@ -43,7 +43,7 @@ export /* async */ function getClientOptions (/* {app, router, ...}, options?: P
         }
         case 'illustrate':
         {
-          let applicationId = constants.Apps.illustratorApp
+          let applicationId = constants.Apps.illustratorCpuApp
           if (operation.variables.applicationId) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             applicationId = operation.variables.applicationId
