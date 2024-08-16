@@ -9,6 +9,7 @@ import commentIcon from './CommentIcon.svg'
 import shareIcon from './ShareIcon.svg'
 import moreIcon from './MoreIcon.svg'
 import createIcon from './CreateIcon.svg'
+import computingProviderBanner from './ComputingProvidersBanner.png'
 
 export {
   addressIcon,
@@ -21,5 +22,6 @@ export {
   commentIcon,
   shareIcon,
   moreIcon,
-  createIcon
+  createIcon,
+  computingProviderBanner
 }

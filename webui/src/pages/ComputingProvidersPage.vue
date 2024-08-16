@@ -1,13 +1,11 @@
 <template>
   <div>
-    <div :style='{height: "400px", background: "red"}' class='flex items-center justify-center'>
-      <q-space />
+    <div :style='{height: "328px"}' class='cp-banner flex items-center justify-center'>
       <div :style='{width: "960px"}'>
         <div class='text-white text-bold' :style='{fontSize: "48px", marginTop: "-48px"}'>
           Bump you Creativity with<br>Linera Edge Generative AI
         </div>
       </div>
-      <q-space />
     </div>
     <div class='row'>
       <q-space />
@@ -34,3 +32,8 @@ const cpRegistry = useCPRegistryStore()
 const cpNodes = computed(() => cpRegistry.nodes)
 
 </script>
+
+<style scope lang='sass'>
+.cp-banner
+  background: url('~assets/ComputingProvidersBanner.png')
+</style>
