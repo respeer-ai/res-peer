@@ -62,7 +62,7 @@ Linera has a different account system from traditional blockchains. Signing bloc
 
 ## Achievements
 
-[Linera Developer Summer School 2023 First Place Winner](https://devpost.com/software/respeer-peer-to-peer-content-delivery-platform)
-[Linera Autumn Developer School 2023 | Rust, WASM, Linera SDK First Place Winner](https://dorahacks.io/hackathon/linera-autumn-2023/results)
-[Rebuild Ownership 2.0: Internet Privacy Linera Track First Place Winner](https://devfolio.co/projects/respeer-peertopeer-content-publishing-applicati-f0c9)
-[Rust on Linera: Spring 2024 Hackathon First Place Winner](https://devpost.com/software/respeer-p2p-content-publishing-application-on-linera)
+- [Linera Developer Summer School 2023 First Place Winner](https://devpost.com/software/respeer-peer-to-peer-content-delivery-platform)
+- [Linera Autumn Developer School 2023 | Rust, WASM, Linera SDK First Place Winner](https://dorahacks.io/hackathon/linera-autumn-2023/results)
+- [Rebuild Ownership 2.0: Internet Privacy Linera Track First Place Winner](https://devfolio.co/projects/respeer-peertopeer-content-publishing-applicati-f0c9)
+- [Rust on Linera: Spring 2024 Hackathon First Place Winner](https://devpost.com/software/respeer-p2p-content-publishing-application-on-linera)
