@@ -1,15 +1,26 @@
 <template>
-  <div class='row'>
-    <q-space />
-    <div :style='{width:"960px"}'>
-      <CPNodeCard
-        v-for='(cpNode, i) in cpNodes'
-        :key='cpNode.nodeId'
-        :cp-node='cpNode'
-        :style='{margin:"64px 0",paddingBottom:"32px",borderBottom: i < cpNodes.length - 1 ? "1px solid grey" : ""}'
-      />
+  <div>
+    <div :style='{height: "400px", background: "red"}' class='flex items-center justify-center'>
+      <q-space />
+      <div :style='{width: "960px"}'>
+        <div class='text-white text-bold' :style='{fontSize: "48px", marginTop: "-48px"}'>
+          Bump you Creativity with<br>Linera Edge Generative AI
+        </div>
+      </div>
+      <q-space />
     </div>
-    <q-space />
+    <div class='row'>
+      <q-space />
+      <div :style='{width:"960px"}'>
+        <CPNodeCard
+          v-for='(cpNode, i) in cpNodes'
+          :key='cpNode.nodeId'
+          :cp-node='cpNode'
+          :style='{margin:"64px 0",paddingBottom:"32px",borderBottom: i < cpNodes.length - 1 ? "1px solid grey" : ""}'
+        />
+      </div>
+      <q-space />
+    </div>
   </div>
 </template>
 

@@ -64,8 +64,8 @@ const getCPNodes = (done?: () => void) => {
   onResult((res) => {
     if (res.loading) return
     const _nodes = graphqlResult.data(res, 'nodes')
-    const entries = graphqlResult.keyValue(_nodes, 'entries') as CPNode[]
-    cpRegistry.nodes = entries
+    const entries = graphqlResult.keyValue(_nodes, 'entries') as unknown[]
+    cpRegistry.nodes = entries.map((el) => graphqlResult.keyValue(el, 'value')) as CPNode[]
     done?.()
   })
 }

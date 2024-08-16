@@ -28,7 +28,7 @@
       >
         <FileUpload
           name='demo[]' @upload='onAdvancedUpload($event)' :multiple='false'
-          accept='image/*' :max-file-size='1000000'
+          accept='image/*' :max-file-size='1000000' @select='onFileSelected($event)'
         >
           <template #header>
             <div />
@@ -36,13 +36,21 @@
           <template #content='{ files }'>
             <div class='flex justify-center items-center' :style='{height: "106px"}' v-if='files.length'>
               <div class='flex flex-wrap gap-4'>
-                <div v-for='file of files' :key='file.name + file.type + file.size' class='p-8 rounded-border flex flex-col border border-surface items-center gap-4'>
-                  <div>
-                    <img
-                      role='presentation' :alt='file.name' :src='file.objectURL' width='100'
-                      height='50'
-                    >
+                <div v-if='false'>
+                  <div v-for='file of files' :key='file.name + file.type + file.size' class='p-8 rounded-border flex flex-col border border-surface items-center gap-4'>
+                    <div>
+                      <img
+                        role='presentation' :alt='file.name' :src='file.objectURL' width='100'
+                        height='50'
+                      >
+                    </div>
                   </div>
+                </div>
+                <div v-if='coverBase64?.length'>
+                  <img
+                    :src='coverBase64' role='presentation' width='100' height='50'
+                    alt='Cover Image'
+                  >
                 </div>
               </div>
             </div>
@@ -124,7 +132,7 @@ import { ApolloClient } from '@apollo/client/core'
 import { targetChain } from 'src/stores/chain'
 import { useSettingStore } from 'src/stores/setting'
 import { useApplicationStore } from 'src/stores/application'
-import FileUpload from 'primevue/fileupload'
+import FileUpload, { FileUploadSelectEvent } from 'primevue/fileupload'
 import { htmlToText } from 'html-to-text'
 
 import TinymceEditor from './editor/TinymceEditor.vue'
@@ -235,9 +243,22 @@ const onAdvancedUpload = (ev: unknown) => {
 }
 
 const showCoverCopilot = ref(false)
+const coverBase64 = ref(undefined as unknown as string)
+
+const onFileSelected = async (ev: FileUploadSelectEvent) => {
+  const data = await fetch(((ev.files as Array<unknown>)[0] as Record<string, string>).objectURL)
+  const reader = new FileReader()
+  reader.onload = () => {
+    coverBase64.value = reader.result as string
+  }
+  reader.onerror = (e) => {
+    console.log(e)
+  }
+  reader.readAsDataURL(await data.blob())
+}
 
 const onCoverGenerated = (base64: string) => {
-  console.log(base64)
+  coverBase64.value = base64
   showCoverCopilot.value = false
 }
 
