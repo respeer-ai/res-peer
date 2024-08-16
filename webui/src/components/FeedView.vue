@@ -3,11 +3,12 @@
     v-for='(_content, index) in contents'
     :key='_content.cid'
     :style='{width: "100%", margin: "16px 0 16px 0"}'
-    class='row'
+    class='row cursor-pointer content-card'
   >
     <q-space />
-    <div :style='{borderBottom: index < contents.length - 1 ? "1px solid grey" : ""}'>
+    <div>
       <content-card-view :cid='_content.cid' />
+      <q-separator v-if='index > 0' :style='{margin: "48px 0"}' />
     </div>
     <q-space />
   </div>
@@ -17,7 +18,7 @@
 import { useContentStore } from 'src/stores/content'
 import { computed } from 'vue'
 
-import ContentCardView from './ContentCardView.vue'
+import ContentCardView from './ContentCardViewV1.vue'
 
 const content = useContentStore()
 const contents = computed(() => content._contents())
@@ -25,9 +26,8 @@ const contents = computed(() => content._contents())
 </script>
 
 <style scoped lang='sass'>
-.error
-  background-image: url(../assets/ResPeer.png)
-  border-radius: 50%
-  background-size: cover
-  background-repeat: no-repeat
+.content-card:hover
+  background: $grey-3
+  border-radius: 16px
+  transition: 1s
 </style>
