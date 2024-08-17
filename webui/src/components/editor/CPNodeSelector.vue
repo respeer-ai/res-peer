@@ -16,8 +16,8 @@
           <div class='text-bold'>
             <div>{{ shortId(props.row.nodeId, 8) }}</div>
             <div class='row'>
-              <q-avatar size='36px'>
-                <q-img :src='props.row.brandLogo' width='36px' height='36px' />
+              <q-avatar size='36px' color='red-1'>
+                <q-img :src='props.row.brandLogo' width='36px' height='36px' fit='contain' />
               </q-avatar>
               <span :style='{lineHeight: "36px", marginLeft: "8px"}'>{{ props.row.brandName }}</span>
             </div>

@@ -27,7 +27,7 @@
       >
         <div class='text-black'>
           <CopilotQueryId
-            :node-id='cpNodeId' :text='text' :task-type='taskType' v-model='queryId'
+            :node-id='cpNodeId' :text='(illustrateDescription as string)' :task-type='taskType' v-model='queryId'
             v-model:signature='signature'
           />
         </div>
@@ -38,7 +38,7 @@
         :done='step > 4'
       >
         <CopilotDepositQuery
-          :node-id='cpNodeId' :text='text' :task-type='taskType' :query-id='queryId?.queryId'
+          :node-id='cpNodeId' :text='(illustrateDescription as string)' :task-type='taskType' :query-id='queryId?.queryId'
           @done='onDepositQueryDone' @fail='onDepositQueryFail'
         />
       </q-step>
@@ -52,7 +52,7 @@
           :node-id='cpNodeId'
           :query-id='queryId'
           :task-type='taskType'
-          :text='text'
+          :text='(illustrateDescription as string)'
           :signature='signature'
           @done='onExecuteTaskDone'
           @fail='onExecuteTaskFail'

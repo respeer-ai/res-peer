@@ -56,7 +56,13 @@
             </div>
           </template>
           <template #empty>
-            <div class='flex justify-center items-center text-center' :style='{height: "106px", padding: "24px 0"}'>
+            <div v-if='coverBase64?.length' :style='{height: "124px", width: "100%"}'>
+              <img
+                :src='coverBase64' role='presentation' width='100%' height='100%'
+                alt='Cover Image'
+              >
+            </div>
+            <div v-else class='flex justify-center items-center text-center' :style='{height: "106px", padding: "24px 0"}'>
               <div>
                 <q-icon name='bi-plus-lg' size='36px' color='grey-6' />
                 <div class='text-grey-6'>
@@ -67,7 +73,7 @@
           </template>
         </FileUpload>
         <div
-          :style='{marginLeft: "192px", marginTop: "-32px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
+          :style='{marginLeft: "192px", background: "white", marginTop: "-32px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
           class='cursor-pointer shadow-6 helper-icon'
           @click='onCoverCopilotClick'
         >
@@ -88,7 +94,7 @@
           placeholder='Use part of the first paragraph as abbreviation or create with Copilot.'
         />
         <div
-          :style='{marginLeft: "calc(100% - 28px)", marginTop: "-32px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
+          :style='{marginLeft: "calc(100% - 28px)", background: "white", marginTop: "-32px", borderRadius: "50%", width: "22px", height: "22px", padding: "1px"}'
           class='cursor-pointer shadow-6 helper-icon'
         >
           <q-img
@@ -144,7 +150,14 @@ const title = ref('')
 const content = ref('')
 const abbreviation = ref('')
 const coverDescription = computed({
-  get: () => htmlToText(content.value, { wordwrap: false }).split(' ').slice(0, 77).join(' '),
+  get: () => htmlToText(content.value, {
+    wordwrap: false,
+    selectors: [
+      {
+        selector: 'p'
+      }
+    ]
+  }).split(' ').slice(0, 77).join(' '),
   set: () => {
     // Do nothing
   }
@@ -262,6 +275,7 @@ const onFileSelected = async (ev: FileUploadSelectEvent) => {
 }
 
 const onCoverGenerated = (base64: string) => {
+  console.log(base64)
   coverBase64.value = base64
   showCoverCopilot.value = false
 }
@@ -285,4 +299,7 @@ const onCoverCopilotClick = () => {
 
 ::v-deep .p-progressbar
   display: none !important
+
+::v-deep .p-fileupload-content
+  padding: 0 !important
 </style>
