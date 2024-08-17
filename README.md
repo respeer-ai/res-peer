@@ -50,13 +50,17 @@ Basically, credits are invaluable in the network. It's valuable only when the ma
 
 Each credits amount has its alive time. User's balance will only contain amounts which is not expired. We have two options to the expired credits: return to total supply, or burn it. But it's a bit early to decide which one we should fulfill due to we still lack of enough thoughts about the use cases.
 
-## Market
+## Avatar Marketplace
 
 ResPeer provides a market to producers. Beside publishing content, producer can also put their works on shelves with Linera token price. Exchange rate between credits and Linera token will be set through DAO. After that when user want to buy assets from the market, they can pay with Linera token, combined with credits if they already earn some. A fix ratio of the total amount of each market transaction will be deposited to fundation, the used as rewards to the content author, the reviewer, and the activity winner.
 
 ## Reader Club
 
 Reader club is another application which will hold some activities, e.g. The Most Popular Content. Reader can donation to the reader club, recommend content, sharing their view, and participate activity.
+
+## Author Copilot and Computing Market
+
+![image](https://github.com/user-attachments/assets/bd4d67b9-be08-4b8e-aeea-85827aaf7d7a)
 
 ## Certificate
 
