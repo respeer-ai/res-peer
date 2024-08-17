@@ -62,7 +62,7 @@
                 alt='Cover Image'
               >
             </div>
-            <div v-else class='flex justify-center items-center text-center' :style='{height: "106px", padding: "24px 0"}'>
+            <div v-else class='flex justify-center items-center text-center' :style='{height: "124px", padding: "24px 0"}'>
               <div>
                 <q-icon name='bi-plus-lg' size='36px' color='grey-6' />
                 <div class='text-grey-6'>
