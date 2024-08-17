@@ -60,7 +60,7 @@ Reader club is another application which will hold some activities, e.g. The Mos
 
 ## Author Copilot and Computing Market
 
-![image](https://github.com/user-attachments/assets/bd4d67b9-be08-4b8e-aeea-85827aaf7d7a)
+![image](https://github.com/user-attachments/assets/7e9650d8-e443-4657-9dee-e5424d9efd36)
 
 ## Certificate
 
