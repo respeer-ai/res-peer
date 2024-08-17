@@ -38,7 +38,7 @@ fn handle_connection(mut stream: TcpStream) {
   let mut response = String::new();
   response.push_str("Content-Type: text/plain\n\n");
   if request_line.starts_with("GET") {
-      let status_line = "HTTP/1.1 200 OK";
+      let mut status_line = "HTTP/1.1 200 OK";
       let url = request_line.split_whitespace().collect::<Vec<&str>>()[1];
       let query_string = url.split('?').skip(1).next().unwrap_or_default();
       let params = parse_query_string(query_string);
@@ -46,7 +46,13 @@ fn handle_connection(mut stream: TcpStream) {
           let args = t5::Args::parse();
           let prompt = value.clone();
           println!("prompt: {:?}", prompt);
-          let contents = t5::run(args, prompt).expect("invalid run model");
+          let contents = match t5::run(args, prompt) {
+            Ok(text) => text,
+            Err(err) => {
+              status_line = "HTTP/1.1 500 Internal Server Error";
+              err.to_string()
+            },
+          };
           let length = contents.len();
           response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
       } else {
