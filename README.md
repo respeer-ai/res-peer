@@ -60,6 +60,12 @@ Reader club is another application which will hold some activities, e.g. The Mos
 
 ## Author Copilot and Computing Market
 
+ResPeer leverages Linera's Edge AI to provide an AI copilot that assists authors with various tasks such as fixing grammar, rewriting, generating illustrations or covers, and abbreviations. This helps authors enhance their content even if they have limitations in writing or artistic skills.
+
+Authors can rent computing resources from community members who have registered their resources with ResPeer at reasonable prices. If an author finds the price acceptable, they can rent the resources needed for their AI-assisted tasks, paying the computing provider incrementally as the work progresses. For example, if 10,000 words need rewriting, the author pays after each 1,000 words are generated. If the provider tries generating more words without being paid, the AI copilot will stop. Similarly, if the author is unsatisfied with the initial work, they can withhold further payments, potentially losing a small amount paid for the initial work.
+
+This model allows authors to affordably leverage AI capabilities to improve their content, while community members provide computing resources. The incremental payment structure mitigates risks for both parties.
+
 ![image](https://github.com/user-attachments/assets/7e9650d8-e443-4657-9dee-e5424d9efd36)
 
 ## Certificate
