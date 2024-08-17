@@ -2,17 +2,17 @@
 
 ## TL;DR
 
-ResPeer is a peer-to-peer content publishing application on Linera. It facilitates a creator ecosystem in which participants can earn the Linera native token (if any) and credits by creating content, selling artwork, reviewing, or participating in activities.
+ResPeer is a peer-to-peer content publishing application on Linera. It facilitates a creator ecosystem where participants can earn the Linera native token (if any) and credits by creating content, selling artwork, reviewing, or participating in activities.
 
 ## Introduction
 
-Linera is a new generation L1 blockchain which supports horizontal scaling by the concept called *microchains*. Validators in Linera could adjust their workers based on network demand, thus it could bring web2 level QoS to the web3 industry.
+Linera is a new generation L1 blockchain that supports horizontal scaling by the concept called *microchains*. Validators in Linera could adjust their workers based on network demand, thus it could bring web2 level QoS to the web3 industry.
 
 ResPeer is the first real-time social feed application on Linera. ResPeer aims to build a creator's community in which creators could monetize their work fairly in the web3 world.
 
 Traditional monolithic chains pack transactions into blocks, then the blocks will be confirmed by validators to reach consensus. Due to all participants of the network competing for limited block space, some transactions have to wait for a long time to be processed.
 
-Running a social feed application needs different resources: storage space for persistent messages, real-time notification for new content, scalability for burst access, etc. We have to leverage a lot of work to centralized servers, or integrate different chains for the mentioned requirements. In Linera, we can do all of these in one blockchain.
+Running a social feed application needs different resources: storage space for persistent messages, real-time notification for new content, scalability for burst access, etc. We have to leverage a lot of work to centralized servers or integrate different chains for the mentioned requirements. In Linera, we can do all of these in one blockchain.
 
 We can persist messages, content and images to blob storage which works as a Content Addressable Network, and stored contents will be replicated in the Linera network automatically. We can implement real-time notification with a native data stream. Most importantly, the message won't wait in the mempool any more, it could reach its target quickly. All of those are the basement to implement a web2-level web3 social feed application.
 
@@ -24,11 +24,11 @@ An initial credit supply will be established when the application is deployed to
 
 ResPeer provides a market for asset producers to showcase their work. Producers set the price of their work in Linera. The market has a unique setting that defines the exchange rate of credits and Linera tokens. When a user buys assets, if they have credits, they can pay for the work with Linera tokens and credits. A fixed ratio of the asset sale amount will be deposited into the foundation application, which will be used to reward the content creators and pay the fees for the reviewers.
 
-ResPeer also implements a copilot to help creators improve their work with Linera Edge Generative AI. When a creator has a new task, they can select computing resources from the computing provider registry and then pay the provider for their task.
+ResPeer also implements a copilot to help creators improve their work with Linera Edge Generative AI. When a creator has a new task, they can select computing resources from the computing provider registry and then pay the provider for their tasks.
 
 ## Governance
 
-As a web3 content application, ResPeer designs a Reviewer DAO that will review all content before publishing. If creators want to list their works in the ResPeer application, they should submit their works to the Reviewer DAO first. The initial members of the Reviewer DAO are configured when the Reviewer application is created. Community members can apply to be a reviewer based on their contributions to the community and their resumes. All types of applications will be reviewed by Reviewer DAO members in a distributed manner. If an application receives enough approvals, it will be approved automatically. The members of the Reviewer DAO can be removed by voting; thus, if some members exhibit disputed behavior, any Reviewer DAO member can propose to remove the disputed member, and the disputed account will be removed automatically after the proposal is approved.
+As a web3 content application, ResPeer designs a Reviewer DAO that will review all content before publishing. If creators want to list their works in the ResPeer application, they should submit their works to the Reviewer DAO first. The initial members of the Reviewer DAO are configured when the Reviewer application is created. Community members can apply to be  reviewer based on their contributions to the community and their resumes. All types of applications will be reviewed by Reviewer DAO members in a distributed manner. If an application receives enough approvals, it will be approved automatically. The members of the Reviewer DAO can be removed by voting; thus, if some members exhibit disputed behavior, any Reviewer DAO member can propose to remove the disputed member, and the disputed account will be removed automatically after the proposal is approved.
 
 ## Creator Economy
 
