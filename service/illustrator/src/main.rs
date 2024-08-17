@@ -53,7 +53,6 @@ fn handle_connection(mut stream: TcpStream) {
               err.to_string()
             },
           };
-          let contents = sd::run(args, prompt);
           let length = contents.len();
           response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
       } else {
