@@ -10,6 +10,20 @@ members = [
     "illustrator",
     "blob-gateway",
     "cp-registry",
+    "service/copilot",
+    "service/illustrator",
+]
+default-members = [
+    "credit",
+    "feed",
+    "market",
+    "foundation",
+    "review",
+    "activity",
+    "copilot",
+    "illustrator",
+    "blob-gateway",
+    "cp-registry",
 ]
 resolver = "2"
 

@@ -1,5 +1,5 @@
 [package]
-name = "copilot"
+name = "copilot-service"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,6 +17,6 @@ hf-hub = "0.3.0"
 serde_json = "1.0.114"
 
 [features]
-default = []
+default = ["cuda"]
 cuda = ["candle-core/cuda", "candle-nn/cuda", "candle-transformers/cuda"]
 cudnn = ["candle-core/cudnn"]
