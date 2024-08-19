@@ -1,12 +1,14 @@
-
 use candle_transformers::models::stable_diffusion;
 
 use anyhow::{Error as E, Result as AnyResult};
-use candle_core::{DType, Device, IndexOp, Module, Result as CandleResult, Tensor, D, utils::{cuda_is_available, metal_is_available}};
+use candle_core::{
+    utils::{cuda_is_available, metal_is_available},
+    DType, Device, IndexOp, Module, Result as CandleResult, Tensor, D,
+};
 use clap::Parser;
-use tokenizers::Tokenizer;
 use image::{ImageBuffer, Rgb};
 use std::io::Cursor;
+use tokenizers::Tokenizer;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -226,48 +228,50 @@ impl ModelFile {
 
 #[allow(clippy::too_many_arguments)]
 fn generate_image(
-  vae: &stable_diffusion::vae::AutoEncoderKL,
-  latents: &Tensor,
-  vae_scale: f64,
-  bsize: usize,
+    vae: &stable_diffusion::vae::AutoEncoderKL,
+    latents: &Tensor,
+    vae_scale: f64,
+    bsize: usize,
 ) -> AnyResult<String> {
-  let images = vae.decode(&(latents / vae_scale)?)?;
-  let images = ((images / 2.)? + 0.5)?.to_device(&Device::Cpu)?;
-  let images = (images.clamp(0f32, 1.)? * 255.)?.to_dtype(DType::U8)?;
-  let mut image_base64_str = String::new();
-  for batch in 0..bsize {
-      let image = images.i(batch)?;
-      image_base64_str = generate_image_data(&image)?;
-  }
-  Ok(image_base64_str)
+    let images = vae.decode(&(latents / vae_scale)?)?;
+    let images = ((images / 2.)? + 0.5)?.to_device(&Device::Cpu)?;
+    let images = (images.clamp(0f32, 1.)? * 255.)?.to_dtype(DType::U8)?;
+    let mut image_base64_str = String::new();
+    for batch in 0..bsize {
+        let image = images.i(batch)?;
+        image_base64_str = generate_image_data(&image)?;
+    }
+    Ok(image_base64_str)
 }
 
 pub fn generate_image_data(img: &Tensor) -> CandleResult<String> {
-  let (channel, height, width) = img.dims3()?;
-  if channel != 3 {
-      candle_core::bail!("generate_image expects an input of shape (3, height, width)")
-  }
-  let img = img.permute((1, 2, 0))?.flatten_all()?;
-  let pixels = img.to_vec1::<u8>()?;
-  let image: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> =
-      match image::ImageBuffer::from_raw(width as u32, height as u32, pixels) {
-          Some(image) => image,
-          None => candle_core::bail!("error saving image"),
-      };
-      let base64_string = convert_image_to_base64(image.clone());
-      println!("Base64 Encoded Image successful");
-      let image_head = "data:image/png;base64,".to_string();
-      let base64_img_string = image_head + &base64_string;
-      Ok(base64_img_string)
+    let (channel, height, width) = img.dims3()?;
+    if channel != 3 {
+        candle_core::bail!("generate_image expects an input of shape (3, height, width)")
+    }
+    let img = img.permute((1, 2, 0))?.flatten_all()?;
+    let pixels = img.to_vec1::<u8>()?;
+    let image: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> =
+        match image::ImageBuffer::from_raw(width as u32, height as u32, pixels) {
+            Some(image) => image,
+            None => candle_core::bail!("error saving image"),
+        };
+    let base64_string = convert_image_to_base64(image.clone());
+    println!("Base64 Encoded Image successful");
+    let image_head = "data:image/png;base64,".to_string();
+    let base64_img_string = image_head + &base64_string;
+    Ok(base64_img_string)
 }
 
 fn convert_image_to_base64(image: ImageBuffer<Rgb<u8>, Vec<u8>>) -> String {
-  let mut buffer = Vec::new();
-  {
-      let mut cursor = Cursor::new(&mut buffer);
-      image.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
-  }
-  base64::encode(&buffer)
+    let mut buffer = Vec::new();
+    {
+        let mut cursor = Cursor::new(&mut buffer);
+        image
+            .write_to(&mut cursor, image::ImageFormat::Png)
+            .unwrap();
+    }
+    base64::encode(&buffer)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -301,7 +305,7 @@ fn text_embeddings(
         .map_err(E::msg)?
         .get_ids()
         .to_vec();
-    
+
     if tokens.len() > sd_config.clip.max_position_embeddings {
         anyhow::bail!(
             "the prompt is too long, {} > max-tokens ({})",
@@ -397,7 +401,7 @@ pub fn build_device(cpu: bool) -> CandleResult<Device> {
         }
         Ok(Device::Cpu)
     }
-  }
+}
 
 pub fn run(args: Args, prompt: String) -> AnyResult<String> {
     if prompt == "" {
@@ -589,12 +593,7 @@ pub fn run(args: Args, prompt: String) -> AnyResult<String> {
             idx + 1,
             num_samples
         );
-        image_base64_str = generate_image(
-            &vae,
-            &latents,
-            vae_scale,
-            bsize,
-        )?;
+        image_base64_str = generate_image(&vae, &latents, vae_scale, bsize)?;
     }
     Ok(image_base64_str)
 }

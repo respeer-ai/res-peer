@@ -67,7 +67,7 @@ impl Illustrator {
         queries.push(query_id);
         Ok(self.query_deposits.insert(&owner, queries)?)
     }
-    
+
     pub(crate) async fn query_fetch_server_url(&self) -> String {
         match &self.fetch_server_url.get() {
             None => String::new(),

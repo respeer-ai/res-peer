@@ -1,13 +1,18 @@
-use std::io::Write;
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 
 use candle_transformers::models::quantized_t5 as t5;
 
 use anyhow::{Error as E, Result as AnyResult};
-use candle_core::{Device, Tensor, Result as CandleResult, utils::{cuda_is_available, metal_is_available}};
+use candle_core::{
+    utils::{cuda_is_available, metal_is_available},
+    Device, Result as CandleResult, Tensor,
+};
 use candle_transformers::generation::LogitsProcessor;
 use clap::{Parser, ValueEnum};
-use hf_hub::{api::sync::Api, api::sync::ApiRepo, Repo, RepoType};
+use hf_hub::{
+    api::sync::{Api, ApiRepo},
+    Repo, RepoType,
+};
 use tokenizers::Tokenizer;
 
 #[derive(Clone, Debug, Copy, ValueEnum)]
@@ -151,104 +156,104 @@ impl T5ModelBuilder {
 }
 
 pub fn build_device(cpu: bool) -> CandleResult<Device> {
-  if cpu {
-      Ok(Device::Cpu)
-  } else if cuda_is_available() {
-      Ok(Device::new_cuda(0)?)
-  } else if metal_is_available() {
-      Ok(Device::new_metal(0)?)
-  } else {
-      #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-      {
-          println!(
-              "Running on CPU, to run on GPU(metal), build this example with `--features metal`"
-          );
-      }
-      #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-      {
-          println!("Running on CPU, to run on GPU, build this example with `--features cuda`");
-      }
-      Ok(Device::Cpu)
-  }
+    if cpu {
+        Ok(Device::Cpu)
+    } else if cuda_is_available() {
+        Ok(Device::new_cuda(0)?)
+    } else if metal_is_available() {
+        Ok(Device::new_metal(0)?)
+    } else {
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        {
+            println!(
+                "Running on CPU, to run on GPU(metal), build this example with `--features metal`"
+            );
+        }
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+        {
+            println!("Running on CPU, to run on GPU, build this example with `--features cuda`");
+        }
+        Ok(Device::Cpu)
+    }
 }
 
 pub fn run(args: Args, prompt: String) -> AnyResult<String> {
-  if prompt.is_empty() || prompt == "" {
-    return Ok("invalid prompt".to_string())
-  }
+    if prompt.is_empty() || prompt == "" {
+        return Ok("invalid prompt".to_string());
+    }
 
-  let mut output = String::new();
+    let mut output = String::new();
 
-  let device = build_device(args.cpu)?;
+    let device = build_device(args.cpu)?;
 
-  let (builder, mut tokenizer) = T5ModelBuilder::load(&args)?;
-  // let device = &builder.device;
-  let tokenizer = tokenizer
-      .with_padding(None)
-      .with_truncation(None)
-      .map_err(E::msg)?;
-  let tokens = tokenizer
-      .encode(prompt, true)
-      .map_err(E::msg)?
-      .get_ids()
-      .to_vec();
-  let input_token_ids = Tensor::new(&tokens[..], &device)?.unsqueeze(0)?;
-  let mut model = builder.build_model(device.clone())?;
-  let mut output_token_ids = [builder
-      .config
-      .decoder_start_token_id
-      .unwrap_or(builder.config.pad_token_id) as u32]
-  .to_vec();
-  let temperature = if args.temperature <= 0. {
-      None
-  } else {
-      Some(args.temperature)
-  };
-  let mut logits_processor = LogitsProcessor::new(299792458, temperature, args.top_p);
-  let encoder_output = model.encode(&input_token_ids)?;
-  let start = std::time::Instant::now();
+    let (builder, mut tokenizer) = T5ModelBuilder::load(&args)?;
+    // let device = &builder.device;
+    let tokenizer = tokenizer
+        .with_padding(None)
+        .with_truncation(None)
+        .map_err(E::msg)?;
+    let tokens = tokenizer
+        .encode(prompt, true)
+        .map_err(E::msg)?
+        .get_ids()
+        .to_vec();
+    let input_token_ids = Tensor::new(&tokens[..], &device)?.unsqueeze(0)?;
+    let mut model = builder.build_model(device.clone())?;
+    let mut output_token_ids = [builder
+        .config
+        .decoder_start_token_id
+        .unwrap_or(builder.config.pad_token_id) as u32]
+    .to_vec();
+    let temperature = if args.temperature <= 0. {
+        None
+    } else {
+        Some(args.temperature)
+    };
+    let mut logits_processor = LogitsProcessor::new(299792458, temperature, args.top_p);
+    let encoder_output = model.encode(&input_token_ids)?;
+    let start = std::time::Instant::now();
 
-  for index in 0.. {
-      if output_token_ids.len() > 512 {
-          break;
-      }
-      let decoder_token_ids = if index == 0 || !builder.config.use_cache {
-          Tensor::new(output_token_ids.as_slice(), &device.clone())?.unsqueeze(0)?
-      } else {
-          let last_token = *output_token_ids.last().unwrap();
-          Tensor::new(&[last_token], &device.clone())?.unsqueeze(0)?
-      };
-      let logits = model
-          .decode(&decoder_token_ids, &encoder_output)?
-          .squeeze(0)?;
-      let logits = if args.repeat_penalty == 1. {
-          logits
-      } else {
-          let start_at = output_token_ids.len().saturating_sub(args.repeat_last_n);
-          candle_transformers::utils::apply_repeat_penalty(
-              &logits,
-              args.repeat_penalty,
-              &output_token_ids[start_at..],
-          )?
-      };
+    for index in 0.. {
+        if output_token_ids.len() > 512 {
+            break;
+        }
+        let decoder_token_ids = if index == 0 || !builder.config.use_cache {
+            Tensor::new(output_token_ids.as_slice(), &device.clone())?.unsqueeze(0)?
+        } else {
+            let last_token = *output_token_ids.last().unwrap();
+            Tensor::new(&[last_token], &device.clone())?.unsqueeze(0)?
+        };
+        let logits = model
+            .decode(&decoder_token_ids, &encoder_output)?
+            .squeeze(0)?;
+        let logits = if args.repeat_penalty == 1. {
+            logits
+        } else {
+            let start_at = output_token_ids.len().saturating_sub(args.repeat_last_n);
+            candle_transformers::utils::apply_repeat_penalty(
+                &logits,
+                args.repeat_penalty,
+                &output_token_ids[start_at..],
+            )?
+        };
 
-      let next_token_id = logits_processor.sample(&logits)?;
-      if next_token_id as usize == builder.config.eos_token_id {
-          break;
-      }
-      output_token_ids.push(next_token_id);
-      if let Some(text) = tokenizer.id_to_token(next_token_id) {
-          let text = text.replace('▁', " ").replace("<0x0A>", "\n");
-          print!("{text}");
-          output.push_str(&text);
-          std::io::stdout().flush()?;
-      }
-  }
-  let dt = start.elapsed();
-  println!(
-      "\n{} tokens generated ({:.2} token/s)\n",
-      output_token_ids.len(),
-      output_token_ids.len() as f64 / dt.as_secs_f64(),
-  );
-  Ok(output)
+        let next_token_id = logits_processor.sample(&logits)?;
+        if next_token_id as usize == builder.config.eos_token_id {
+            break;
+        }
+        output_token_ids.push(next_token_id);
+        if let Some(text) = tokenizer.id_to_token(next_token_id) {
+            let text = text.replace('▁', " ").replace("<0x0A>", "\n");
+            print!("{text}");
+            output.push_str(&text);
+            std::io::stdout().flush()?;
+        }
+    }
+    let dt = start.elapsed();
+    println!(
+        "\n{} tokens generated ({:.2} token/s)\n",
+        output_token_ids.len(),
+        output_token_ids.len() as f64 / dt.as_secs_f64(),
+    );
+    Ok(output)
 }
