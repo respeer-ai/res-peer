@@ -6,14 +6,14 @@
 mod state;
 
 use std::{
-    str::FromStr,
     sync::{Arc, Mutex},
 };
 
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
 use linera_sdk::{
-    base::{Blob, BlobId, WithServiceAbi},
+    base::{WithServiceAbi},
     Service, ServiceRuntime,
+    DataBlobHash,
 };
 
 pub struct BlobGatewayService {
@@ -34,10 +34,9 @@ struct QueryRoot {}
 
 #[Object]
 impl QueryRoot {
-    async fn fetch(&self, ctx: &Context<'_>, blob_id: String) -> Result<Blob, anyhow::Error> {
-        let blob_id = BlobId::from_str(&blob_id)?;
+    async fn fetch(&self, ctx: &Context<'_>, blob_hash: DataBlobHash) -> Result<Vec<u8>, anyhow::Error> {
         let ctx = ctx.data::<FetchContext>().unwrap();
-        Ok(ctx.runtime.lock().unwrap().read_blob(blob_id).into_inner())
+        Ok(ctx.runtime.lock().unwrap().read_data_blob(blob_hash))
     }
 }
 

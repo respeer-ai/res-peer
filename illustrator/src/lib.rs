@@ -61,9 +61,9 @@ impl Into<cp_registry::RegisterParameters> for InstantiationArgument {
             brand_name: self.brand_name,
             link: self.link_base,
             application_id: ApplicationId::from_str(
-                "1db1936dad0717597a7743a8353c9c0191c14c3a129b258e9743aec2b4f05d031800000000000000000000001db1936dad0717597a7743a8353c9c0191c14c3a129b258e9743aec2b4f05d031a0000000000000000000000",
-            ).
-            expect("Invalid applicationId"),
+                "0c6e5c22f1934a607c90f3e40033604bcfcecc05e147a92241aa4f56786e5b676c0b401ef871a3110eb328b64bc54dcc4ec9a286220f95ea3d766ce3f4c8dc611db1936dad0717597a7743a8353c9c0191c14c3a129b258e9743aec2b4f05d030f0000000000000000000000",
+            )
+            .expect("Invalid applicationId"),
             resource_type: self.resource_type,
             device_model: self.device_model,
             cpu_model: self.cpu_model,
