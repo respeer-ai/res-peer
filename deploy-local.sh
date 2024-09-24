@@ -169,7 +169,11 @@ function run_new_service() {
   linera --with-wallet $1 wallet show
   print $'\U01f499' $LIGHTGREEN " Run $port service ..."
   LOG_FILE=`echo $SERVICE_LOG_FILE | sed "s/8080/$port/g"`
-  linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
+  # linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
+  linera --with-wallet $1 service --port $port > $LOG_FILE 2>&1 &
+  BASE_CAT_PORT=20201
+  cat_port=`expr $BASE_CAT_PORT + $1`
+  socat TCP4-LISTEN:$cat_port TCP4:localhost:$port &
 }
 
 for i in `seq 1 $SERVICE_WALLET_NUMBER`; do
