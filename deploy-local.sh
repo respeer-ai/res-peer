@@ -162,6 +162,11 @@ sed -i "s/illustratorGpuApp =.*/illustratorGpuApp = '$illustrator_gpu_appid'/g" 
 sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
 sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts
 
+function _run_service() {
+  linera --with-wallet $1 service --external-signing false --port $2 > $LOG_FILE 2>&1
+  [ ! $? -eq 0 ] && linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
+}
+
 function run_new_service() {
   BASE_PORT=9080
   port=`expr $BASE_PORT + $1`
@@ -169,8 +174,7 @@ function run_new_service() {
   linera --with-wallet $1 wallet show
   print $'\U01f499' $LIGHTGREEN " Run $port service ..."
   LOG_FILE=`echo $SERVICE_LOG_FILE | sed "s/8080/$port/g"`
-  # linera --with-wallet $1 service --external-signing false --port $port > $LOG_FILE 2>&1 &
-  linera --with-wallet $1 service --port $port > $LOG_FILE 2>&1 &
+  _run_service $1 $port &
   BASE_CAT_PORT=20201
   cat_port=`expr $BASE_CAT_PORT + $1`
   socat TCP4-LISTEN:$cat_port TCP4:localhost:$port &
