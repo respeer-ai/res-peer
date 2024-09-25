@@ -164,7 +164,10 @@ sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_de
 
 function _run_service() {
   linera --with-wallet $1 service --external-signing false --port $2 > $LOG_FILE 2>&1
-  [ ! $? -eq 0 ] && linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
+  if [ ! $? -eq 0 ]; then
+    print $'\U01f499' $LIGHTGREEN " Run with official release ..."
+    linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
+  fi
 }
 
 function run_new_service() {

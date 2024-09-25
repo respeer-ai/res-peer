@@ -5,8 +5,11 @@ linera wallet init --faucet http://localhost:8080 --with-new-chain
 linera wallet show
 
 function run_service () {
-  linera service --port 30080 --external-signing false
-  [ ! $? -eq 0 ] && linera service --port 30080
+  linera service --port 30080 --external-signing true
+  if [ ! $? -eq 0 ]; then
+    echo "Run with official release"
+    linera service --port 30080
+  fi
 }
 
 run_service &
