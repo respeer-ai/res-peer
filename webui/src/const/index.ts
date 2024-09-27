@@ -17,7 +17,7 @@ export const appIds = Object.values(Apps)
 
 /// Chain which is the application originally deployed
 export const appDeployChain = '1db1936dad0717597a7743a8353c9c0191c14c3a129b258e9743aec2b4f05d03'
-export const appDeployOwner = 'd50e245d94a46a5c99564099cf2226f8f196309debd1a60e30200c1b73cbac85'
+export const appDeployOwner = 'ba3b94014b8e475a04e4dae8ebe24e5d050eb943ab0f8db93b4cf55c1e692b89'
 
 /// Port should be set with different service
 export const port = '9080'
