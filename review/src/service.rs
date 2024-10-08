@@ -5,10 +5,7 @@ mod state;
 use self::state::Review;
 use async_graphql::{EmptySubscription, Request, Response, Schema};
 use linera_sdk::{
-    base::WithServiceAbi,
-    graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
-    Service, ServiceRuntime,
+    base::WithServiceAbi, graphql::GraphQLMutationRoot, views::View, Service, ServiceRuntime,
 };
 use review::{Operation, ReviewParameters};
 use std::sync::Arc;
@@ -27,7 +24,7 @@ impl Service for ReviewService {
     type Parameters = ReviewParameters;
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
-        let state = Review::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Review::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         ReviewService {

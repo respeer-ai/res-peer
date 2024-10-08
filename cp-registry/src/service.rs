@@ -11,10 +11,7 @@ use self::state::CPRegistry;
 use async_graphql::{EmptySubscription, Request, Response, Schema};
 use cp_registry::Operation;
 use linera_sdk::{
-    base::WithServiceAbi,
-    graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
-    Service, ServiceRuntime,
+    base::WithServiceAbi, graphql::GraphQLMutationRoot, views::View, Service, ServiceRuntime,
 };
 
 pub struct CPRegistryService {
@@ -31,7 +28,7 @@ impl Service for CPRegistryService {
     type Parameters = ();
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
-        let state = CPRegistry::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = CPRegistry::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         CPRegistryService {

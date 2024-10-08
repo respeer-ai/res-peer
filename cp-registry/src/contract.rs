@@ -12,7 +12,7 @@ use cp_registry::{
 };
 use linera_sdk::{
     base::{ChannelName, CryptoHash, Destination, MessageId, WithContractAbi},
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 
@@ -35,7 +35,7 @@ impl Contract for CPRegistryContract {
     type Parameters = ();
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = CPRegistry::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = CPRegistry::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         CPRegistryContract { state, runtime }

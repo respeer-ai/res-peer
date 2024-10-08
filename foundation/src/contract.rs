@@ -10,7 +10,7 @@ use foundation::{
 };
 use linera_sdk::{
     base::{Amount, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 
@@ -33,7 +33,7 @@ impl Contract for FoundationContract {
     type Parameters = ();
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Foundation::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Foundation::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         FoundationContract { state, runtime }

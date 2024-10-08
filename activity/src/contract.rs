@@ -13,7 +13,7 @@ use feed::{FeedAbi, FeedResponse};
 use foundation::{FoundationAbi, FoundationResponse};
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 use review::{ReviewAbi, ReviewResponse};
@@ -37,7 +37,7 @@ impl Contract for ActivityContract {
     type Parameters = ActivityParameters;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Activity::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Activity::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         ActivityContract { state, runtime }

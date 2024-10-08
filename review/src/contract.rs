@@ -12,7 +12,7 @@ use linera_sdk::{
     base::{
         Amount, ApplicationId, ChainId, ChannelName, Destination, MessageId, Owner, WithContractAbi,
     },
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 // use linera_views::views::ViewError;
@@ -41,7 +41,7 @@ impl Contract for ReviewContract {
     type Parameters = ReviewParameters;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Review::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Review::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         ReviewContract { state, runtime }

@@ -6,7 +6,7 @@ use self::state::Credit;
 use credit::{CreditAbi, CreditError, InstantiationArgument, Message, Operation};
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 
@@ -29,7 +29,7 @@ impl Contract for CreditContract {
     type Parameters = ();
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Credit::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Credit::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         CreditContract { state, runtime }

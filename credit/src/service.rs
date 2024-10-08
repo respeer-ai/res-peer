@@ -6,10 +6,7 @@ use self::state::Credit;
 use async_graphql::{EmptySubscription, Request, Response, Schema};
 use credit::Operation;
 use linera_sdk::{
-    base::WithServiceAbi,
-    graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
-    Service, ServiceRuntime,
+    base::WithServiceAbi, graphql::GraphQLMutationRoot, views::View, Service, ServiceRuntime,
 };
 use std::sync::Arc;
 
@@ -27,7 +24,7 @@ impl Service for CreditService {
     type Parameters = ();
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
-        let state = Credit::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Credit::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         CreditService {

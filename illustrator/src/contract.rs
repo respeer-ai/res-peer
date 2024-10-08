@@ -13,7 +13,7 @@ use illustrator::{
 };
 use linera_sdk::{
     base::{Account, Amount, ApplicationId, ChannelName, CryptoHash, MessageId, WithContractAbi},
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 
@@ -36,7 +36,7 @@ impl Contract for IllustratorContract {
     type Parameters = IllustratorParameters;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Illustrator::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Illustrator::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         IllustratorContract { state, runtime }

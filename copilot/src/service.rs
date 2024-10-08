@@ -20,7 +20,7 @@ use linera_sdk::{
         Amount, BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi,
     },
     graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
+    views::View,
     Service, ServiceRuntime,
 };
 use log::info;
@@ -229,7 +229,7 @@ impl Service for CopilotService {
             tokenizer: tokenizer_bytes,
         };
 
-        let state = Copilot::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Copilot::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
 

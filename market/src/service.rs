@@ -5,10 +5,7 @@ mod state;
 use self::state::Market;
 use async_graphql::{EmptySubscription, Request, Response, Schema};
 use linera_sdk::{
-    base::WithServiceAbi,
-    graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
-    Service, ServiceRuntime,
+    base::WithServiceAbi, graphql::GraphQLMutationRoot, views::View, Service, ServiceRuntime,
 };
 use market::{MarketParameters, Operation};
 use std::sync::Arc;
@@ -27,7 +24,7 @@ impl Service for MarketService {
     type Parameters = MarketParameters;
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
-        let state = Market::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Market::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         MarketService {

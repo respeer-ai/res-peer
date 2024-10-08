@@ -26,7 +26,7 @@ use linera_sdk::{
         Amount, BcsHashable, CryptoHash, Owner, PublicKey, Signature, Timestamp, WithServiceAbi,
     },
     graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
+    views::View,
     Service, ServiceRuntime,
 };
 use log::{error, info};
@@ -230,7 +230,7 @@ impl Service for IllustratorService {
             unet_weights: unet_weights_bytes,
         };
 
-        let state = Illustrator::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Illustrator::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
 

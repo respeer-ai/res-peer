@@ -6,10 +6,7 @@ use self::state::Activity;
 use activity::{ActivityParameters, Operation};
 use async_graphql::{EmptySubscription, Request, Response, Schema};
 use linera_sdk::{
-    base::WithServiceAbi,
-    graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
-    Service, ServiceRuntime,
+    base::WithServiceAbi, graphql::GraphQLMutationRoot, views::View, Service, ServiceRuntime,
 };
 use std::sync::Arc;
 
@@ -27,7 +24,7 @@ impl Service for ActivityService {
     type Parameters = ActivityParameters;
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
-        let state = Activity::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Activity::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         ActivityService {

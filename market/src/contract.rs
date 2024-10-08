@@ -7,7 +7,7 @@ use credit::CreditAbi;
 use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 use market::{InstantiationArgument, MarketError, MarketParameters, Message, Operation};
@@ -31,7 +31,7 @@ impl Contract for MarketContract {
     type Parameters = MarketParameters;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Market::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Market::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         MarketContract { state, runtime }

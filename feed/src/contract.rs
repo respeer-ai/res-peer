@@ -12,7 +12,7 @@ use feed::{
 use foundation::FoundationAbi;
 use linera_sdk::{
     base::{Amount, ApplicationId, ChannelName, Destination, MessageId, Owner, WithContractAbi},
-    views::{RootView, View, ViewStorageContext},
+    views::{RootView, View},
     Contract, ContractRuntime,
 };
 
@@ -35,7 +35,7 @@ impl Contract for FeedContract {
     type Parameters = FeedParameters;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
-        let state = Feed::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Feed::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         FeedContract { state, runtime }

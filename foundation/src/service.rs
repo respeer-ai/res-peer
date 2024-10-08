@@ -6,10 +6,7 @@ use self::state::Foundation;
 use async_graphql::{EmptySubscription, Request, Response, Schema};
 use foundation::Operation;
 use linera_sdk::{
-    base::WithServiceAbi,
-    graphql::GraphQLMutationRoot,
-    views::{View, ViewStorageContext},
-    Service, ServiceRuntime,
+    base::WithServiceAbi, graphql::GraphQLMutationRoot, views::View, Service, ServiceRuntime,
 };
 use std::sync::Arc;
 
@@ -27,7 +24,7 @@ impl Service for FoundationService {
     type Parameters = ();
 
     async fn new(runtime: ServiceRuntime<Self>) -> Self {
-        let state = Foundation::load(ViewStorageContext::from(runtime.key_value_store()))
+        let state = Foundation::load(runtime.root_view_storage_context())
             .await
             .expect("Failed to load state");
         FoundationService {
