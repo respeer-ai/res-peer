@@ -13,7 +13,8 @@ function print() {
   echo -e $1$2$3$NC
 }
 
-RUSTFLAGS="--cfg web_sys_unstable_apis --cfg tokio_unstable" cargo build --release --target wasm32-unknown-unknown
+unset RUSTFLAGS
+cargo build --release --target wasm32-unknown-unknown
 
 PROJECT_ROOT=/home/test
 export TMPDIR=/tmp
