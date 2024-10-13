@@ -1,8 +1,13 @@
 #!/bin/bash
 
-killall -15 linera > /dev/null 2>&1
-killall -15 linera-proxy > /dev/null 2>&1
-killall -15 linera-server > /dev/null 2>&1
+function cleanup() {
+  kill -15 `ps | grep linera-proxy | awk '{print $1}'` > /dev/null 2>&1
+  kill -15 `ps | grep linera-server | awk '{print $1}'` > /dev/null 2>&1
+  kill -15 `ps | grep linera | awk '{print $1}'` > /dev/null 2>&1
+  kill -9 `ps | grep socat | awk '{print $1}'` > /dev/null 2>&1
+}
+
+cleanup
 
 BLUE='\033[1;34m'
 YELLOW='\033[1;33m'
@@ -191,12 +196,6 @@ done
 print $'\U01f499' $LIGHTGREEN " Wallet of faucet ..."
 linera --with-wallet 0 wallet show
 linera --with-wallet 0 faucet --port 40080 --amount "10.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1 &
-
-function cleanup() {
-  killall -15 linera > /dev/null 2>&1
-  killall -15 linera-proxy > /dev/null 2>&1
-  killall -15 linera-server > /dev/null 2>&1
-}
 
 trap cleanup INT
 read -p "  Press any key to exit"
