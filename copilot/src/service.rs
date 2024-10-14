@@ -9,7 +9,7 @@ mod token;
 
 use std::sync::{Arc, Mutex};
 
-use ed25519_dalek::Verifier;
+use ed25519_dalek::{self as dalek, Verifier};
 
 use async_graphql::{Context, EmptySubscription, Object, Request, Response, Schema, SimpleObject};
 use candle_core::{Device, Tensor};
@@ -74,9 +74,8 @@ impl QueryRoot {
     ) -> Result<QueryId, CopilotError> {
         let hex_prompt = format!("{}", hex::encode(prompt.clone()));
         let bytes = hex::decode(hex_prompt)?;
-        public_key
-            .to_verifying_key()?
-            .verify(&bytes, &signature.0)?;
+        let verifying_key = dalek::VerifyingKey::from_bytes(&public_key.0)?;
+        verifying_key.verify(&bytes, &signature.0)?;
 
         let model_context = ctx.data::<Arc<ModelContext>>().unwrap();
         let timestamp = model_context.runtime.lock().unwrap().system_time();
@@ -121,9 +120,8 @@ impl QueryRoot {
 
         let hex_prompt = format!("{}", hex::encode(prompt.clone()));
         let bytes = hex::decode(hex_prompt)?;
-        public_key
-            .to_verifying_key()?
-            .verify(&bytes, &signature.0)?;
+        let verifying_key = dalek::VerifyingKey::from_bytes(&public_key.0)?;
+        verifying_key.verify(&bytes, &signature.0)?;
 
         let hash_input = HashInput {
             prompt: prompt.clone(),
