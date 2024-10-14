@@ -32,7 +32,7 @@ WALLET_NUMBER=5
 EXTRA_WALLET_NUMBER=`expr $WALLET_NUMBER - 1`
 SERVICE_WALLET_NUMBER=`expr $EXTRA_WALLET_NUMBER - 1`
 
-print $'\U01F4AB' $YELLOW " Running lienra net, log in $NODE_LOG_FILE ..."
+print $'\U01F4AB' $YELLOW " Running linera net, log in $NODE_LOG_FILE ..."
 lineradir=`whereis linera | awk '{print $2}'`
 lineradir=`dirname $lineradir`
 cd $lineradir
