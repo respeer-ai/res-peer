@@ -21,13 +21,13 @@ function print() {
 unset RUSTFLAGS
 cargo build --release --target wasm32-unknown-unknown
 
-PROJECT_ROOT=/home/test
+PROJECT_ROOT=$HOME/linera-project
 export TMPDIR=/tmp
 
-mkdir -p $PROJECT_ROOT/linera-project
-NODE_LOG_FILE=$PROJECT_ROOT/linera-project/linera.log
-SERVICE_LOG_FILE=$PROJECT_ROOT/linera-project/service_8080.log
-FAUCET_LOG_FILE=$PROJECT_ROOT/linera-project/faucet_8080.log
+mkdir -p $PROJECT_ROOT
+NODE_LOG_FILE=$PROJECT_ROOT/linera.log
+SERVICE_LOG_FILE=$PROJECT_ROOT/service_8080.log
+FAUCET_LOG_FILE=$PROJECT_ROOT/faucet_8080.log
 WALLET_NUMBER=5
 EXTRA_WALLET_NUMBER=`expr $WALLET_NUMBER - 1`
 SERVICE_WALLET_NUMBER=`expr $EXTRA_WALLET_NUMBER - 1`
