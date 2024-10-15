@@ -19,10 +19,10 @@ function print() {
 }
 
 unset RUSTFLAGS
+export TMPDIR=
 cargo build --release --target wasm32-unknown-unknown
 
 PROJECT_ROOT=$HOME/linera-project
-export TMPDIR=/tmp
 
 mkdir -p $PROJECT_ROOT
 NODE_LOG_FILE=$PROJECT_ROOT/linera.log
