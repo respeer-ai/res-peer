@@ -81,8 +81,8 @@ You should install yarn, rust before next steps.
 ```
 git clone https://github.com/linera-io/linera-protocol.git
 cd linera-protocol
-cargo install --path linera-service
-cargo install --path linera-storage-service
+cargo install --path linera-service --features storage-service
+cargo install --path linera-storage-service --features storage-service
 git clone https://github.com/respeer-ai/res-peer.git
 cd res-peer
 cargo build --release
