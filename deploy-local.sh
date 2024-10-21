@@ -36,7 +36,7 @@ print $'\U01F4AB' $YELLOW " Running linera net, log in $NODE_LOG_FILE ..."
 lineradir=`whereis linera | awk '{print $2}'`
 lineradir=`dirname $lineradir`
 cd $lineradir
-linera net up --extra-wallets $EXTRA_WALLET_NUMBER 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
+linera net up --initial-amount 100000000 --extra-wallets $EXTRA_WALLET_NUMBER 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
 cd -
 
 for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
@@ -195,7 +195,7 @@ done
 
 print $'\U01f499' $LIGHTGREEN " Wallet of faucet ..."
 linera --with-wallet 0 wallet show
-linera --with-wallet 0 faucet --port 40080 --amount "10.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1 &
+linera --with-wallet 0 faucet --port 40080 --amount "100.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1 &
 
 trap cleanup INT
 read -p "  Press any key to exit"
