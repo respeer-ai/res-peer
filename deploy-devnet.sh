@@ -22,14 +22,6 @@ function print() {
 }
 
 faucet_url=https://faucet.devnet-2024-09-04.linera.net
-
-options="f:"
-while getopts $options opt; do
-  case ${opt} in
-    f) faucet_url=${OPTARG} ;;
-  esac
-done
-
 PROJECT_ROOT=$HOME/linera-project
 
 NODE_LOG_FILE=$PROJECT_ROOT/linera.log
@@ -167,7 +159,7 @@ sed -i "s/feedApp =.*/feedApp = '$feed_appid',/g" webui/src/const/index.ts
 sed -i "s/creditApp =.*/creditApp = '$credit_appid',/g" webui/src/const/index.ts
 sed -i "s/marketApp =.*/marketApp = '$market_appid',/g" webui/src/const/index.ts
 sed -i "s/reviewApp =.*/reviewApp = '$review_appid',/g" webui/src/const/index.ts
-sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid'/g," webui/src/const/index.ts
+sed -i "s/foundationApp =.*/foundationApp = '$foundation_appid',/g" webui/src/const/index.ts
 sed -i "s/activityApp =.*/activityApp = '$activity_appid',/g" webui/src/const/index.ts
 sed -i "s/blobGatewayApp =.*/blobGatewayApp = '$blob_gateway_appid',/g" webui/src/const/index.ts
 sed -i "s/cpRegistryApp =.*/cpRegistryApp = '$cp_registry_appid',/g" webui/src/const/index.ts
