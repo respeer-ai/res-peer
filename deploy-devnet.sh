@@ -130,6 +130,9 @@ print $'\U01f499' $LIGHTGREEN " CPRegistry application deployed"
 echo -e "    Bytecode ID:    $BLUE$cp_registry_bid$NC"
 echo -e "    Application ID: $BLUE$cp_registry_appid$NC"
 
+app_deploy_chain=`linera --with-wallet 0 wallet show | grep "Public Key" | awk '{print $2}'`
+app_deploy_owner=`linera --with-wallet 0 wallet show | grep "Owner" | awk '{print $4}'`
+
 print $'\U01F4AB' $YELLOW " Deploying Copilot CPU application ..."
 copilot_cpu_bid=`linera --with-wallet 0 publish-bytecode ./target/wasm32-unknown-unknown/release/copilot_{contract,service}.wasm`
 copilot_cpu_appid=`linera --with-wallet 0 create-application $copilot_cpu_bid --json-argument "{\"node_id\":\"d7a776b018fefbd45d533d3031c101bb64c29d52423beb6e4d5cf84e322ef429\",\"brand_logo\":\"https://github.com/respeer-ai/res-peer/blob/master/webui/public/favicon.png?raw=true\",\"brand_name\":\"respeer.ai\",\"link_base\":\"http://172.16.31.73:9081\",\"resource_type\":\"CPU\",\"device_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"cpu_model\":\"Intel(R) Xeon(R) Silver 4214R CPU @ 2.40GHz\",\"storage_type\":\"NVME\",\"storage_bytes\":100000000000,\"memory_bytes\":256000000000,\"free_quota\":3,\"price_quota\":1,\"quota_price\":\"0.003\",\"supported_task_types\":[\"FixGrammar\",\"RewriteEasierUnderstand\",\"Paraphrase\",\"WriteFormally\",\"WriteMoreNeutral\"],\"payment_chain_id\":\"$app_deploy_chain\",\"ai_model\":\"CoEDiT T5\",\"ai_model_url\":\"https://huggingface.co/jbochi/candle-coedit-quantized\"}" --json-parameters "{\"cp_registry_app_id\":\"$cp_registry_appid\"}" --required-application-ids $cp_registry_appid`
@@ -160,10 +163,6 @@ print $'\U01f499' $LIGHTGREEN " Illustrator GPU application deployed"
 echo -e "    Bytecode ID:    $BLUE$illustrator_gpu_bid$NC"
 echo -e "    Application ID: $BLUE$illustrator_gpu_appid$NC"
 
-
-app_deploy_chain=`linera --with-wallet 0 wallet show | grep "Public Key" | awk '{print $2}'`
-app_deploy_owner=`linera --with-wallet 0 wallet show | grep "Owner" | awk '{print $4}'`
-
 sed -i "s/feedApp =.*/feedApp = '$feed_appid',/g" webui/src/const/index.ts
 sed -i "s/creditApp =.*/creditApp = '$credit_appid',/g" webui/src/const/index.ts
 sed -i "s/marketApp =.*/marketApp = '$market_appid',/g" webui/src/const/index.ts
@@ -176,11 +175,12 @@ sed -i "s/copilotCpuApp =.*/copilotCpuApp = '$copilot_cpu_appid',/g" webui/src/c
 sed -i "s/copilotGpuApp =.*/copilotGpuApp = '$copilot_gpu_appid',/g" webui/src/const/index.ts
 sed -i "s/illustratorCpuApp =.*/illustratorCpuApp = '$illustrator_cpu_appid',/g" webui/src/const/index.ts
 sed -i "s/illustratorGpuApp =.*/illustratorGpuApp = '$illustrator_gpu_appid'/g" webui/src/const/index.ts
+
 sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
 sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts
 
 for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
-  run_service $i
+  run_service $i &
 done
 
 trap cleanup INT
