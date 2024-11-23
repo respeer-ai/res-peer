@@ -169,11 +169,7 @@ sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_de
 sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts
 
 function _run_service() {
-  linera --with-wallet $1 service --external-signing false --port $2 > $LOG_FILE 2>&1
-  if [ ! $? -eq 0 ]; then
-    print $'\U01f499' $LIGHTGREEN " Run with official release ..."
-    linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
-  fi
+  linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
 }
 
 function run_new_service() {
