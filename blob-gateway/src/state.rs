@@ -1,7 +1,15 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::{Deserialize, Serialize};
+use async_graphql::SimpleObject;
+use blob_gateway::BlobData;
+use linera_sdk::{
+    base::CryptoHash,
+    views::{linera_views, MapView, RootView, ViewStorageContext},
+};
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-pub struct BlobGateway {}
+#[derive(RootView, SimpleObject)]
+#[view(context = "ViewStorageContext")]
+pub struct BlobGateway {
+    pub blobs: MapView<CryptoHash, BlobData>,
+}

@@ -37,7 +37,7 @@ linera-sdk = { version = "0.13.0", git = "https://github.com/linera-io/linera-pr
 linera-views = { version = "0.13.0", git = "https://github.com/linera-io/linera-protocol.git", rev = "v0.13.0" }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
-thiserror = "1.0.57"
+thiserror = "^1.0.65"
 cid = "0.10.1"
 log = "0.4.21"
 tokio-stream = "0.1.14"
