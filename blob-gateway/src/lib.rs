@@ -10,11 +10,17 @@ use linera_views::views::ViewError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub enum BlobGatewayResponse {
+    #[default]
+    Ok,
+}
+
 pub struct BlobGatewayAbi;
 
 impl ContractAbi for BlobGatewayAbi {
     type Operation = Operation;
-    type Response = ();
+    type Response = BlobGatewayResponse;
 }
 
 impl ServiceAbi for BlobGatewayAbi {
@@ -25,7 +31,9 @@ impl ServiceAbi for BlobGatewayAbi {
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
 pub enum BlobDataType {
     Image,
-    Text,
+    Video,
+    Html,
+    Raw,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq)]
@@ -38,6 +46,14 @@ pub struct BlobData {
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
+    Register {
+        data_type: BlobDataType,
+        blob_hash: CryptoHash,
+    },
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum Message {
     Register {
         data_type: BlobDataType,
         blob_hash: CryptoHash,
