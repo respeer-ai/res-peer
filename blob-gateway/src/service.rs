@@ -8,9 +8,9 @@ mod state;
 use std::sync::{Arc, Mutex};
 
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Request, Response, Schema};
-use linera_sdk::{base::WithServiceAbi, views::View, DataBlobHash, Service, ServiceRuntime};
+use linera_sdk::{base::{WithServiceAbi, Timestamp}, views::View, DataBlobHash, Service, ServiceRuntime};
 
-use blob_gateway::BlobData;
+use blob_gateway::{BlobData, BlobDataType};
 use state::BlobGateway;
 
 pub struct BlobGatewayService {
@@ -42,7 +42,14 @@ impl QueryRoot {
         Ok(ctx.runtime.lock().unwrap().read_data_blob(blob_hash))
     }
 
-    async fn list(&self, ctx: &Context<'_>) -> Result<Vec<BlobData>, anyhow::Error> {
+    async fn list(
+        &self, 
+        ctx: &Context<'_>,
+        created_before: Option<Timestamp>,
+        created_after: Option<Timestamp>,
+        data_type: Option<BlobDataType>,
+        limit: usize
+    ) -> Result<Vec<BlobData>, anyhow::Error> {
         let ctx = ctx.data::<FetchContext>().unwrap();
         let mut blobs = Vec::new();
 
@@ -53,8 +60,19 @@ impl QueryRoot {
                 Ok(())
             })
             .await?;
-
-        Ok(blobs)
+        blobs.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        
+        let filtered: Vec<BlobData> = blobs
+        .into_iter()
+        .filter(|item| {
+            let before_condition = created_before.map_or(true, |before| item.created_at < before);
+            let after_condition = created_after.map_or(true, |after| item.created_at > after);
+            let application_type_condition = data_type.map_or(true, |data| item.data_type == data);
+            before_condition && after_condition && application_type_condition
+        })
+        .collect();
+        let results = filtered.into_iter().take(limit).collect();
+        Ok(results)
     }
 }
 
