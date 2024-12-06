@@ -168,6 +168,9 @@ sed -i "s/illustratorGpuApp =.*/illustratorGpuApp = '$illustrator_gpu_appid'/g" 
 sed -i "s/export const appDeployChain =.*/export const appDeployChain = '$app_deploy_chain'/g" webui/src/const/index.ts
 sed -i "s/export const appDeployOwner =.*/export const appDeployOwner = '$app_deploy_owner'/g" webui/src/const/index.ts
 
+sed -i "s/blob_gateway_app_id=.*/blob_gateway_app_id=\"$blob_gateway_appid\"/g" ../linera-dapps/deploy-local.sh
+sed -i "s/blob_gateway_creation_chain_id=.*/blob_gateway_creation_chain_id=\"$blob_gateway_bid\"/g" ../linera-dapps/deploy-local.sh
+
 function _run_service() {
   linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
 }
