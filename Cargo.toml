@@ -72,7 +72,7 @@ cp-registry = { path = "./cp-registry" }
 debug = true
 lto = true
 opt-level = 'z'
-strip = 'debuginfo'
+strip = true
 
 [profile.bench]
 debug = true
