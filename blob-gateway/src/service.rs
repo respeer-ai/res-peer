@@ -60,7 +60,7 @@ impl QueryRoot {
                 Ok(())
             })
             .await?;
-        blobs.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        blobs.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         
         let filtered: Vec<BlobData> = blobs
         .into_iter()
