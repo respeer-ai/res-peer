@@ -9,59 +9,109 @@ function cleanup() {
 
 cleanup
 
+options="N:n:"
+
+while getopts $options opt; do
+  case ${opt} in
+    N) NETWORK_TYPE=${OPTARG} ;;
+    n) NETWORK_ID=${OPTARG} ;;
+  esac
+done
+
+case $NETWORK_TYPE in
+  localnet)
+    faucet_url=http://localhost:40080
+    ;;
+  testnet-archimedes)
+    faucet_url=https://faucet.testnet-archimedes.linera.net
+    ;;
+  devnet|*)
+    faucet_url=https://faucet.devnet-2024-09-04.linera.net
+    ;;
+esac
+
+case $NETWORK_ID in
+  1)
+    WALLET_10_PUBLIC_IPORT='210.209.69.38:23099'
+    WALLET_11_PUBLIC_IPORT='210.209.69.38:23101'
+    WALLET_12_PUBLIC_IPORT='210.209.69.38:23103'
+    WALLET_13_PUBLIC_IPORT='210.209.69.38:23105'
+    WALLET_14_PUBLIC_IPORT='210.209.69.38:23106'
+    BLOB_GATEWAY_PUBLIC_IPORT='210.209.69.38:23107'
+    LOCAL_IP='172.21.132.203'
+    ;;
+  2)
+    WALLET_10_PUBLIC_IPORT='172.16.31.73:40110'
+    WALLET_11_PUBLIC_IPORT='172.16.31.73:40111'
+    WALLET_12_PUBLIC_IPORT='172.16.31.73:40112'
+    WALLET_13_PUBLIC_IPORT='172.16.31.73:40113'
+    WALLET_14_PUBLIC_IPORT='172.16.31.73:40114'
+    BLOB_GATEWAY_PUBLIC_IPORT='172.16.31.73:23105'
+    LOCAL_IP='172.16.31.73'
+    ;;
+  3)
+    WALLET_10_PUBLIC_IPORT='localhost:30090'
+    WALLET_11_PUBLIC_IPORT='localhost:30091'
+    WALLET_12_PUBLIC_IPORT='localhost:30092'
+    WALLET_13_PUBLIC_IPORT='localhost:30093'
+    WALLET_14_PUBLIC_IPORT='localhost:30094'
+    BLOB_GATEWAY_PUBLIC_IPORT='localhost:9081'
+    LOCAL_IP='localhost'
+    ;;
+  4)
+    WALLET_10_PUBLIC_IPORT='172.16.31.73:30090'
+    WALLET_11_PUBLIC_IPORT='172.16.31.73:30091'
+    WALLET_12_PUBLIC_IPORT='172.16.31.73:30092'
+    WALLET_13_PUBLIC_IPORT='172.16.31.73:30093'
+    WALLET_14_PUBLIC_IPORT='172.16.31.73:30094'
+    BLOB_GATEWAY_PUBLIC_IPORT='172.16.31.73:9081'
+    LOCAL_IP='172.16.31.73'
+    ;;
+  5)
+    WALLET_10_PUBLIC_IPORT='172.16.31.42:30090'
+    WALLET_11_PUBLIC_IPORT='172.16.31.42:30091'
+    WALLET_12_PUBLIC_IPORT='172.16.31.42:30092'
+    WALLET_13_PUBLIC_IPORT='172.16.31.42:30093'
+    WALLET_14_PUBLIC_IPORT='172.16.31.42:30094'
+    BLOB_GATEWAY_PUBLIC_IPORT='172.16.31.42:9081'
+    LOCAL_IP='172.16.31.42'
+    ;;
+esac
+
 BLUE='\033[1;34m'
 YELLOW='\033[1;33m'
 LIGHTGREEN='\033[1;32m'
+RED='\033[1;31m'
 NC='\033[0m'
 
 function print() {
   echo -e $1$2$3$NC
 }
 
+function create_wallet() {
+  export LINERA_WALLET_$1=$WALLET_BASE/wallet_$1.json
+  export LINERA_STORAGE_$1=rocksdb:$WALLET_BASE/client_$1.db
+
+  rm -rf $WALLET_BASE/wallet_$1.json $WALLET_BASE/client_$1.db
+
+  linera -w $1 wallet init --faucet $faucet_url --with-new-chain
+  linera -w $1 wallet show
+}
+
 unset RUSTFLAGS
-export TMPDIR=
+unset TMPDIR
 cargo build --release --target wasm32-unknown-unknown
 
 PROJECT_ROOT=$HOME/linera-project
+WALLET_BASE=$PROJECT_ROOT/linera/respeer
 
 mkdir -p $PROJECT_ROOT
-NODE_LOG_FILE=$PROJECT_ROOT/linera.log
 SERVICE_LOG_FILE=$PROJECT_ROOT/service_8080.log
-FAUCET_LOG_FILE=$PROJECT_ROOT/faucet_8080.log
-WALLET_NUMBER=5
-EXTRA_WALLET_NUMBER=`expr $WALLET_NUMBER - 1`
-SERVICE_WALLET_NUMBER=`expr $EXTRA_WALLET_NUMBER - 1`
 
-print $'\U01F4AB' $YELLOW " Running linera net, log in $NODE_LOG_FILE ..."
-lineradir=`whereis linera | awk '{print $2}'`
-lineradir=`dirname $lineradir`
-cd $lineradir
-linera net up --initial-amount 100000000 --extra-wallets $EXTRA_WALLET_NUMBER 2>&1 | sh -c 'exec cat' > $NODE_LOG_FILE &
-cd -
+rm $WALLET_BASE -rf
+mkdir $WALLET_BASE -p
 
-for i in `seq 0 $EXTRA_WALLET_NUMBER`; do
-  while true; do
-    [ ! -f $NODE_LOG_FILE ] && sleep 3 && continue
-    LINERA_WALLET_ENV=`grep "export LINERA_WALLET_$i" $NODE_LOG_FILE | sed 's/"//g'`
-    LINERA_STORAGE_ENV=`grep "export LINERA_STORAGE_$i" $NODE_LOG_FILE | sed 's/"//g'`
-    print $'\U01F411' $LIGHTGREEN " Waiting linera net $i ..."
-    [ -z "$LINERA_WALLET_ENV" -o -z "$LINERA_STORAGE_ENV" ] && sleep 3 && continue
-    print $'\U01F411' $LIGHTGREEN " Linera net up $i ..."
-    break
-  done
-
-  print $'\U01F4AB' $YELLOW " $LINERA_WALLET_ENV"
-  $LINERA_WALLET_ENV
-  print $'\U01F4AB' $YELLOW " $LINERA_STORAGE_ENV"
-  $LINERA_STORAGE_ENV
-
-  while true; do
-    LINERA_WALLET_NAME="LINERA_WALLET_$i"
-    print $'\U01F411' $LIGHTGREEN " Waiting linera database `dirname ${!LINERA_WALLET_NAME}` ..."
-    [ ! -f ${!LINERA_WALLET_NAME} ] && sleep 3 && continue
-    break
-  done
-done
+create_wallet 1
 
 print $'\U01F4AB' $YELLOW " Deploying Credit application ..."
 credit_bid=`linera --with-wallet 1 publish-bytecode ./target/wasm32-unknown-unknown/release/credit_{contract,service}.wasm`
@@ -191,10 +241,6 @@ function run_new_service() {
 for i in `seq 1 $SERVICE_WALLET_NUMBER`; do
   run_new_service $i
 done
-
-print $'\U01f499' $LIGHTGREEN " Wallet of faucet ..."
-linera --with-wallet 0 wallet show
-linera --with-wallet 0 faucet --port 40080 --amount "100.0" e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65 > $FAUCET_LOG_FILE 2>&1 &
 
 trap cleanup INT
 read -p "  Press any key to exit"
