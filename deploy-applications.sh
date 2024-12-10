@@ -238,7 +238,7 @@ function run_new_service() {
   socat TCP4-LISTEN:$cat_port TCP4:localhost:$port &
 }
 
-run_new_service $i
+run_new_service 1
 
 trap cleanup INT
 read -p "  Press any key to exit"
