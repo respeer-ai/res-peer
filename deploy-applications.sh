@@ -238,9 +238,7 @@ function run_new_service() {
   socat TCP4-LISTEN:$cat_port TCP4:localhost:$port &
 }
 
-for i in `seq 1 $SERVICE_WALLET_NUMBER`; do
-  run_new_service $i
-done
+run_new_service $i
 
 trap cleanup INT
 read -p "  Press any key to exit"
