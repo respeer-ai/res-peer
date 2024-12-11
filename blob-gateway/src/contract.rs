@@ -97,13 +97,7 @@ impl BlobGatewayContract {
         self.runtime.assert_data_blob_exists(data_blob_hash);
 
         match self.state.blobs.get(&blob_hash).await? {
-            Some(blob) => {
-                if blob.creator == creator {
-                    Ok(())
-                } else {
-                    Err(BlobGatewayError::AlreadyExists)
-                }
-            }
+            Some(blob) => Ok(()),
             _ => Ok(self.state.blobs.insert(
                 &blob_hash,
                 BlobData {
