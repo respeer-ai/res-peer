@@ -30,7 +30,7 @@ mkdir -p $PROJECT_ROOT
 SERVICE_LOG_FILE=$PROJECT_ROOT/service_8080.log
 
 function _run_service() {
-  linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
+  linera --max-retries 100 --retry-delay-ms 10 --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
 }
 
 function run_new_service() {
