@@ -5,6 +5,7 @@ use async_graphql::{Enum, Request, Response, SimpleObject};
 use linera_sdk::{
     base::{ContractAbi, CryptoHash, Owner, ServiceAbi, Timestamp},
     graphql::GraphQLMutationRoot,
+    DataBlobHash,
 };
 use linera_views::views::ViewError;
 use serde::{Deserialize, Serialize};
@@ -57,6 +58,9 @@ pub enum Message {
     Register {
         data_type: BlobDataType,
         blob_hash: CryptoHash,
+    },
+    AssertDataBlobExists {
+        data_blob_hash: DataBlobHash,
     },
 }
 

@@ -60,7 +60,13 @@ impl Contract for BlobGatewayContract {
             } => self
                 .on_msg_register(data_type, blob_hash)
                 .await
-                .expect("Failed OP: Register"),
+                .expect("Failed MSG: Register"),
+            Message::AssertDataBlobExists {
+                data_blob_hash,
+            } => self
+                .on_msg_assert_data_blob_extsts(data_blob_hash)
+                .await
+                .expect("Failed MSG: AssertDataBlobExists"),
         }
     }
 
@@ -94,7 +100,11 @@ impl BlobGatewayContract {
         let creator = self.runtime.authenticated_signer().unwrap();
 
         let data_blob_hash = DataBlobHash(blob_hash);
-        self.runtime.assert_data_blob_exists(data_blob_hash);
+        self.runtime.prepare_message(
+            Message::AssertDataBlobExists { data_blob_hash }
+        )
+        .with_authentication()
+        .send_to(self.runtime.application_creator_chain_id());
 
         match self.state.blobs.get(&blob_hash).await? {
             Some(blob) => Ok(()),
@@ -108,5 +118,17 @@ impl BlobGatewayContract {
                 },
             )?),
         }
+    }
+
+    async fn on_msg_assert_data_blob_extsts(
+        &mut self,
+        data_blob_hash: DataBlobHash,
+    ) -> Result<(), BlobGatewayError> {
+        if self.runtime.chain_id() != self.runtime.application_creator_chain_id() {
+            return Ok(())
+        }
+      
+        self.runtime.assert_data_blob_exists(data_blob_hash);
+        Ok(())
     }
 }
