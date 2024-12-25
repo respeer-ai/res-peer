@@ -1,0 +1,3 @@
+resources:
+  - 01-respeer-webui.yaml
+  - 02-ingress.yaml
