@@ -1,0 +1,119 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: node-service-traefik-app-ingress
+  namespace: kube-system
+  annotations:
+    k8s.kuboard.cn/displayName: node-service-traefik-app
+    k8s.kuboard.cn/workload: node-service-traefik-app
+    kubernetes.io/ingress.class: "traefik-internet"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares:
+      kube-system-strip-node-service-prefix@kubernetescrd,
+      kube-system-http-redirect-https@kubernetescrd,
+      kube-system-common-headers@kubernetescrd
+
+spec:
+  tls:
+    - hosts:
+        - '*.hk.testnet-archimedes.respeer.ai'
+        - 'hk.testnet-archimedes.respeer.ai'
+      secretName: hk-testnet-archimedes-respeer-ai-tls
+  rules:
+    - host: hk.testnet-archimedes.respeer.ai
+      http: &http_rules
+        paths:
+          - path: /rpc
+            backend:
+              serviceName: node-service
+              servicePort: 30080
+
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: node-service-h2c-traefik-app-ingress
+  namespace: kube-system
+  annotations:
+    ingress.kubernetes.io/protocol: h2c
+    k8s.kuboard.cn/displayName: node-service-h2c-traefik-app
+    k8s.kuboard.cn/workload: node-service-h2c-traefik-app
+    kubernetes.io/ingress.class: "traefik-internet"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares:
+      kube-system-common-headers@kubernetescrd
+
+spec:
+  tls:
+    - hosts:
+        - '*.hk.testnet-archimedes.respeer.ai'
+        - 'hk.testnet-archimedes.respeer.ai'
+      secretName: hk-testnet-archimedes-respeer-ai-tls
+  rules:
+    - host: hk.testnet-archimedes.respeer.ai
+      http: &http_rules
+        paths:
+          - path: /ws
+            backend:
+              serviceName: node-service
+              servicePort: 30080
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: node-service-testnet-traefik-app-ingress
+  namespace: kube-system
+  annotations:
+    k8s.kuboard.cn/displayName: node-service-testnet-traefik-app
+    k8s.kuboard.cn/workload: node-service-testnet-traefik-app
+    kubernetes.io/ingress.class: "traefik-internet"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares:
+      kube-system-strip-node-service-prefix@kubernetescrd,
+      kube-system-http-redirect-https@kubernetescrd,
+      kube-system-common-headers@kubernetescrd
+
+spec:
+  tls:
+    - hosts:
+        - '*.testnet-archimedes.respeer.ai'
+        - 'testnet-archimedes.respeer.ai'
+      secretName: testnet-archimedes-respeer-ai-tls
+  rules:
+    - host: testnet-archimedes.respeer.ai
+      http: &http_rules
+        paths:
+          - path: /rpc
+            backend:
+              serviceName: node-service
+              servicePort: 30080
+
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: node-service-testnet-h2c-traefik-app-ingress
+  namespace: kube-system
+  annotations:
+    ingress.kubernetes.io/protocol: h2c
+    k8s.kuboard.cn/displayName: node-service-testnet-h2c-traefik-app
+    k8s.kuboard.cn/workload: node-service-testnet-h2c-traefik-app
+    kubernetes.io/ingress.class: "traefik-internet"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares:
+      kube-system-common-headers@kubernetescrd
+
+spec:
+  tls:
+    - hosts:
+        - '*.testnet-archimedes.respeer.ai'
+        - 'testnet-archimedes.respeer.ai'
+      secretName: testnet-archimedes-respeer-ai-tls
+  rules:
+    - host: testnet-archimedes.respeer.ai
+      http: &http_rules
+        paths:
+          - path: /ws
+            backend:
+              serviceName: node-service
+              servicePort: 30080
