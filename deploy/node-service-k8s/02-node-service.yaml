@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-service
+  namespace: kube-system
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-service
+  template:
+    metadata:
+      labels:
+        app: node-service
+    spec:
+      containers:
+        - name: node-service
+          image: DOCKER_REGISTRY/linera/linera-node-service:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: workdir
+              mountPath: /root/.config/linera
+          env:
+            - name: ENV_ENVIRONMENT_TARGET
+              valueFrom:
+                configMapKeyRef:
+                  name: system-environment
+                  key: environment.target
+            - name: ENV_CONSUL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: system-environment
+                  key: environment.consul_host
+            - name: ENV_CONSUL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: system-environment
+                  key: environment.consul_port
+            - name: ENV_CLUSTER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-password-secret
+                  key: rootpassword
+      imagePullSecrets:
+        - name: regcred
+      volumes:
+        - name: workdir
+          persistentVolumeClaim:
+            claimName: node-service-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-service
+  namespace: kube-system
+spec:
+  ports:
+    - name: http
+      port: 30080
+  selector:
+    app: node-service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-service-h2c
+  namespace: kube-system
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: h2c
+spec:
+  ports:
+    - name: grpc
+      port: 30080
+  selector:
+    app: node-service

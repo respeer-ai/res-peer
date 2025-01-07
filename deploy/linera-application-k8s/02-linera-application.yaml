@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linera-application-service
+  namespace: kube-system
+  annotations:
+    "sidecar.jaegertracing.io/inject": "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: linera-application-service
+  template:
+    metadata:
+      labels:
+        app: linera-application-service
+    spec:
+      containers:
+        - name: linera-application-service
+          image: DOCKER_REGISTRY/linera/linera-application-service:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: workdir
+              mountPath: /root/linera-project
+          env:
+            - name: ENV_ENVIRONMENT_TARGET
+              valueFrom:
+                configMapKeyRef:
+                  name: system-environment
+                  key: environment.target
+            - name: ENV_CONSUL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: system-environment
+                  key: environment.consul_host
+            - name: ENV_CONSUL_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: system-environment
+                  key: environment.consul_port
+            - name: ENV_CLUSTER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-password-secret
+                  key: rootpassword
+      imagePullSecrets:
+        - name: regcred
+      volumes:
+        - name: workdir
+          persistentVolumeClaim:
+            claimName: linera-application-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: linera-application-service
+  namespace: kube-system
+spec:
+  ports:
+    - name: http
+      port: 9081
+      targetPort: 9081
+  selector:
+    app: linera-application-service

@@ -1,0 +1,59 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: linera-application-service-traefik-app-ingress
+  namespace: kube-system
+  annotations:
+    k8s.kuboard.cn/displayName: linera-application-service-traefik-app
+    k8s.kuboard.cn/workload: linera-application-service-traefik-app
+    kubernetes.io/ingress.class: "traefik-internet"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares:
+      kube-system-strip-linera-application-service-prefix@kubernetescrd,
+      kube-system-http-redirect-https@kubernetescrd,
+      kube-system-common-headers@kubernetescrd
+
+spec:
+  tls:
+    - hosts:
+        - '*.hk.testnet-archimedes.blobgateway.com'
+        - 'hk.testnet-archimedes.blobgateway.com'
+      secretName: hk-testnet-archimedes-blobgateway-com-tls
+  rules:
+    - host: hk.testnet-archimedes.blobgateway.com
+      http: &http_rules
+        paths:
+          - path: /api/blobs
+            backend:
+              serviceName: linera-application-service
+              servicePort: 9081
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: linera-application-service-testnet-traefik-app-ingress
+  namespace: kube-system
+  annotations:
+    k8s.kuboard.cn/displayName: linera-application-service-testnet-traefik-app
+    k8s.kuboard.cn/workload: linera-application-service-testnet-traefik-app
+    kubernetes.io/ingress.class: "traefik-internet"
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares:
+      kube-system-strip-linera-application-service-prefix@kubernetescrd,
+      kube-system-http-redirect-https@kubernetescrd,
+      kube-system-common-headers@kubernetescrd
+
+spec:
+  tls:
+    - hosts:
+        - '*.testnet-archimedes.blobgateway.com'
+        - 'testnet-archimedes.blobgateway.com'
+      secretName: testnet-archimedes-blobgateway-com-tls
+  rules:
+    - host: testnet-archimedes.blobgateway.com
+      http: &http_rules
+        paths:
+          - path: /api/blobs
+            backend:
+              serviceName: linera-application-service
+              servicePort: 9081

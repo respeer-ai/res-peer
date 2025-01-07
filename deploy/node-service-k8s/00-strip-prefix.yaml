@@ -1,0 +1,9 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-node-service-prefix
+  namespace: kube-system
+spec:
+  stripPrefix:
+    prefixes:
+      - /rpc
