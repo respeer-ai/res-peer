@@ -4,7 +4,7 @@ user root
 ARG ALL_PROXY
 
 RUN chmod 777 /tmp
-RUN apt-get update -y
+RUN apt-get update --fix-missing -y
 RUN apt-get install git wget make curl jq vim gcc unzip libclang-dev g++ socat -y
 
 RUN mkdir /opt/linera-project
