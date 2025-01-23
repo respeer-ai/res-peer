@@ -5,7 +5,7 @@
 
 mod state;
 
-use blob_gateway::{BlobData, BlobDataType, BlobGatewayError, Operation, Message, BlobGatewayResponse};
+use blob_gateway::{BlobData, BlobDataType, BlobGatewayError, Operation, Message, BlobGatewayResponse, StoreType};
 use linera_sdk::{
     base::{CryptoHash, WithContractAbi},
     views::{RootView, View},
@@ -43,10 +43,11 @@ impl Contract for BlobGatewayContract {
     async fn execute_operation(&mut self, operation: Operation) -> BlobGatewayResponse {
         match operation {
             Operation::Register {
+                store_type,
                 data_type,
                 blob_hash,
             } => self
-                .on_op_register(data_type, blob_hash)
+                .on_op_register(store_type, data_type, blob_hash)
                 .await
                 .expect("Failed OP: Register"),
         }
@@ -55,10 +56,11 @@ impl Contract for BlobGatewayContract {
     async fn execute_message(&mut self, message: Message) {
         match message {
             Message::Register {
+                store_type,
                 data_type,
                 blob_hash,
             } => self
-                .on_msg_register(data_type, blob_hash)
+                .on_msg_register(store_type, data_type, blob_hash)
                 .await
                 .expect("Failed MSG: Register"),
             Message::AssertDataBlobExists {
@@ -78,11 +80,12 @@ impl Contract for BlobGatewayContract {
 impl BlobGatewayContract {
     async fn on_op_register(
         &mut self,
+        store_type: StoreType,
         data_type: BlobDataType,
         blob_hash: CryptoHash,
     ) -> Result<BlobGatewayResponse, BlobGatewayError> {
         self.runtime.prepare_message(
-            Message::Register { data_type, blob_hash }
+            Message::Register { store_type, data_type, blob_hash }
         )
         .with_authentication()
         .send_to(self.runtime.application_creator_chain_id());
@@ -91,6 +94,7 @@ impl BlobGatewayContract {
 
     async fn on_msg_register(
         &mut self,
+        store_type: StoreType,
         data_type: BlobDataType,
         blob_hash: CryptoHash,
     ) -> Result<(), BlobGatewayError> {
@@ -99,18 +103,21 @@ impl BlobGatewayContract {
         }
         let creator = self.runtime.authenticated_signer().unwrap();
 
-        let data_blob_hash = DataBlobHash(blob_hash);
-        self.runtime.prepare_message(
-            Message::AssertDataBlobExists { data_blob_hash }
-        )
-        .with_authentication()
-        .send_to(self.runtime.application_creator_chain_id());
+        if store_type == StoreType::Blob {
+            let data_blob_hash =  DataBlobHash(blob_hash);
+            self.runtime.prepare_message(
+                Message::AssertDataBlobExists { data_blob_hash }
+                )
+                .with_authentication()
+                .send_to(self.runtime.application_creator_chain_id());
+        }
 
         match self.state.blobs.get(&blob_hash).await? {
             Some(_) => Ok(()),
             _ => Ok(self.state.blobs.insert(
                 &blob_hash,
                 BlobData {
+                    store_type,
                     data_type,
                     blob_hash,
                     creator,
@@ -127,7 +134,7 @@ impl BlobGatewayContract {
         if self.runtime.chain_id() != self.runtime.application_creator_chain_id() {
             return Ok(())
         }
-      
+
         self.runtime.assert_data_blob_exists(data_blob_hash);
         Ok(())
     }

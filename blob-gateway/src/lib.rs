@@ -37,8 +37,16 @@ pub enum BlobDataType {
     Raw,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Enum, Copy)]
+pub enum StoreType {
+    Blob,
+    Ipfs,
+    S3,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, SimpleObject, Eq, PartialEq)]
 pub struct BlobData {
+    pub store_type: StoreType,
     pub data_type: BlobDataType,
     pub blob_hash: CryptoHash,
     pub created_at: Timestamp,
@@ -48,6 +56,7 @@ pub struct BlobData {
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum Operation {
     Register {
+        store_type: StoreType,
         data_type: BlobDataType,
         blob_hash: CryptoHash,
     },
@@ -56,6 +65,7 @@ pub enum Operation {
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Message {
     Register {
+        store_type: StoreType,
         data_type: BlobDataType,
         blob_hash: CryptoHash,
     },
