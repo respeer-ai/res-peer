@@ -107,7 +107,7 @@ impl BlobGatewayContract {
         .send_to(self.runtime.application_creator_chain_id());
 
         match self.state.blobs.get(&blob_hash).await? {
-            Some(blob) => Ok(()),
+            Some(_) => Ok(()),
             _ => Ok(self.state.blobs.insert(
                 &blob_hash,
                 BlobData {
