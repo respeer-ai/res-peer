@@ -24,7 +24,7 @@ RUN cd /opt/linera-project \
 RUN cd /opt/linera-project/linera-protocol \
     && export PATH=$HOME/.cargo/bin:$PATH \
     && export PATH=/opt/linera-project/protoc/bin:$PATH \
-    && git checkout respeer-maas-testnet_archimedes-5fcbc190-2024_12_06 \
+    && git checkout respeer-maas-testnet_archimedes-e117e2cb-2025_02_05 \
     && export all_proxy=$ALL_PROXY \
     && CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path linera-service --features disable-native-rpc,enable-wallet-rpc,enable-request-application,storage-service \
     && CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --path linera-storage-service --features storage-service \
