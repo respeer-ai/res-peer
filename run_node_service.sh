@@ -26,7 +26,7 @@ linera wallet init --faucet $faucet_url
 linera wallet show
 
 function run_service () {
-  linera --max-retries 100 --retry-delay-ms 10 service --port 30080 --listener-skip-process-inbox
+  linera service --port 30080 --listener-skip-process-inbox
 }
 
 run_service &

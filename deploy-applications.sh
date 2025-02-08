@@ -222,7 +222,7 @@ sed -i "s/blob_gateway_app_id=.*/blob_gateway_app_id=\"$blob_gateway_appid\"/g" 
 sed -i "s/blob_gateway_creation_chain_id=.*/blob_gateway_creation_chain_id=\"$app_deploy_chain\"/g" ../linera-dapps/deploy-local.sh
 
 function _run_service() {
-  linera --max-retries 100 --retry-delay-ms 10 --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
+  linera --with-wallet $1 service --port $2 > $LOG_FILE 2>&1
 }
 
 function run_new_service() {
